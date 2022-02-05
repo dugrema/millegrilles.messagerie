@@ -15,8 +15,8 @@ export HOST_MQ=mg-dev5
 
 CERT_FOLDER=/home/mathieu/mgdev/certs
 export MG_MQ_CAFILE=/certs/pki.millegrille.cert
-export MG_MQ_CERTFILE=/certs/pki.messagerie.cert
-export MG_MQ_KEYFILE=/certs/pki.messagerie.key
+export MG_MQ_CERTFILE=/certs/pki.messagerie_web.cert
+export MG_MQ_KEYFILE=/certs/pki.messagerie_web.key
 export MG_MQ_URL=amqps://$HOST_MQ:5673
 export MG_REDIS_HOST=mg-dev5
 export PORT=3039
