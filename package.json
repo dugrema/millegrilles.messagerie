@@ -4,7 +4,10 @@
   "description": "Messagerie pour MilleGrilles (web)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ./bin/www",
+    "dev": "export $(cat .env.development .env.local | grep -v ^\\# | xargs) && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "node ./bin/www"
   },
   "repository": {
     "type": "git",
@@ -17,6 +20,13 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/dugrema/millegrilles.messagerie/issues"
+  },
+  "dependencies": {
+    "@dugrema/millegrilles.nodejs": "https://github.com/dugrema/millegrilles.nodejs.git#2022.1",
+    "@dugrema/millegrilles.utiljs": "https://github.com/dugrema/millegrilles.utiljs.git#2022.1",
+    "axios": "^0.24.0",
+    "debug": "^4.3.3",
+    "express": "^4.17.2"
   },
   "homepage": "https://github.com/dugrema/millegrilles.messagerie#readme"
 }
