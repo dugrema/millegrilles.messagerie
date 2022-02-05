@@ -1,0 +1,22 @@
+{
+  "name": "millegrilles.messagerie",
+  "version": "2022.1.0",
+  "description": "Messagerie pour MilleGrilles (web)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dugrema/millegrilles.messagerie.git"
+  },
+  "keywords": [
+    "millegrilles"
+  ],
+  "author": "Mathieu Dugre",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dugrema/millegrilles.messagerie/issues"
+  },
+  "homepage": "https://github.com/dugrema/millegrilles.messagerie#readme"
+}
