@@ -1,0 +1,27 @@
+.text-hardwrap {
+    overflow: auto;
+    overflow-wrap: break-word;
+}
+
+.info-labels > DIV {
+    padding-bottom: 0.4rem;
+}
+
+.modal-picklist .container {
+    height: 70vh;
+    overflow-y: auto;
+}
+
+.transfer-labels {
+    white-space: nowrap;
+}
+
+/*
+.transfer-labels DIV {
+    display: inline-block;
+}
+*/
+
+.navbar .nav-link {
+    white-space: nowrap;
+}
