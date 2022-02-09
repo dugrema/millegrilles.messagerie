@@ -1,6 +1,6 @@
 import { proxy } from 'comlink'
 
-const CONST_APP_URL = 'collections/socket.io'
+const CONST_APP_URL = 'messagerie/socket.io'
 
 export async function connecter(workers, setUsagerState, setEtatConnexion) {
     const { connexion } = workers
