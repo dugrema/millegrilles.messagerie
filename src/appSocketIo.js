@@ -23,7 +23,9 @@ function configurerEvenements(socket) {
       { eventName: 'challenge', callback: (params, cb) => traiter(socket, mqdao.challenge, {params, cb}) },
     ],
     listenersPrives: [
+      { eventName: 'getMessages', callback: (params, cb) => traiter(socket, mqdao.getMessages, {params, cb}) },
       { eventName: 'getClesFichiers', callback: (params, cb) => traiter(socket, mqdao.getClesFichiers, {params, cb}) },
+      { eventName: 'getPermissionMessages', callback: (params, cb) => traiter(socket, mqdao.getPermissionMessages, {params, cb}) },
 
       // Evenements
       // {eventName: 'ecouterMajFichiers', callback: (_, cb) => {mqdao.ecouterMajFichiers(socket, cb)}},

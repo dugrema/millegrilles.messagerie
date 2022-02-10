@@ -1,26 +1,18 @@
 import { expose } from 'comlink'
-// import { ConnexionClient, saveCleDechiffree, getCleDechiffree } from '@dugrema/millegrilles.reactjs'
 import * as ConnexionClient from '@dugrema/millegrilles.reactjs/src/connexionClient'
 
 const CONST_DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MAITREDESCLES = 'MaitreDesCles',
-      CONST_DOMAINE_FICHIERS = 'fichiers'
+      CONST_DOMAINE_FICHIERS = 'fichiers',
+      CONST_DOMAINE_MESSAGERIE = 'Messagerie'
 
-function getFavoris() {
-  return ConnexionClient.emitBlocking('getFavoris', {}, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'favoris', ajouterCertificat: true})
+function getMessages(requete) {
+  return ConnexionClient.emitBlocking('getMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getMessages', ajouterCertificat: true})
 }
 
-function getCorbeille() {
-  return ConnexionClient.emitBlocking('getCorbeille', {}, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'getCorbeille', ajouterCertificat: true})
-}
-
-function getRecents(params) {
-  return ConnexionClient.emitBlocking('getRecents', params, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'activiteRecente', ajouterCertificat: true})
-}
-
-function getContenuCollection(tuuidsDocuments) {
-  const params = {tuuid_collection: tuuidsDocuments}
-  return ConnexionClient.emitBlocking('getCollection', params, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'contenuCollection', ajouterCertificat: true})
+function getPermissionMessages(uuid_transaction_messages) {
+  const requete = {uuid_transaction_messages}
+  return ConnexionClient.emitBlocking('getPermissionMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getPermissionMessages', ajouterCertificat: true})
 }
 
 async function getClesFichiers(fuuids, usager, opts) {
@@ -242,8 +234,10 @@ expose({
     ...ConnexionClient, 
 
     // Requetes et commandes privees
+    getMessages, getPermissionMessages,
+
+
     getDocuments, getClesFichiers,
-    getFavoris, getCorbeille, getRecents, getContenuCollection,
     creerCollection, toggleFavoris, 
     recupererDocuments, retirerDocumentsCollection, supprimerDocuments,
     decrireFichier, decrireCollection,

@@ -32,8 +32,12 @@ function challenge(socket, params) {
     return socket.amqpdao.pki.formatterMessage(reponse, 'challenge', {ajouterCertificat: true})
 }
 
-function getDocuments(socket, params) {
-    return transmettreRequete(socket, params, 'documentsParTuuid')
+function getMessages(socket, params) {
+    return transmettreRequete(socket, params, 'getMessages')
+}
+
+function getPermissionMessages(socket, params) {
+    return transmettreRequete(socket, params, 'getPermissionMessages')
 }
 
 function getClesFichiers(socket, params) {
@@ -121,7 +125,9 @@ async function retirerTranscodageProgres(socket, params, cb) {
 }
 
 module.exports = {
-    challenge, getDocuments, getClesFichiers, 
+    challenge, getMessages, getPermissionMessages, getClesFichiers, 
+
+
     ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     retirerTranscodageProgres, 
 }
