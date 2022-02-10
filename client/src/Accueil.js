@@ -1,73 +1,59 @@
-import { useState, useEffect } from 'react'
+import { Suspense, lazy, useState, useEffect, useCallback } from 'react'
+
+import ListeMessages from './Reception'
+
+const AfficherMessage = lazy(() => import('./AfficherMessage'))
 
 function Accueil(props) {
 
     const { workers, etatConnexion, usager, downloadAction } = props
 
     const [listeMessages, setListeMessages] = useState([])
+    const [uuidSelectionne, setUuidSelectionne] = useState('')
 
     useEffect( () => { 
         if(!etatConnexion) return
         workers.connexion.getMessages({}).then(async messages=>{
-            console.debug("Messages recus : %O", messages)
-            setListeMessages(messages)
-            await chargerClesMessages(workers, messages)
+            // console.debug("Messages recus : %O", messages)
+            setListeMessages(messages.messages)
         })
     }, [workers, etatConnexion, setListeMessages])
+
+    const retour = useCallback(()=>{setUuidSelectionne('')}, [setUuidSelectionne])
+    const ouvrirMessage = useCallback(event=>{
+        let uuidMessage = event
+        if(event.currentTarget) uuidMessage = event.currentTarget.value
+        console.debug("Ouvrir message : %O", uuidMessage)
+        setUuidSelectionne(uuidMessage)
+    }, [setUuidSelectionne])
+
+    let contenu = ''
+    if(uuidSelectionne) {
+        // Afficher message
+        const message = listeMessages.filter(item=>item.uuid_transaction===uuidSelectionne).shift()
+        console.debug("Ouvrir message : %O", message)
+        contenu = <AfficherMessage 
+                    workers={workers} 
+                    message={message} 
+                    retour={retour} />
+    } else {
+        // Afficher liste Reception
+        contenu = <ListeMessages 
+                    workers={workers} 
+                    messages={listeMessages} 
+                    ouvrirMessage={ouvrirMessage} />
+    }
 
     return (
         <>
             <h1>Messagerie</h1>
+
+            <Suspense fallback={<p>Chargement en cours</p>}>
+                {contenu}
+            </Suspense>
         </>
     )
 
 }
 
 export default Accueil
-
-async function chargerClesMessages(workers, listeMessages) {
-    const { connexion, chiffrage } = workers
-
-    const uuidMessages = listeMessages.messages.map(item=>item.uuid_transaction)
-    const reponseCles = await connexion.getPermissionMessages(uuidMessages)
-    const cles = reponseCles.cles
-    console.debug("Reponse permission dechiffrage messages : %O", reponseCles)
-
-    for(let idx=0; idx<listeMessages.messages.length; idx++) {
-        const message = listeMessages.messages[idx]
-        console.debug("Dechiffrer message : %O", message)
-        const {uuid_transaction, hachage_bytes, message_chiffre} = message
-        const cle = cles[hachage_bytes]
-        // Dechiffrer cle asymmetrique
-        const cleDechiffree = await chiffrage.dechiffrerCleSecrete(cle.cle)
-        // const cleDechiffrerBuffer = Buffer.from(cleDechiffree, 'binary').buffer
-        console.debug("Cle secrete dechiffree : %O", cleDechiffree)
-        const messageDechiffre = await chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag, {DEBUG: true})
-
-        // const messageDechiffre = await chiffrage.chiffrage.testDecipher(message_chiffre, cleDechiffree, cle.iv, {tag: cle.tag})
-        const messageTexte = JSON.parse(new TextDecoder().decode(messageDechiffre))
-        console.debug("Message texte : %O", messageTexte)
-        // console.debug("Dechiffrage du message")
-        // const messageDechiffre = await decipher.update(message_chiffre)
-        console.debug("Message dechiffre : %O", messageDechiffre)
-
-        // Verification du certificat du message
-        const dateMessage = new Date(messageTexte['en-tete'].estampille*1000)
-        console.debug("Date message : %O", dateMessage)
-        // const dateCorrompue = new Date(dateMessage * 1000)
-        // dateCorrompue.setFullYear(2019)
-        const certificatVerifie = await chiffrage.validerCertificat(message.certificat_message, dateMessage)
-        if(certificatVerifie === true) {
-            console.debug("Certificat verifie: %O", certificatVerifie)
-            const messageValide = await chiffrage.verifierMessage({_certificat: message.certificat_message, ...messageTexte})
-            if(messageValide === true) {
-                console.debug("Message valide : %O", messageValide)
-            } else {
-                console.warn("Message invalide : %O", messageTexte)
-            }
-        } else {
-            console.warn("Certificat invalide pour message %O", messageTexte)
-        }
-    }
-
-}

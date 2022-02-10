@@ -24,7 +24,7 @@ function Menu(props) {
         
         <Navbar.Brand>
           <Nav.Link onClick={()=>setPage('Accueil')} title="Accueil MilleGrilles Collections">
-              Collections
+              Messagerie
           </Nav.Link>
         </Navbar.Brand>
 

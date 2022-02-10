@@ -25,3 +25,7 @@
 .navbar .nav-link {
     white-space: nowrap;
 }
+
+.nouveau {
+    font-weight: bold;
+}
