@@ -20,7 +20,9 @@ const ROUTING_KEYS_COLLECTIONS = [
 // ...ROUTING_KEYS_FICHIERS,
 // ...ROUTING_KEYS_COLLECTIONS,
 // ]
-      
+
+let _certificatMaitreCles = null
+
 function challenge(socket, params) {
     // Repondre avec un message signe
     const reponse = {
@@ -32,6 +34,30 @@ function challenge(socket, params) {
     return socket.amqpdao.pki.formatterMessage(reponse, 'challenge', {ajouterCertificat: true})
 }
 
+async function getClesChiffrage(socket, params) {
+    let certificatMaitreCles = _certificatMaitreCles
+    if(!certificatMaitreCles) {
+        debug("Requete pour certificat maitre des cles")
+
+        try {
+            certificatMaitreCles = await socket.amqpdao.transmettreRequete(
+                CONST_DOMAINE_MAITREDESCLES, {}, 
+                {action: 'certMaitreDesCles', decoder: true}
+            )
+
+            // TTL
+            setTimeout(()=>{_certificatMaitreCles=null}, 120_000)
+        } catch(err) {
+            console.error("mqdao.transmettreRequete ERROR : %O", err)
+            return {ok: false, err: ''+err}
+        }
+    
+        // certificatMaitreCles = await transmettreRequete(socket, params, 'certMaitreDesCles', {domaine: CONST_DOMAINE_MAITREDESCLES})
+        _certificatMaitreCles = certificatMaitreCles
+    }
+    return certificatMaitreCles
+}
+  
 function getMessages(socket, params) {
     return transmettreRequete(socket, params, 'getMessages')
 }
@@ -42,6 +68,20 @@ function getPermissionMessages(socket, params) {
 
 function getClesFichiers(socket, params) {
     return transmettreRequete(socket, params, 'dechiffrage', {domaine: CONST_DOMAINE_MAITREDESCLES})
+}
+
+async function posterMessage(socket, params) {
+    const { message, commandeMaitrecles } = params
+
+    debug("Poster message\n%O\nCommande maitre cles : %O", message, commandeMaitrecles)
+
+    const partition = commandeMaitrecles['_partition']
+    const reponseMaitreCles = await transmettreCommande(socket, commandeMaitrecles, 'sauvegarderCle', {domaine: CONST_DOMAINE_MAITREDESCLES, partition})
+    debug("Reponse maitre des cles : %O", reponseMaitreCles)
+    const reponseMessage = await transmettreCommande(socket, message, 'poster')
+    debug("Reponse poster message : %O", reponseMessage)
+
+    return {message: reponseMessage, maitreCles: reponseMaitreCles}
 }
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -66,12 +106,13 @@ async function transmettreCommande(socket, params, action, opts) {
     const domaine = opts.domaine || DOMAINE_MESSAGERIE
     const exchange = opts.exchange || L2Prive
     const nowait = opts.nowait
+    const partition = opts.partition
     try {
         verifierMessage(params, domaine, action)
         return await socket.amqpdao.transmettreCommande(
             domaine, 
             params, 
-            {action, exchange, noformat: true, decoder: true, nowait}
+            {action, partition, exchange, noformat: true, decoder: true, nowait}
         )
     } catch(err) {
         console.error("mqdao.transmettreCommande ERROR : %O", err)
@@ -125,7 +166,9 @@ async function retirerTranscodageProgres(socket, params, cb) {
 }
 
 module.exports = {
-    challenge, getMessages, getPermissionMessages, getClesFichiers, 
+    challenge, getClesChiffrage,
+    getMessages, getPermissionMessages, getClesFichiers, 
+    posterMessage,
 
 
     ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 

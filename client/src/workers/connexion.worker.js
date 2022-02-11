@@ -15,6 +15,10 @@ function getPermissionMessages(uuid_transaction_messages) {
   return ConnexionClient.emitBlocking('getPermissionMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getPermissionMessages', ajouterCertificat: true})
 }
 
+function getClesChiffrage() {
+  return ConnexionClient.emitBlocking('getClesChiffrage', {})
+}
+
 async function getClesFichiers(fuuids, usager, opts) {
   opts = opts || {}
 
@@ -55,16 +59,14 @@ async function getPermission(fuuids) {
   return permission
 }
 
-function creerCollection(nomCollection, opts) {
+async function posterMessage(message, commandeMaitrecles, opts) {
   opts = opts || {}
-  const params = {nom: nomCollection}
-  if(opts.cuuid) params.cuuid = opts.cuuid
-  if(opts.favoris) params.favoris = true
-  return ConnexionClient.emitBlocking(
-    'creerCollection', 
-    params, 
-    {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'nouvelleCollection', ajouterCertificat: true}
-  )
+
+  // Les messages vont etre signes separement et emis en meme temps vers le serveur
+  const messageSigne = await ConnexionClient.formatterMessage(message, 'Messagerie', {action: 'poster', ajouterCertificat: true})
+  // const commandeMaitreclesSignee = await ConnexionClient.formatterMessage(commandeMaitrecles, 'poster', {domaine: 'MaitreDesCles'})
+
+  return ConnexionClient.emitBlocking('posterMessage', {message: messageSigne, commandeMaitrecles})
 }
 
 function toggleFavoris(etatFavoris) {
@@ -232,13 +234,15 @@ async function supprimerCallbackTranscodageProgres(fuuid) {
 // Exposer methodes du Worker
 expose({
     ...ConnexionClient, 
+    getClesChiffrage,
 
     // Requetes et commandes privees
     getMessages, getPermissionMessages,
+    posterMessage,
 
 
     getDocuments, getClesFichiers,
-    creerCollection, toggleFavoris, 
+    toggleFavoris, 
     recupererDocuments, retirerDocumentsCollection, supprimerDocuments,
     decrireFichier, decrireCollection,
     copierVersCollection, deplacerFichiersCollection,

@@ -17,13 +17,23 @@ function Menu(props) {
     const { 
       setPage, paramsRecherche, setParamsRecherche,
       showTransfertModal,  
+      setAfficherNouveauMessage, setUuidSelectionne,
     } = props
+
+    const afficherNouveauMessage = useCallback(()=>{
+      setAfficherNouveauMessage(true)
+    }, [setAfficherNouveauMessage])
+
+    const afficherReception = useCallback(()=>{
+      setAfficherNouveauMessage(false)
+      setUuidSelectionne('')
+    }, [setAfficherNouveauMessage])
 
     return (
       <Navbar collapseOnSelect expand="md">
         
         <Navbar.Brand>
-          <Nav.Link onClick={()=>setPage('Accueil')} title="Accueil MilleGrilles Collections">
+          <Nav.Link onClick={afficherReception} title="Accueil MilleGrilles Collections">
               Messagerie
           </Nav.Link>
         </Navbar.Brand>
@@ -37,8 +47,8 @@ function Menu(props) {
         <Navbar.Collapse id="responsive-navbar-menu">
 
             <Nav.Item>
-                <Nav.Link title="Recents" onClick={()=>setPage('Recents')}>
-                    <i className="fa fa-clock-o" /> {' '} Recents
+                <Nav.Link title="Nouveau" onClick={afficherNouveauMessage}>
+                    Nouveau
                 </Nav.Link>
             </Nav.Item>
 

@@ -24,6 +24,7 @@ function App() {
   const [usager, setUsager] = useState('')
   const [etatConnexion, setEtatConnexion] = useState(false)
   const [idmg, setIdmg] = useState('')
+  const [certificatMaitreDesCles, setCertificatMaitreDesCles] = useState('')
 
   const { connexion, transfertFichiers } = workers
 
@@ -91,7 +92,14 @@ function App() {
         console.debug("IDMG local chiffrage : %O", idmg)
         setIdmg(idmg)
       })
-  }, [etatConnexion, setIdmg])
+
+      workers.connexion.getClesChiffrage()
+        .then(cles=>{
+          console.debug("Cles chiffrage recues : %O", cles)
+          setCertificatMaitreDesCles(cles.certificat)
+        })
+        .catch(err=>{console.error("Erreur chargement cles chiffrage : %O", err)})
+  }, [etatConnexion, setIdmg, setCertificatMaitreDesCles])
   
   return (
     <LayoutApplication>
@@ -101,6 +109,8 @@ function App() {
           workers={workers} 
           usager={usager} 
           etatConnexion={etatConnexion} 
+          setAfficherNouveauMessage={setAfficherNouveauMessage}
+          setUuidSelectionne={setUuidSelectionne}
         />
       </HeaderApplication>
 
@@ -111,6 +121,7 @@ function App() {
             usager={usager}
             etatConnexion={etatConnexion} 
             downloadAction={downloadAction}
+            certificatMaitreDesCles={certificatMaitreDesCles}
             afficherNouveauMessage={afficherNouveauMessage}
             setAfficherNouveauMessage={setAfficherNouveauMessage}
             uuidSelectionne={uuidSelectionne}
