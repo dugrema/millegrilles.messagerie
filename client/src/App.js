@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
 import { proxy } from 'comlink'
 
 import Container from 'react-bootstrap/Container'
@@ -13,7 +13,10 @@ import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 import './App.css'
 
 import Menu from './Menu'
-import Accueil from './Accueil'
+
+const Accueil = lazy(() => import('./Accueil'))
+const AfficherMessage = lazy(() => import('./AfficherMessage'))
+const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
 function App() {
   
@@ -23,6 +26,10 @@ function App() {
   const [idmg, setIdmg] = useState('')
 
   const { connexion, transfertFichiers } = workers
+
+  // Selecteurs de page
+  const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
+  const [uuidSelectionne, setUuidSelectionne] = useState('')
 
   const downloadAction = useCallback( fichier => {
     //console.debug("Download fichier %O", fichier)
@@ -104,6 +111,10 @@ function App() {
             usager={usager}
             etatConnexion={etatConnexion} 
             downloadAction={downloadAction}
+            afficherNouveauMessage={afficherNouveauMessage}
+            setAfficherNouveauMessage={setAfficherNouveauMessage}
+            uuidSelectionne={uuidSelectionne}
+            setUuidSelectionne={setUuidSelectionne}
           />
         </Suspense>
       </Container>
@@ -139,9 +150,16 @@ function initDb() {
 function Contenu(props) {
   if(!props.workers) return <Attente />
 
+  const { afficherNouveauMessage, uuidSelectionne } = props
+
+  // Selection de la page a afficher
   let Page
-  switch(props.page) {
-    default: Page = Accueil;
+  if(afficherNouveauMessage) {
+    Page = NouveauMessage
+  } else if(uuidSelectionne) {
+    Page = AfficherMessage
+  } else {
+    Page = Accueil
   }
 
   return <Page {...props} />
