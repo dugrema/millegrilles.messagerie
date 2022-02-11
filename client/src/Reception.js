@@ -58,7 +58,7 @@ function LigneMessage(props) {
 
         dechiffrerMessage(workers, message)
             .then(messageDechiffre1=>{
-                console.debug("Message dechiffre 1 %O", messageDechiffre1)
+                // console.debug("Message dechiffre 1 %O", messageDechiffre1)
                 setMessageDechiffre(messageDechiffre1)
             })
             .catch(err=>console.error("Erreur dechiffrage message1 : %O", err))

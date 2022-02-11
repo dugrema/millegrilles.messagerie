@@ -29,7 +29,7 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
             acc[item] = true
             return acc
         }, {})
-        console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
+        // console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
         for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
             const hachage_bytes = liste_hachage_bytes[idx]
             // console.debug("Charger localement cle : %s", hachage_bytes)

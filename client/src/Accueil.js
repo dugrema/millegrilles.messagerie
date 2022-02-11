@@ -23,7 +23,7 @@ function Accueil(props) {
     const ouvrirMessage = useCallback(event=>{
         let uuidMessage = event
         if(event.currentTarget) uuidMessage = event.currentTarget.value
-        console.debug("Ouvrir message : %O", uuidMessage)
+        // console.debug("Ouvrir message : %O", uuidMessage)
         setUuidSelectionne(uuidMessage)
     }, [setUuidSelectionne])
 
@@ -31,7 +31,7 @@ function Accueil(props) {
     if(uuidSelectionne) {
         // Afficher message
         const message = listeMessages.filter(item=>item.uuid_transaction===uuidSelectionne).shift()
-        console.debug("Ouvrir message : %O", message)
+        // console.debug("Ouvrir message : %O", message)
         contenu = <AfficherMessage 
                     workers={workers} 
                     message={message} 
