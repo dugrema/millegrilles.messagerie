@@ -6,7 +6,8 @@ const L2Prive = '2.prive',
 const DOMAINE_MESSAGERIE = 'Messagerie',
       DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MAITREDESCLES = 'MaitreDesCles',
-      CONST_DOMAINE_FICHIERS = 'fichiers'
+      CONST_DOMAINE_FICHIERS = 'fichiers',
+      CONST_DOMAINE_TOPOLOGIE = 'CoreTopologie'
 
 const ROUTING_KEYS_FICHIERS = [
     //'evenement.grosfichiers.majFichier',
@@ -21,7 +22,8 @@ const ROUTING_KEYS_COLLECTIONS = [
 // ...ROUTING_KEYS_COLLECTIONS,
 // ]
 
-let _certificatMaitreCles = null
+let _certificatMaitreCles = null,
+    _domainesApplications = null
 
 function challenge(socket, params) {
     // Repondre avec un message signe
@@ -84,6 +86,35 @@ async function posterMessage(socket, params) {
     return {message: reponseMessage, maitreCles: reponseMaitreCles}
 }
 
+async function getDomainesMessagerie(socket, params) {
+    let domainesApplications = _domainesApplications
+    if(!domainesApplications) {
+        debug("Requete pour applications/domaines (dns messagerie)")
+
+        try {
+            domainesApplications = await socket.amqpdao.transmettreRequete(
+                CONST_DOMAINE_TOPOLOGIE, {}, 
+                {action: 'listeApplicationsDeployees', decoder: true}
+            )
+
+            // TTL
+            setTimeout(()=>{_domainesApplications=null}, 120_000)
+
+            _domainesApplications = domainesApplications
+        } catch(err) {
+            console.error("mqdao.transmettreRequete ERROR : %O", err)
+
+            // Utiliser ancienne version si disponible
+            if(!domainesApplications) {
+                // Aucune version disponible
+                return {ok: false, err: ''+err}
+            }
+        }
+    }
+
+    return domainesApplications
+}
+
 async function transmettreRequete(socket, params, action, opts) {
     opts = opts || {}
     const domaine = opts.domaine || DOMAINE_MESSAGERIE
@@ -129,48 +160,49 @@ function verifierMessage(message, domaine, action) {
     if(actionRecue !== action) throw new Error(`Mismatch action (${actionRecue} !== ${action})"`)
 }
 
-async function ecouterMajFichiers(socket, cb) {
-    const userId = socket.userId
-    debug("ecouterMajFichiers userId : %s", socket.userId)
-    const opts = {
-        routingKeys: ROUTING_KEYS_FICHIERS,
-        exchange: [L2Prive],
-        userId,
-    }
-    socket.subscribe(opts, cb)
-}
+// async function ecouterMajFichiers(socket, cb) {
+//     const userId = socket.userId
+//     debug("ecouterMajFichiers userId : %s", socket.userId)
+//     const opts = {
+//         routingKeys: ROUTING_KEYS_FICHIERS,
+//         exchange: [L2Prive],
+//         userId,
+//     }
+//     socket.subscribe(opts, cb)
+// }
 
-async function ecouterMajCollections(socket, cb) {
-    const userId = socket.userId
-    debug("ecouterMajCollections userId : %s", socket.userId)
-    const opts = {
-        routingKeys: ROUTING_KEYS_COLLECTIONS,
-        exchange: [L2Prive],
-        userId,
-    }
-    socket.subscribe(opts, cb)
-}
+// async function ecouterMajCollections(socket, cb) {
+//     const userId = socket.userId
+//     debug("ecouterMajCollections userId : %s", socket.userId)
+//     const opts = {
+//         routingKeys: ROUTING_KEYS_COLLECTIONS,
+//         exchange: [L2Prive],
+//         userId,
+//     }
+//     socket.subscribe(opts, cb)
+// }
 
-async function ecouterTranscodageProgres(socket, params, cb) {
-    const opts = {
-        routingKeys: [`evenement.fichiers.${params.fuuid}.transcodageProgres`],
-        exchange: [L2Prive],
-    }
-    socket.subscribe(opts, cb)
-}
+// async function ecouterTranscodageProgres(socket, params, cb) {
+//     const opts = {
+//         routingKeys: [`evenement.fichiers.${params.fuuid}.transcodageProgres`],
+//         exchange: [L2Prive],
+//     }
+//     socket.subscribe(opts, cb)
+// }
 
-async function retirerTranscodageProgres(socket, params, cb) {
-    const routingKeys = [`2.prive/evenement.fichiers.${params.fuuid}.transcodageProgres`]
-    socket.unsubscribe({routingKeys})
-    if(cb) cb(true)
-}
+// async function retirerTranscodageProgres(socket, params, cb) {
+//     const routingKeys = [`2.prive/evenement.fichiers.${params.fuuid}.transcodageProgres`]
+//     socket.unsubscribe({routingKeys})
+//     if(cb) cb(true)
+// }
 
 module.exports = {
     challenge, getClesChiffrage,
     getMessages, getPermissionMessages, getClesFichiers, 
-    posterMessage,
+    posterMessage, 
+    
+    getDomainesMessagerie,
 
-
-    ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
-    retirerTranscodageProgres, 
+    // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
+    // retirerTranscodageProgres, 
 }

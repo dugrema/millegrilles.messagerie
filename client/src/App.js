@@ -25,6 +25,7 @@ function App() {
   const [etatConnexion, setEtatConnexion] = useState(false)
   const [idmg, setIdmg] = useState('')
   const [certificatMaitreDesCles, setCertificatMaitreDesCles] = useState('')
+  const [dnsMessagerie, setDnsMessagerie] = useState('')
 
   const { connexion, transfertFichiers } = workers
 
@@ -88,18 +89,25 @@ function App() {
       // }))
       //   .catch(err=>{console.error("Erreur enregistrerCallbackMajCollection : %O", err)})
 
-      workers.chiffrage.getIdmgLocal().then(idmg=>{
-        console.debug("IDMG local chiffrage : %O", idmg)
-        setIdmg(idmg)
-      })
+      workers.chiffrage.getIdmgLocal()
+        .then(idmg=>{
+          console.debug("IDMG local chiffrage : %O", idmg)
+          setIdmg(idmg)
+        })
+        .catch(err=>console.error("Erreur chargement idmg local : %O", err))
 
       workers.connexion.getClesChiffrage()
         .then(cles=>{
           console.debug("Cles chiffrage recues : %O", cles)
           setCertificatMaitreDesCles(cles.certificat)
         })
-        .catch(err=>{console.error("Erreur chargement cles chiffrage : %O", err)})
-  }, [etatConnexion, setIdmg, setCertificatMaitreDesCles])
+        .catch(err=>console.error("Erreur chargement cles chiffrage : %O", err))
+
+      workers.connexion.getDomainesMessagerie()
+        .then( info => chargerDnsMessagerie(info, setDnsMessagerie) )
+        .catch(err=>console.error("Erreur chargement DNS messagerie : %O", err))
+
+  }, [etatConnexion, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
   
   return (
     <LayoutApplication>
@@ -156,6 +164,21 @@ async function connecter(workers, setUsager, setEtatConnexion) {
 
 function initDb() {
   return ouvrirDB({upgrade: true})
+}
+
+function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
+  console.debug("Info domaines messagerie : %O", infoDns)
+  const listeMessagerie = infoDns.filter(item=>item.application==='messagerie_web')
+  if(listeMessagerie.length === 1) {
+    const item = listeMessagerie.shift()
+    const url = new URL(item.url)
+    const hostDns = url.host
+    console.debug("Host dns messagerie local par defaut : %s", hostDns)
+    setDnsMessagerie(hostDns)
+  } else {
+    // Todo
+    throw new Error("TO DO - handling plusieurs serveurs messagerie")
+  }
 }
 
 function Contenu(props) {
