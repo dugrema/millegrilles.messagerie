@@ -35,9 +35,10 @@ function Contacts(props) {
 
             <EditerContact 
                 show={uuidContactSelectionne?true:false} 
+                workers={workers}
                 uuidContactSelectionne={uuidContactSelectionne} 
                 setUuidContactSelectionne={setUuidContactSelectionne} />
-                
+
         </>
     )
 }

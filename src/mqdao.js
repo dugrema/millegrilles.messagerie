@@ -94,6 +94,10 @@ async function posterMessage(socket, params) {
     return {message: reponseMessage, maitreCles: reponseMaitreCles}
 }
 
+async function majContact(socket, params) {
+    const reponseMessage = await transmettreCommande(socket, params, 'majContact')
+}
+
 async function getDomainesMessagerie(socket, params) {
     let domainesApplications = _domainesApplications
     if(!domainesApplications) {
@@ -211,7 +215,7 @@ function verifierMessage(message, domaine, action) {
 module.exports = {
     challenge, getClesChiffrage,
     getProfil, getMessages, getPermissionMessages, getClesFichiers, getContacts,
-    posterMessage, 
+    posterMessage, majContact,
     
     getDomainesMessagerie,
     initialiserProfil,

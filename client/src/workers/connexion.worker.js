@@ -33,6 +33,10 @@ function getContacts() {
   return ConnexionClient.emitBlocking('getContacts', {}, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getContacts', ajouterCertificat: true})
 }
 
+function majContact(contact) {
+  return ConnexionClient.emitBlocking('majContact', contact, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'majContact', ajouterCertificat: true})
+}
+
 // async function getClesFichiers(fuuids, usager, opts) {
 //   opts = opts || {}
 
@@ -259,7 +263,7 @@ expose({
     // Requetes et commandes privees
     getProfil, getMessages, getPermissionMessages,
     posterMessage,
-    getDomainesMessagerie, getContacts,
+    getDomainesMessagerie, getContacts, majContact,
 
     initialiserProfil,
 

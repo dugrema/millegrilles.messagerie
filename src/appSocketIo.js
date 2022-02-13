@@ -32,6 +32,7 @@ function configurerEvenements(socket) {
       { eventName: 'getDomainesMessagerie', callback: (params, cb) => traiter(socket, mqdao.getDomainesMessagerie, {params, cb}) },
       { eventName: 'initialiserProfil', callback: (params, cb) => traiter(socket, mqdao.initialiserProfil, {params, cb}) },
       { eventName: 'getContacts', callback: (params, cb) => traiter(socket, mqdao.getContacts, {params, cb}) },
+      { eventName: 'majContact', callback: (params, cb) => traiter(socket, mqdao.majContact, {params, cb}) },
 
       // Evenements
       // {eventName: 'ecouterMajFichiers', callback: (_, cb) => {mqdao.ecouterMajFichiers(socket, cb)}},
