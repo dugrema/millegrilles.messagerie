@@ -7,6 +7,8 @@ import Form from 'react-bootstrap/Form'
 import { posterMessage } from './messageUtils'
 import { chargerProfilUsager } from './profil'
 
+import ModalContacts from './ModalContacts'
+
 function NouveauMessage(props) {
 
     const { workers, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie } = props
@@ -19,6 +21,7 @@ function NouveauMessage(props) {
     const [profil, setProfil] = useState('')
     const [replyTo, setReplyTo] = useState('')
     const [from, setFrom] = useState('')
+    const [showContacts, setShowContacts] = useState(false)
 
     const envoyerCb = useCallback(()=>{
         envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc, reply_to: replyTo})
@@ -33,6 +36,15 @@ function NouveauMessage(props) {
     const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
+    const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
+    const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
+
+    const ajouterTo = useCallback(adresses=>{
+        if(!adresses) return
+        let adressesStr = adresses.map(item=>item.adresses[0]).join('; ')
+        if(to) adressesStr = to + '; ' + adressesStr
+        setTo(adressesStr)
+    }, [to, setTo])
 
     useEffect(()=>{
         const from = `@${usager.nomUsager}/${dnsMessagerie}`
@@ -69,6 +81,8 @@ function NouveauMessage(props) {
                 value={to}
                 onChange={toChange}
             />
+            <Button onClick={choisirContacts}>Contacts</Button>
+            <p></p>
 
             <Form.Label htmlFor="inputCc">Cc</Form.Label>
             <Form.Control
@@ -109,6 +123,8 @@ function NouveauMessage(props) {
 
             <Button onClick={envoyerCb}>Envoyer</Button>
             <Button variant="secondary" onClick={annuler}>Annuler</Button>
+
+            <ModalContacts show={showContacts} workers={workers} fermer={fermerContacts} ajouterAdresses={ajouterTo} />
         </>
     )
 
