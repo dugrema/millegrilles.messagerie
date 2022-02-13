@@ -16,10 +16,13 @@ function NouveauMessage(props) {
     const [bcc, setBcc] = useState('')
     const [subject, setSubject] = useState('')
     const [content, setContent] = useState('')
+    const [profil, setProfil] = useState('')
+    const [replyTo, setReplyTo] = useState('')
+    const [from, setFrom] = useState('')
 
     const envoyerCb = useCallback(()=>{
-        envoyer(workers, certificatMaitreDesCles, to, subject, content, {cc, bcc})
-    }, [workers, certificatMaitreDesCles, to, cc, bcc, subject, content])
+        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc})
+    }, [workers, certificatMaitreDesCles, from, to, cc, bcc, subject, content])
     const annuler = useCallback(()=>{
         setAfficherNouveauMessage(false)
     }, [setAfficherNouveauMessage])
@@ -29,18 +32,32 @@ function NouveauMessage(props) {
     const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
     const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
+    const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
 
     useEffect(()=>{
         chargerProfilUsager(workers, {usager, dnsMessagerie})
             .then( profil => {
                 console.debug("Profil recu : %O", profil)
+                setProfil(profil)
+                const from = profil.adresses?profil.adresses[0]:''
+                setFrom(from)
+                setReplyTo(from)
             })
             .catch(err=>console.error("Erreur chargement profil : %O", err))
-    }, [workers])
+    }, [workers, setProfil, setReplyTo])
 
     return (
         <>
             <p>Nouveau message</p>
+
+            <Form.Label htmlFor="replyTo">Reply to</Form.Label>
+            <Form.Control
+                type="text"
+                id="replyTo"
+                name="to"
+                value={replyTo}
+                onChange={replyToChange}
+            />
 
             <Form.Label htmlFor="inputTo">To</Form.Label>
             <Form.Control
@@ -78,7 +95,7 @@ function NouveauMessage(props) {
                 onChange={subjectChange}
             />
             
-            <Form.Group controlId="inputContent">
+            <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
                 <Form.Control 
                     as="textarea" 
@@ -97,8 +114,8 @@ function NouveauMessage(props) {
 
 export default NouveauMessage
 
-async function envoyer(workers, certificatChiffragePem, to, subject, content, opts) {
+async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
-    const resultat = await posterMessage(workers, certificatChiffragePem, to, subject, content, opts)
+    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, subject, content, opts)
     console.debug("Resultat posterMessage : %O", resultat)
 }

@@ -1,7 +1,7 @@
-export async function posterMessage(workers, certifcatChiffragePem, to, subject, content, opts) {
+export async function posterMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     
     const { connexion } = workers
-    const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, to, subject, content, opts)
+    const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
     console.debug("Enveloppe message : %O", enveloppeMessage)
     console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
@@ -11,7 +11,7 @@ export async function posterMessage(workers, certifcatChiffragePem, to, subject,
 
 }
 
-export async function signerMessage(workers, certifcatChiffragePem, to, subject, content, opts) {
+export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
     const {connexion, chiffrage} = workers
@@ -28,7 +28,7 @@ export async function signerMessage(workers, certifcatChiffragePem, to, subject,
         bccFiltre = bcc.split(';').map(item=>item.trim())
     }
 
-    const message = {to: toFiltre, subject, content}
+    const message = {from, to: toFiltre, subject, content}
     champsOptionnels.forEach(nomChamp=>{
         if(opts[nomChamp]) message[nomChamp] = opts[nomChamp]
     })

@@ -61,6 +61,8 @@ function RenderMessage(props) {
 
     if(!message) return ''
 
+    console.debug("Message : %O", message)
+
     return (
         <>
             <p>From: {from}</p>
