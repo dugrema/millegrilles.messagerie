@@ -21,8 +21,8 @@ function NouveauMessage(props) {
     const [from, setFrom] = useState('')
 
     const envoyerCb = useCallback(()=>{
-        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc})
-    }, [workers, certificatMaitreDesCles, from, to, cc, bcc, subject, content])
+        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc, reply_to: replyTo})
+    }, [workers, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content])
     const annuler = useCallback(()=>{
         setAfficherNouveauMessage(false)
     }, [setAfficherNouveauMessage])
@@ -35,16 +35,18 @@ function NouveauMessage(props) {
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
 
     useEffect(()=>{
+        const from = `@${usager.nomUsager}/${dnsMessagerie}`
+        setFrom(from)
+
         chargerProfilUsager(workers, {usager, dnsMessagerie})
             .then( profil => {
                 console.debug("Profil recu : %O", profil)
                 setProfil(profil)
-                const from = profil.adresses?profil.adresses[0]:''
-                setFrom(from)
-                setReplyTo(from)
+                const replyTo = profil.adresses?profil.adresses[0]:''
+                setReplyTo(replyTo)
             })
             .catch(err=>console.error("Erreur chargement profil : %O", err))
-    }, [workers, setProfil, setReplyTo])
+    }, [workers, usager, dnsMessagerie, setProfil, setReplyTo])
 
     return (
         <>

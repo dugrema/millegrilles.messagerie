@@ -9,13 +9,14 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, su
     const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles )
     console.debug("Reponse poster : %O", reponse)
 
+    return reponse
 }
 
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
     const {connexion, chiffrage} = workers
-    const {cc, bcc, reply_to, attachments, attachments_inline} = opts
+    const {cc, bcc, attachments, attachments_inline} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())

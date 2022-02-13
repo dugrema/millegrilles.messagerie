@@ -66,6 +66,7 @@ function RenderMessage(props) {
     return (
         <>
             <p>From: {from}</p>
+            <p>Reply To: {reply_to}</p>
             <p>To: {to.join('; ')}</p>
             <p>CC: {cc}</p>
             <p>Date reception : <FormatterDate value={date_reception}/></p>
