@@ -37,6 +37,11 @@ function majContact(contact) {
   return ConnexionClient.emitBlocking('majContact', contact, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'majContact', ajouterCertificat: true})
 }
 
+function marquerLu(uuid_message, flag_lu) {
+  const data = {uuid_transaction: uuid_message, lu: flag_lu}
+  return ConnexionClient.emitBlocking('marquerLu', data, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'lu', ajouterCertificat: true})
+}
+
 // async function getClesFichiers(fuuids, usager, opts) {
 //   opts = opts || {}
 
@@ -263,7 +268,7 @@ expose({
     // Requetes et commandes privees
     getProfil, getMessages, getPermissionMessages,
     posterMessage,
-    getDomainesMessagerie, getContacts, majContact,
+    getDomainesMessagerie, getContacts, majContact, marquerLu,
 
     initialiserProfil,
 

@@ -40,6 +40,13 @@ function AfficherMessage(props) {
             .catch(err=>console.error("Erreur chargement message : %O", err))
     }, [workers, uuidSelectionne, setMessage, setMessageDechiffre])
 
+    useEffect(()=>{
+        if(messageDechiffre && !message.lu) {
+            console.debug("Marquer message %s comme lu", message.uuid_transaction)
+            marquerMessageLu(workers, message.uuid_transaction)
+        }
+    }, [workers, message, messageDechiffre])
+
     return (
         <>
             <p>Afficher message</p>
@@ -74,4 +81,13 @@ function RenderMessage(props) {
             <div>{content}</div>
         </>
     )
+}
+
+async function marquerMessageLu(workers, uuid_transaction) {
+    try {
+        const reponse = await workers.connexion.marquerLu(uuid_transaction, true)
+        console.debug("Reponse marquer message %s lu : %O", uuid_transaction, reponse)
+    } catch(err) {
+        console.error("Erreur marquer message %s lu : %O", uuid_transaction, err)
+    }
 }
