@@ -14,12 +14,14 @@ function Contacts(props) {
     const nouveauContact = useCallback(()=>setUuidContactSelectionne(true), [setUuidContactSelectionne])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
 
+    let contactSelectionne = ''
+    if(contacts && contacts.length > 0 && uuidContactSelectionne) {
+        contactSelectionne = contacts.filter(item=>item.uuid_contact===uuidContactSelectionne).shift()
+    }
+
     useEffect(()=>{
         workers.connexion.getContacts()
-            .then( reponse => {
-                console.debug("Contacts : %O", reponse)
-                setContacts(reponse.contacts)
-            })
+            .then( reponse => setContacts(reponse.contacts) )
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
     }, [])
 
@@ -31,13 +33,15 @@ function Contacts(props) {
                 show={uuidContactSelectionne?false:true} 
                 contacts={contacts} 
                 nouveauContact={nouveauContact}
-                retour={retour} />
+                retour={retour} 
+                setUuidContactSelectionne={setUuidContactSelectionne} />
 
             <EditerContact 
                 show={uuidContactSelectionne?true:false} 
                 workers={workers}
                 uuidContactSelectionne={uuidContactSelectionne} 
-                setUuidContactSelectionne={setUuidContactSelectionne} />
+                setUuidContactSelectionne={setUuidContactSelectionne} 
+                contact={contactSelectionne} />
 
         </>
     )
@@ -46,8 +50,14 @@ function Contacts(props) {
 export default Contacts
 
 function AfficherListeContacts(props) {
-    console.debug("AfficherListeContacts proppys : %O", props)
-    const { nouveauContact, retour, contacts, show } = props
+    const { nouveauContact, retour, contacts, show, setUuidContactSelectionne } = props
+
+    const ouvrir = useCallback(event=>{
+        const uuid_contact = event.currentTarget.value
+        console.debug("Ouvrir : %O", uuid_contact)
+        setUuidContactSelectionne(uuid_contact)
+    }, [setUuidContactSelectionne])
+
     if( !contacts || !show ) return ''
 
     return (
@@ -59,15 +69,27 @@ function AfficherListeContacts(props) {
                 </Col>
             </Row>
 
-            {contacts.map( item => <AfficherContactRow key={item.uuid_contact} value={item} /> )}
+            <Row>
+                <Col>Nom</Col>
+                <Col>Adresse</Col>
+            </Row>
+            {contacts.map( item => <AfficherContactRow key={item.uuid_contact} value={item} ouvrir={ouvrir} /> )}
         </>
     )
 }
 
 function AfficherContactRow(props) {
+    const { ouvrir } = props
+    const { nom, adresses, uuid_contact } = props.value
+    const adresse = [...adresses].shift()
+
     return (
-        <>
-            <p>Contact</p>
-        </>
+        <Row>
+            <Col>{nom}</Col>
+            <Col>{adresse}</Col>
+            <Col>
+                <Button onClick={ouvrir} value={uuid_contact}>Ouvrir</Button>
+            </Col>
+        </Row>
     )
 }

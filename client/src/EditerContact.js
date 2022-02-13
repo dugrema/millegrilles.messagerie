@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
@@ -6,7 +6,8 @@ import Col from 'react-bootstrap/Col'
 
 function EditerContact(props) {
 
-    const { workers, show, setUuidContactSelectionne } = props
+    const { workers, show, setUuidContactSelectionne, contact } = props
+    const uuid_contact = contact?contact.uuid_contact:''
 
     // Champs data
     const [nom, setNom] = useState('')
@@ -15,7 +16,7 @@ function EditerContact(props) {
     const [adresses, setAdresses] = useState([])
     const [blocked, setBlocked] = useState(false)
     const [trusted, setTrusted] = useState(false)
-    const data = {nom, adresses, blocked, trusted}
+    const data = {uuid_contact, nom, adresses, blocked, trusted}
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
     const adresseEditChange = useCallback(event=>setAdresseEdit(event.currentTarget.value), [setAdresseEdit])
@@ -56,6 +57,25 @@ function EditerContact(props) {
 
     const retour = useCallback(()=>setUuidContactSelectionne(''), [setUuidContactSelectionne])
     const sauvegarderCb = useCallback(()=>sauvegarder(workers, data, retour), [workers, data, retour])
+
+    useEffect(()=>{
+        if(contact) {
+            setNom(contact.nom || '')
+            setAdresseEdit('')
+            setAdresseEditIdx('')
+            setAdresses(contact.adresses || [])
+            setBlocked(contact.blocked===true?true:false)
+            setTrusted(contact.trusted===true?true:false)
+        } else {
+            // Reset (nouveau contact)
+            setNom('')
+            setAdresseEdit('')
+            setAdresseEditIdx('')
+            setAdresses([])
+            setBlocked(false)
+            setTrusted(false)
+        }
+    }, [contact])
 
     if(!show) return ''
 
