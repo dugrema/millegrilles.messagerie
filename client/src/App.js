@@ -16,6 +16,7 @@ import Menu from './Menu'
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
+const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
   const { connexion, transfertFichiers } = workers
 
   // Selecteurs de page
+  const [afficherContacts, setAfficherContacts] = useState(false)
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   const [uuidSelectionne, setUuidSelectionne] = useState('')
 
@@ -119,6 +121,7 @@ function App() {
           etatConnexion={etatConnexion} 
           setAfficherNouveauMessage={setAfficherNouveauMessage}
           setUuidSelectionne={setUuidSelectionne}
+          setAfficherContacts={setAfficherContacts}
         />
       </HeaderApplication>
 
@@ -135,7 +138,8 @@ function App() {
             uuidSelectionne={uuidSelectionne}
             setUuidSelectionne={setUuidSelectionne}
             dnsMessagerie={dnsMessagerie}
-            
+            afficherContacts={afficherContacts}
+            setAfficherContacts={setAfficherContacts}
           />
         </Suspense>
       </Container>
@@ -186,11 +190,13 @@ function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
 function Contenu(props) {
   if(!props.workers) return <Attente />
 
-  const { afficherNouveauMessage, uuidSelectionne } = props
+  const { afficherNouveauMessage, afficherContacts, uuidSelectionne } = props
 
   // Selection de la page a afficher
   let Page
-  if(afficherNouveauMessage) {
+  if(afficherContacts) {
+    Page = Contacts
+  } else if(afficherNouveauMessage) {
     Page = NouveauMessage
   } else if(uuidSelectionne) {
     Page = AfficherMessage

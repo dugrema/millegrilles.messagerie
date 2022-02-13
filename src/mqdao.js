@@ -76,6 +76,10 @@ function getClesFichiers(socket, params) {
     return transmettreRequete(socket, params, 'dechiffrage', {domaine: CONST_DOMAINE_MAITREDESCLES})
 }
 
+function getContacts(socket, params) {
+    return transmettreRequete(socket, params, 'getContacts')
+}
+
 async function posterMessage(socket, params) {
     const { message, commandeMaitrecles } = params
 
@@ -206,7 +210,7 @@ function verifierMessage(message, domaine, action) {
 
 module.exports = {
     challenge, getClesChiffrage,
-    getProfil, getMessages, getPermissionMessages, getClesFichiers, 
+    getProfil, getMessages, getPermissionMessages, getClesFichiers, getContacts,
     posterMessage, 
     
     getDomainesMessagerie,

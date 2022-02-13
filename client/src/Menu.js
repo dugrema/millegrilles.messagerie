@@ -1,12 +1,8 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 
 import Navbar from 'react-bootstrap/Navbar'
 import Nav from 'react-bootstrap/Nav'
-import Badge from 'react-bootstrap/Badge'
-import Button from 'react-bootstrap/Button'
 import NavDropdown from 'react-bootstrap/NavDropdown'
-import Form from 'react-bootstrap/Form'
-import FormControl from 'react-bootstrap/FormControl'
 
 import { IconeConnexion } from '@dugrema/millegrilles.reactjs'
 
@@ -15,19 +11,22 @@ function Menu(props) {
     // console.debug("!!! Menu Proppys : %O", props)
 
     const { 
-      setPage, paramsRecherche, setParamsRecherche,
-      showTransfertModal,  
-      setAfficherNouveauMessage, setUuidSelectionne,
+      setAfficherNouveauMessage, setAfficherContacts, setUuidSelectionne,
     } = props
-
-    const afficherNouveauMessage = useCallback(()=>{
-      setAfficherNouveauMessage(true)
-    }, [setAfficherNouveauMessage])
 
     const afficherReception = useCallback(()=>{
       setAfficherNouveauMessage(false)
       setUuidSelectionne('')
     }, [setAfficherNouveauMessage])
+
+    const afficherNouveauMessage = useCallback(()=>{
+      setAfficherNouveauMessage(true)
+      setAfficherContacts(false)
+    }, [setAfficherNouveauMessage, setAfficherContacts])
+
+    const afficherContacts = useCallback(()=>{
+      setAfficherContacts(true)
+    }, [setAfficherContacts])
 
     return (
       <Navbar collapseOnSelect expand="md">
@@ -38,12 +37,6 @@ function Menu(props) {
           </Nav.Link>
         </Navbar.Brand>
 
-        <Nav.Item>
-            <Nav.Link title="Upload/Download" onClick={showTransfertModal}>
-                <LabelTransfert {...props} />
-            </Nav.Link>
-        </Nav.Item>
-
         <Navbar.Collapse id="responsive-navbar-menu">
 
             <Nav.Item>
@@ -52,13 +45,11 @@ function Menu(props) {
                 </Nav.Link>
             </Nav.Item>
 
-            <DropDownRequetes {...props} />
-
-            <Search 
-              paramsRecherche={paramsRecherche}
-              setParamsRecherche={setParamsRecherche}
-              setPage={setPage}
-            />
+            <Nav.Item>
+                <Nav.Link title="Contacts" onClick={afficherContacts}>
+                    Contacts
+                </Nav.Link>
+            </Nav.Item>
 
             <DropDownUsager {...props} />
 
@@ -73,60 +64,6 @@ function Menu(props) {
 }
 
 export default Menu
-
-function Search(props) {
-
-  const { setParamsRecherche, setPage } = props
-
-  const [ paramsStr, setParamsStr ] = useState('')
-
-  const changerParams = useCallback( event => {
-    const value = event.currentTarget.value
-    setParamsStr(value)
-  }, [setParamsStr])
-
-  const chercherAction = useCallback( event => {
-    event.stopPropagation()
-    event.preventDefault()
-
-    if(paramsStr) {
-      setParamsRecherche(paramsStr)
-      setPage("Recherche")
-    }
-
-  }, [paramsStr, setPage, setParamsRecherche])
-
-  return (
-    <Form className="d-flex" onSubmit={chercherAction}>
-      <FormControl
-        type="search"
-        placeholder="Search"
-        className="me-2"
-        aria-label="Search"
-        value={paramsStr}
-        onChange={changerParams}
-      />
-      <Button variant="outline-secondary" disabled={!paramsStr} onClick={chercherAction}>Recherche</Button>
-    </Form>
-  )
-}
-
-function DropDownRequetes(props) {
-
-  const { setPage, showReindexerModalOuvrir } = props
-
-  return (
-      <NavDropdown title="Requetes" id="basic-nav-dropdown-requetes" drop="down" className="menu-item">
-        <NavDropdown.Item title="Corbeille" onClick={()=>setPage('Corbeille')}>
-          <i className="fa fa-trash-o" /> {' '} Corbeille
-        </NavDropdown.Item>
-        <NavDropdown.Item title="Reindexer" onClick={showReindexerModalOuvrir}>
-          <i className="fa fa-repeat" /> {' '} Reindexer
-        </NavDropdown.Item>
-      </NavDropdown>
-  )
-
-}
 
 function DropDownUsager(props) {
 
@@ -149,62 +86,4 @@ function DropDownUsager(props) {
         </NavDropdown>
     )
 
-}
-
-function LabelTransfert(props) {
-
-  return <p>Etat Transfert</p>
-
-  // const { etatTransfert } = props
-  // const download = etatTransfert.download || {}
-  // const downloads = download.downloads || []
-  // const pctDownload = download.pct || 100
-  // const upload = etatTransfert.upload || {}
-  // const uploadsCompletes = upload.uploadsCompletes || []
-  // const pctUpload = upload.pctTotal || 100
-
-  // const downloadsResultat = downloads.reduce((nb, item)=>{
-  //   let {encours, succes, erreur} = nb
-  //   if(item.status===3) succes++
-  //   if(item.status===4) erreur++
-  //   return {encours, succes, erreur}
-  // }, {encours: 0, succes: 0, erreur: 0})
-
-  // let variantDownload = 'primary'
-  // if(downloadsResultat.erreur>0) variantDownload = 'danger'
-  // else if(downloadsResultat.succes>0) variantDownload = 'success'
-
-  // const uploadsResultat = uploadsCompletes.reduce((nb, item)=>{
-  //   let {encours, succes, erreur} = nb
-  //   if(item.status===3) succes++
-  //   if(item.status===4) erreur++
-  //   return {encours, succes, erreur}
-  // }, {encours: 0, succes: 0, erreur: 0})
-  // if(upload.uploadEnCours) {
-  //   uploadsResultat.encours = 1
-  // }
-
-  // let variantUpload = 'primary'
-  // if(uploadsResultat.erreur>0) variantUpload = 'danger'
-  // else if(uploadsResultat.succes>0) variantUpload = 'success'
-
-  // return (
-  //   <div className="transfer-labels">
-
-  //     <div>
-  //       <i className="fa fa-upload" />
-  //       {' '}
-  //       <Badge pill bg={variantUpload}>{pctUpload}%</Badge>
-  //     </div>
-
-  //     {' '}
-
-  //     <div>
-  //       <i className="fa fa-download" />
-  //       {' '}
-  //       <Badge pill bg={variantDownload}>{pctDownload}%</Badge>
-  //     </div>
-
-  //   </div>
-  // )
 }
