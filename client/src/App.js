@@ -134,6 +134,8 @@ function App() {
             setAfficherNouveauMessage={setAfficherNouveauMessage}
             uuidSelectionne={uuidSelectionne}
             setUuidSelectionne={setUuidSelectionne}
+            dnsMessagerie={dnsMessagerie}
+            
           />
         </Suspense>
       </Container>
@@ -177,7 +179,7 @@ function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
     setDnsMessagerie(hostDns)
   } else {
     // Todo
-    throw new Error("TO DO - handling plusieurs serveurs messagerie")
+    throw new Error("TO DO - handling plusieurs serveurs messagerie / serveur manquant")
   }
 }
 

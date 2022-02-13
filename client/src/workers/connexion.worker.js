@@ -7,6 +7,11 @@ const CONST_DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MESSAGERIE = 'Messagerie',
       CONST_DOMAINE_TOPOLOGIE = 'CoreTopologie'
 
+function getProfil(requete) {
+  requete = requete || {}
+  return ConnexionClient.emitBlocking('getProfil', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getProfil', ajouterCertificat: true})
+}
+
 function getMessages(requete) {
   return ConnexionClient.emitBlocking('getMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getMessages', ajouterCertificat: true})
 }
@@ -18,6 +23,10 @@ function getPermissionMessages(uuid_transaction_messages) {
 
 function getClesChiffrage() {
   return ConnexionClient.emitBlocking('getClesChiffrage', {})
+}
+
+function initialiserProfil(adresse) {
+  return ConnexionClient.emitBlocking('initialiserProfil', {adresse}, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'initialiserProfil', ajouterCertificat: true})
 }
 
 // async function getClesFichiers(fuuids, usager, opts) {
@@ -244,9 +253,11 @@ expose({
     // getClesFichiers, getPermission,
 
     // Requetes et commandes privees
-    getMessages, getPermissionMessages,
+    getProfil, getMessages, getPermissionMessages,
     posterMessage,
     getDomainesMessagerie,
+
+    initialiserProfil,
 
     // getDocuments, 
     // toggleFavoris, 

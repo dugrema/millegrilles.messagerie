@@ -5,10 +5,11 @@ import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 
 import { posterMessage } from './messageUtils'
+import { chargerProfilUsager } from './profil'
 
 function NouveauMessage(props) {
 
-    const { workers, setAfficherNouveauMessage, certificatMaitreDesCles } = props
+    const { workers, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie } = props
 
     const [to, setTo] = useState('')
     const [cc, setCc] = useState('')
@@ -28,6 +29,14 @@ function NouveauMessage(props) {
     const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
     const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
+
+    useEffect(()=>{
+        chargerProfilUsager(workers, {usager, dnsMessagerie})
+            .then( profil => {
+                console.debug("Profil recu : %O", profil)
+            })
+            .catch(err=>console.error("Erreur chargement profil : %O", err))
+    }, [workers])
 
     return (
         <>

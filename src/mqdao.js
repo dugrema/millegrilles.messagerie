@@ -59,7 +59,11 @@ async function getClesChiffrage(socket, params) {
     }
     return certificatMaitreCles
 }
-  
+
+function getProfil(socket, params) {
+    return transmettreRequete(socket, params, 'getProfil')
+}
+
 function getMessages(socket, params) {
     return transmettreRequete(socket, params, 'getMessages')
 }
@@ -113,6 +117,10 @@ async function getDomainesMessagerie(socket, params) {
     }
 
     return domainesApplications
+}
+
+async function initialiserProfil(socket, params) {
+    return transmettreCommande(socket, params, 'initialiserProfil')
 }
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -198,10 +206,11 @@ function verifierMessage(message, domaine, action) {
 
 module.exports = {
     challenge, getClesChiffrage,
-    getMessages, getPermissionMessages, getClesFichiers, 
+    getProfil, getMessages, getPermissionMessages, getClesFichiers, 
     posterMessage, 
     
     getDomainesMessagerie,
+    initialiserProfil,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 
