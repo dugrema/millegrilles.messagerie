@@ -29,3 +29,7 @@
 .nouveau {
     font-weight: bold;
 }
+
+.clear {
+    clear: left;
+}

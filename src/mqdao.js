@@ -4,7 +4,7 @@ const L2Prive = '2.prive',
       L3Protege = '3.protege'
 
 const DOMAINE_MESSAGERIE = 'Messagerie',
-      DOMAINE_GROSFICHIERS = 'GrosFichiers',
+      CONST_DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MAITREDESCLES = 'MaitreDesCles',
       CONST_DOMAINE_FICHIERS = 'fichiers',
       CONST_DOMAINE_TOPOLOGIE = 'CoreTopologie'
@@ -135,6 +135,24 @@ async function initialiserProfil(socket, params) {
     return transmettreCommande(socket, params, 'initialiserProfil')
 }
 
+
+// Section GrosFichiers pour attachements
+
+function getDocuments(socket, params) {
+    return transmettreRequete(socket, params, 'documentsParTuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
+function getFavoris(socket, params) {
+    return transmettreRequete(socket, params, 'favoris', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
+function getCollection(socket, params) {
+    return transmettreRequete(socket, params, 'contenuCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
+
+// Fonctions generiques
+
 async function transmettreRequete(socket, params, action, opts) {
     opts = opts || {}
     const domaine = opts.domaine || DOMAINE_MESSAGERIE
@@ -180,41 +198,6 @@ function verifierMessage(message, domaine, action) {
     if(actionRecue !== action) throw new Error(`Mismatch action (${actionRecue} !== ${action})"`)
 }
 
-// async function ecouterMajFichiers(socket, cb) {
-//     const userId = socket.userId
-//     debug("ecouterMajFichiers userId : %s", socket.userId)
-//     const opts = {
-//         routingKeys: ROUTING_KEYS_FICHIERS,
-//         exchange: [L2Prive],
-//         userId,
-//     }
-//     socket.subscribe(opts, cb)
-// }
-
-// async function ecouterMajCollections(socket, cb) {
-//     const userId = socket.userId
-//     debug("ecouterMajCollections userId : %s", socket.userId)
-//     const opts = {
-//         routingKeys: ROUTING_KEYS_COLLECTIONS,
-//         exchange: [L2Prive],
-//         userId,
-//     }
-//     socket.subscribe(opts, cb)
-// }
-
-// async function ecouterTranscodageProgres(socket, params, cb) {
-//     const opts = {
-//         routingKeys: [`evenement.fichiers.${params.fuuid}.transcodageProgres`],
-//         exchange: [L2Prive],
-//     }
-//     socket.subscribe(opts, cb)
-// }
-
-// async function retirerTranscodageProgres(socket, params, cb) {
-//     const routingKeys = [`2.prive/evenement.fichiers.${params.fuuid}.transcodageProgres`]
-//     socket.unsubscribe({routingKeys})
-//     if(cb) cb(true)
-// }
 
 module.exports = {
     challenge, getClesChiffrage,
@@ -223,6 +206,9 @@ module.exports = {
     
     getDomainesMessagerie,
     initialiserProfil,
+
+    // GrosFichiers
+    getDocuments, getFavoris, getCollection,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 
