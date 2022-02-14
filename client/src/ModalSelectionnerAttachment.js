@@ -195,35 +195,35 @@ async function chargerCollection(workers, cuuid, setListe, usager) {
     }, [])
     console.debug("Fuuids images : %O", fuuidsImages)
 
-    // Verifier les cles qui sont deja connues
-    let fuuidsInconnus = []
-    for await (const fuuid of fuuidsImages) {
-        const cleFichier = await getCleDechiffree(fuuid)
-        if(!cleFichier) fuuidsInconnus.push(fuuid)
-    }
+    // // Verifier les cles qui sont deja connues
+    // let fuuidsInconnus = []
+    // for await (const fuuid of fuuidsImages) {
+    //     const cleFichier = await getCleDechiffree(fuuid)
+    //     if(!cleFichier) fuuidsInconnus.push(fuuid)
+    // }
 
-    if(fuuidsInconnus.length > 0) {
-        connexion.getClesFichiers(fuuidsInconnus, usager)
-            .then(async reponse=>{
-                // console.debug("Reponse dechiffrage cles : %O", reponse)
+    // if(fuuidsInconnus.length > 0) {
+    //     connexion.getClesFichiers(fuuidsInconnus, usager)
+    //         .then(async reponse=>{
+    //             // console.debug("Reponse dechiffrage cles : %O", reponse)
 
-                for await (const fuuid of Object.keys(reponse.cles)) {
-                    const cleFichier = reponse.cles[fuuid]
-                    // console.debug("Dechiffrer cle %O", cleFichier)
-                    const cleSecrete = await workers.chiffrage.preparerCleSecreteSubtle(cleFichier.cle, cleFichier.iv)
-                    cleFichier.cleSecrete = cleSecrete
-                    // console.debug("Cle secrete fichier %O", cleFichier)
-                    saveCleDechiffree(fuuid, cleSecrete, cleFichier)
-                        .catch(err=>{
-                            console.warn("Erreur sauvegarde cle dechiffree %s dans la db locale", err)
-                        })
-                }
+    //             for await (const fuuid of Object.keys(reponse.cles)) {
+    //                 const cleFichier = reponse.cles[fuuid]
+    //                 // console.debug("Dechiffrer cle %O", cleFichier)
+    //                 const cleSecrete = await workers.chiffrage.preparerCleSecreteSubtle(cleFichier.cle, cleFichier.iv)
+    //                 cleFichier.cleSecrete = cleSecrete
+    //                 // console.debug("Cle secrete fichier %O", cleFichier)
+    //                 saveCleDechiffree(fuuid, cleSecrete, cleFichier)
+    //                     .catch(err=>{
+    //                         console.warn("Erreur sauvegarde cle dechiffree %s dans la db locale", err)
+    //                     })
+    //             }
             
-            })
-            .catch(err=>{console.error("Erreur chargement cles fichiers %O : %O", fuuidsInconnus, err)})
-    } else {
-        // console.debug("Toutes les cles sont deja chargees")
-    }
+    //         })
+    //         .catch(err=>{console.error("Erreur chargement cles fichiers %O : %O", fuuidsInconnus, err)})
+    // } else {
+    //     // console.debug("Toutes les cles sont deja chargees")
+    // }
 
     if(documents) {
         const donnees = preprarerDonnees(documents, workers)

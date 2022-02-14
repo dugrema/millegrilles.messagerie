@@ -15,8 +15,10 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, su
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
+    console.debug("Signer message, params opts : %O", opts)
+
     const {connexion, chiffrage} = workers
-    const {cc, bcc, attachments, attachments_inline} = opts
+    const {cc, bcc, attachments} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())

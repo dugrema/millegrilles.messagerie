@@ -4,6 +4,9 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
+import { base64 } from 'multiformats/bases/base64'
+
+import { ListeFichiers, FormatteurTaille, FormatterDate, getCleDechiffree, saveCleDechiffree } from '@dugrema/millegrilles.reactjs'
 
 import { posterMessage } from './messageUtils'
 import { chargerProfilUsager } from './profil'
@@ -11,7 +14,7 @@ import { chargerProfilUsager } from './profil'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, getCleDechiffree, saveCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import { loadThumbnailChiffre } from './mapperFichier'
 
 function NouveauMessage(props) {
 
@@ -174,10 +177,45 @@ export default NouveauMessage
 async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
+    let attachments_inline = opts.attachments_inline
+
     if(opts.attachments) {
+        console.debug("Traiter attachments : %O", opts.attachments)
+        // Inline all thumbnails
+        const mediaAttachments = opts.attachments.filter(
+            item => item.version_courante && item.version_courante.images && item.version_courante.images.thumb)
+        for(let idx=0; idx<mediaAttachments.length; idx++) {
+            const attachment = mediaAttachments[idx]
+            const thumbnail = attachment.version_courante.images.thumb
+            // const miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
+            const blobThumbnail = await workers.traitementFichiers.getThumbnail(thumbnail.hachage, {dataChiffre: thumbnail.data_chiffre})
+
+            console.debug("Blob thumbnail : %O", blobThumbnail)
+
+            const thumbnailData = await blobThumbnail.arrayBuffer()
+            console.debug("Bytes thumbnail : %O", thumbnailData)
+
+            // Encoder en multibase
+            const thumbnailBase64 = base64.encode(new Uint8Array(thumbnailData))
+            console.debug("Thumbnail inline : %O", thumbnailBase64)
+            const thumbnailInfo = {...thumbnail, data: thumbnailBase64}
+            delete thumbnailInfo.data_chiffre
+
+            if(!attachments_inline) {
+                attachments_inline = []
+                // opts.attachments_inline = attachments_inline
+            }
+
+            attachments_inline.push({
+                fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
+                thumb: thumbnailInfo, 
+            })
+        }
+
         // Mapper le fuuid seulement
         const attachments = opts.attachments.map(item=>item.fuuid)
-        opts = {...opts, attachments}
+        opts = {...opts, attachments, attachments_inline}
+
     }
 
     const resultat = await posterMessage(workers, certificatChiffragePem, from, to, subject, content, opts)
