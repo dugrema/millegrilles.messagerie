@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
+import ButtonGroup from 'react-bootstrap/ButtonGroup'
 
-import { pki } from '@dugrema/node-forge'
-import { FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
 
 import { dechiffrerMessage } from './cles'
+import { mapper, onContextMenu } from './mapperFichier'
 
 const { extraireExtensionsMillegrille } = forgecommon
 
@@ -62,8 +63,8 @@ export default AfficherMessage
 
 function RenderMessage(props) {
 
-    const { message, infoMessage } = props
-    const { to, cc, from, reply_to, subject, content } = message
+    const { workers, message, infoMessage } = props
+    const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const { date_reception, lu } = infoMessage
 
     if(!message) return ''
@@ -79,6 +80,8 @@ function RenderMessage(props) {
             <p>Date reception : <FormatterDate value={date_reception}/></p>
             <p>Sujet: {subject}</p>
             <div>{content}</div>
+
+            <AfficherAttachments workers={workers} attachments={attachments} attachments_inline={attachments_inline} />
         </>
     )
 }
@@ -90,4 +93,126 @@ async function marquerMessageLu(workers, uuid_transaction) {
     } catch(err) {
         console.error("Erreur marquer message %s lu : %O", uuid_transaction, err)
     }
+}
+
+function AfficherAttachments(props) {
+    console.debug("AfficherAttachments proppys : %O", props)
+    const { workers, attachments, attachments_inline } = props
+
+    const [colonnes, setColonnes] = useState('')
+    const [modeView, setModeView] = useState('')
+    const [attachmentsList, setAttachmentsList] = useState('')
+    const [fichiersCharges, setFichierCharges] = useState('')
+
+    useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
+
+    useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
+
+    useEffect(()=>{
+        if(!attachments || !attachments_inline) { setAttachmentsList(''); return }  // Rien a faire
+
+        const dictAttachments = {}
+        attachments.forEach( fuuid => dictAttachments[fuuid] = {fileId: fuuid, fuuid_v_courante: fuuid, version_courante: {mimetype: 'application/bytes'}} )
+        if(fichiersCharges) {
+            console.debug("Combiner fichiers charges: %O", fichiersCharges)
+        }
+        attachments_inline.forEach(a=>{
+            let attachmentInline = {...dictAttachments[a.fuuid], ...a}
+            if(attachmentInline.thumb) {
+                // Override images.thumb.data_chiffre par .data
+                let { version_courante } = attachmentInline
+                version_courante = {...version_courante, ...a}
+                attachmentInline.version_courante = version_courante
+                delete version_courante.data
+                delete version_courante.thumb
+                let images = version_courante.images || {}
+                version_courante.images = images
+                let thumb = images.thumb || {}
+                thumb = {...thumb, ...a.thumb}
+                images.thumb = thumb
+                delete thumb.data_chiffre
+                delete attachmentInline.thumb
+            }
+
+            dictAttachments[a.fuuid] = attachmentInline
+        })
+
+        console.debug("Dict attachments combines : %O", dictAttachments)
+
+        const liste = attachments.map(fuuid=>dictAttachments[fuuid])
+        const listeMappee = liste.map(item=>mapper(item, workers))
+        console.debug("Liste mappee : %O", listeMappee)
+
+        setAttachmentsList(listeMappee)
+
+    }, [workers, attachments, attachments_inline, fichiersCharges, setAttachmentsList])
+
+    if(!attachmentsList) return ''
+
+    return (
+        <div>
+            <Row>
+                <Col>Attachment</Col>
+            </Row>
+
+            <Row>
+                <Col>
+                    <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+                </Col>
+            </Row>
+
+            <ListeFichiers 
+                modeView={modeView}
+                colonnes={colonnes}
+                rows={attachmentsList} 
+                // onClick={onClick} 
+                // onDoubleClick={onDoubleClick}
+                // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                // onSelection={onSelectionLignes}
+                onClickEntete={colonne=>{
+                    // console.debug("Entete click : %s", colonne)
+                }}
+            />
+        </div>
+    )
+}
+
+function preparerColonnes() {
+    const params = {
+        ordreColonnes: ['nom', 'taille', 'mimetype', 'boutonDetail'],
+        paramsColonnes: {
+            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 7},
+            'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
+            'mimetype': {'label': 'Type', className: 'details', xs: 8, lg: 2},
+            'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
+        },
+        // tri: {colonne: 'nom', ordre: 1},
+    }
+    return params
+}
+
+function BoutonsFormat(props) {
+
+    const { modeView, setModeView } = props
+
+    const setModeListe = useCallback(()=>{ setModeView('liste') }, [setModeView])
+    const setModeThumbnails = useCallback(()=>{ setModeView('thumbnails') }, [setModeView])
+
+    let variantListe = 'secondary', variantThumbnail = 'outline-secondary'
+    if( modeView === 'thumbnails' ) {
+        variantListe = 'outline-secondary'
+        variantThumbnail = 'secondary'
+    }
+
+    return (
+        <ButtonGroup>
+            <Button variant={variantListe} onClick={setModeListe}><i className="fa fa-list" /></Button>
+            <Button variant={variantThumbnail} onClick={setModeThumbnails}><i className="fa fa-th-large" /></Button>
+        </ButtonGroup>
+    )
+}
+
+async function chargerFichiers(workers, fuuids, setFichiersCharges) {
+    console.debug("Charges fichiers avec fuuids : %O", fuuids)
+
 }

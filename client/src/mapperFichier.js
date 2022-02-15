@@ -1,3 +1,5 @@
+import { base64 } from "multiformats/bases/base64"
+
 const ICONE_FOLDER = <i className="fa fa-folder fa-lg"/>
 const ICONE_FICHIER = <i className="fa fa-file fa-lg"/>
 const ICONE_FICHIER_PDF = <i className="fa fa-file-pdf-o fa-lg"/>
@@ -28,14 +30,16 @@ export function mapper(row, workers) {
         ids = {},
         thumbnailLoader = null
     if(!version_courante) {
+        // console.debug("mapper folder pour %O", row)
         ids.folderId = tuuid  // Collection, tuuid est le folderId
         thumbnailIcon = Icones.ICONE_FOLDER
     } else {
+        // console.debug("mapper fichier, info courante : %O", version_courante)
         const { mimetype, date_fichier, taille, images, video } = version_courante
         mimetype_fichier = mimetype
         date_version = date_fichier
         taille_fichier = taille
-        ids.fileId = tuuid    // Fichier, tuuid est le fileId
+        ids.fileId = tuuid || fuuid_v_courante    // Fichier, tuuid est le fileId
         const mimetypeBase = mimetype.split('/').shift()
 
         if(workers && images) {
@@ -43,8 +47,18 @@ export function mapper(row, workers) {
                   small = images.small || images.poster
             let miniLoader = null, smallLoader
             if(thumbnail) {
-                if (thumbnail.data_chiffre) {
-                    // console.debug("!!! Loader thumbnail chiffre : %O", thumbnail)
+                if (thumbnail.data) {
+                    // console.debug("!!! Loader thumbnail data non chiffre: %O", thumbnail)
+                    const dataArray = base64.decode(thumbnail.data)
+                    const blob = new Blob([dataArray])
+                    const objectUrl = URL.createObjectURL(blob)
+                    // console.debug("Object url pour thumbnail : %O", objectUrl)
+                    miniLoader = {
+                        load: setter => setter(objectUrl),
+                        unload: () => URL.revokeObjectURL(objectUrl)
+                    }
+                } else if (thumbnail.data_chiffre) {
+                    console.debug("!!! Loader thumbnail chiffre : %O", thumbnail)
                     miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
                 }
             }
@@ -61,7 +75,7 @@ export function mapper(row, workers) {
                         loadSmall = true  // Tenter de charger small en remplacement
                     }
 
-                    if(loadSmall) {
+                    if(loadSmall && small) {
                         smallLoader = loadThumbnailChiffre(small.hachage, workers)
                         await smallLoader.load(setSrc)
                     }
@@ -110,93 +124,6 @@ export function mapper(row, workers) {
     }
 }
 
-export function mapperRecherche(row, workers) {
-    const { 
-        fuuid, tuuid, nom, supprime, favoris, date_creation, date_version, 
-        // mimetype, taille, 
-        thumb_data, thumb_hachage_bytes,
-        version_courante,
-        score,
-    } = row
-
-    // console.debug("!!! MAPPER %O", row)
-
-    let mimetype_fichier = '',
-        taille_fichier = ''
-
-    let thumbnailIcon = '',
-        ids = {},
-        thumbnailLoader = null
-    if(!fuuid) {
-        ids.folderId = tuuid  // Collection, tuuid est le folderId
-        thumbnailIcon = Icones.ICONE_FOLDER
-    } else {
-        const { mimetype, date_fichier, taille, images, video } = version_courante
-        mimetype_fichier = mimetype
-        taille_fichier = taille
-        ids.fileId = tuuid    // Fichier, tuuid est le fileId
-        ids.fuuid = fuuid
-        const mimetypeBase = mimetype.split('/').shift()
-
-        if(workers && thumb_data && thumb_hachage_bytes) {
-            let loader = null
-            if (thumb_data) {
-                // console.debug("!!! Loader thumbnail chiffre : %O", thumbnail)
-                loader = loadThumbnailChiffre(thumb_hachage_bytes, workers, {dataChiffre: thumb_data})
-            }
-            thumbnailLoader = {
-                load: async (setSrc, opts) => {
-                    if(loader) {
-                        try {
-                            await loader.load(setSrc)
-                        } catch(err) {
-                            console.error("Erreur chargement mini thumbnail pour image %s : %O", tuuid, err)
-                        }
-                    }
-                },
-                unload: () => {
-                    if(loader) loader.unload()
-                }
-            }
-        }
-
-        if(mimetype === 'application/pdf') {
-            thumbnailIcon = ICONE_FICHIER_PDF
-        } else if(mimetypeBase === 'image') {
-            thumbnailIcon = ICONE_FICHIER_IMAGE
-        } else if(mimetypeBase === 'video') {
-            thumbnailIcon = ICONE_FICHIER_VIDEO
-        } else if(mimetypeBase === 'audio') {
-            thumbnailIcon = ICONE_FICHIER_AUDIO
-        } else if(mimetypeBase === 'application/text') {
-            thumbnailIcon = ICONE_FICHIER_TEXT
-        } else if(mimetypeBase === 'application/zip') {
-            thumbnailIcon = ICONE_FICHIER_ZIP
-        } else { 
-            thumbnailIcon = ICONE_FICHIER
-        }
-    }
-
-    return {
-        // fileId: tuuid,
-        // folderId: tuuid,
-        ...ids,
-        nom,
-        supprime, 
-        taille: taille_fichier,
-        dateAjout: date_version || date_creation,
-        mimetype: ids.folderId?'Repertoire':mimetype_fichier,
-        // thumbnailSrc,
-        thumbnailLoader,
-        thumbnailIcon,
-        thumbnailCaption: nom,
-        version_courante,
-        fuuid,
-        favoris,
-        score,
-    }
-}
-
 export function onContextMenu(event, value, setContextuel) {
     event.preventDefault()
     const {clientX, clientY} = event
@@ -208,7 +135,7 @@ export function onContextMenu(event, value, setContextuel) {
 }
 
 function loadThumbnailChiffre(fuuid, workers, opts) {
-    // console.debug("!!! loadThumbnailChiffre workers : %O", workers)
+    console.debug("!!! loadThumbnailChiffre workers : %O", workers)
     const { traitementFichiers } = workers
     const blobPromise = traitementFichiers.getThumbnail(fuuid, opts)
         .then(blob=>{

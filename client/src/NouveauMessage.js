@@ -6,7 +6,7 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
 import { base64 } from 'multiformats/bases/base64'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, getCleDechiffree, saveCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille } from '@dugrema/millegrilles.reactjs'
 
 import { posterMessage } from './messageUtils'
 import { chargerProfilUsager } from './profil'
