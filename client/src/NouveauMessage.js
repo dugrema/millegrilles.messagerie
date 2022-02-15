@@ -177,10 +177,23 @@ export default NouveauMessage
 async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-    let attachments_inline = opts.attachments_inline
 
     if(opts.attachments) {
+        let attachmentsMapping = {}
+
         console.debug("Traiter attachments : %O", opts.attachments)
+
+        // Mapper data attachments
+        opts.attachments.forEach( attachment => {
+            const { fuuid, version_courante } = attachment
+            attachmentsMapping[fuuid] = {
+                fuuid,
+                nom: attachment.nom,
+                mimetype: version_courante.mimetype,
+                taille: version_courante.taille,
+            }
+        })
+
         // Inline all thumbnails
         const mediaAttachments = opts.attachments.filter(
             item => item.version_courante && item.version_courante.images && item.version_courante.images.thumb)
@@ -201,20 +214,22 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
             const thumbnailInfo = {...thumbnail, data: thumbnailBase64}
             delete thumbnailInfo.data_chiffre
 
-            if(!attachments_inline) {
-                attachments_inline = []
-                // opts.attachments_inline = attachments_inline
-            }
+            // if(!attachments_inline) {
+            //     attachments_inline = []
+            //     // opts.attachments_inline = attachments_inline
+            // }
 
-            attachments_inline.push({
-                fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
-                thumb: thumbnailInfo, 
-            })
+            attachmentsMapping[attachment.fuuid].thumb = thumbnailInfo
+            // attachments_inline.push({
+            //     fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
+            //     thumb: thumbnailInfo, 
+            // })
         }
 
         // Mapper le fuuid seulement
-        const attachments = opts.attachments.map(item=>item.fuuid)
-        opts = {...opts, attachments, attachments_inline}
+        // const attachments = opts.attachments.map(item=>item.fuuid)
+        // opts = {...opts, attachments, attachments_inline}
+        opts = {...opts, attachments: Object.values(attachmentsMapping)}
 
     }
 

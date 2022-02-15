@@ -97,7 +97,7 @@ async function marquerMessageLu(workers, uuid_transaction) {
 
 function AfficherAttachments(props) {
     console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments, attachments_inline } = props
+    const { workers, attachments } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -109,43 +109,72 @@ function AfficherAttachments(props) {
     useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
 
     useEffect(()=>{
-        if(!attachments || !attachments_inline) { setAttachmentsList(''); return }  // Rien a faire
+        if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
 
         const dictAttachments = {}
-        attachments.forEach( fuuid => dictAttachments[fuuid] = {fileId: fuuid, fuuid_v_courante: fuuid, version_courante: {mimetype: 'application/bytes'}} )
+        attachments.forEach( attachment => {
+            const fuuid = attachment.fuuid
+            dictAttachments[fuuid] = {
+                ...attachment, 
+                fileId: fuuid, fuuid_v_courante: fuuid, 
+                version_courante: {mimetype: 'application/bytes'}
+        }})
         if(fichiersCharges) {
             console.debug("Combiner fichiers charges: %O", fichiersCharges)
+            fichiersCharges.forEach(item=>{
+                // Insertion information fichier
+                const fuuid = item.fuuid_v_courante
+                dictAttachments[fuuid] = {...dictAttachments[fuuid], ...item}
+            })
+            console.debug("Fichiers combines avec reponse GrosFichiers : %O", dictAttachments)
         }
-        attachments_inline.forEach(a=>{
-            let attachmentInline = {...dictAttachments[a.fuuid], ...a}
-            if(attachmentInline.thumb) {
-                // Override images.thumb.data_chiffre par .data
-                let { version_courante } = attachmentInline
-                version_courante = {...version_courante, ...a}
-                attachmentInline.version_courante = version_courante
-                delete version_courante.data
-                delete version_courante.thumb
-                let images = version_courante.images || {}
-                version_courante.images = images
-                let thumb = images.thumb || {}
-                thumb = {...thumb, ...a.thumb}
-                images.thumb = thumb
-                delete thumb.data_chiffre
-                delete attachmentInline.thumb
-            }
 
-            dictAttachments[a.fuuid] = attachmentInline
+        // Remettre thumbnails dechiffres en place si applicable
+        attachments.filter(attachment=>attachment.thumb).forEach( attachment => {
+            const { fuuid, thumb } = attachment
+            // delete attachment.thumb
+
+            const attachmentMappe = dictAttachments[fuuid]
+            delete attachmentMappe.thumb
+            let { version_courante } = attachmentMappe
+            let images = version_courante.images || {}
+            version_courante.images = images
+            let thumbCopie = images.thumb || {}
+            thumbCopie = {...thumbCopie, ...thumb}
+            images.thumb = thumbCopie
+            delete thumbCopie.data_chiffre
         })
+
+        // attachments_inline.forEach(a=>{
+        //     let attachmentInline = {...dictAttachments[a.fuuid], ...a}
+        //     if(attachmentInline.thumb) {
+        //         // Override images.thumb.data_chiffre par .data
+        //         let { version_courante } = attachmentInline
+        //         version_courante = {...version_courante, ...a}
+        //         attachmentInline.version_courante = version_courante
+        //         delete version_courante.data
+        //         delete version_courante.thumb
+        //         let images = version_courante.images || {}
+        //         version_courante.images = images
+        //         let thumb = images.thumb || {}
+        //         thumb = {...thumb, ...a.thumb}
+        //         images.thumb = thumb
+        //         delete thumb.data_chiffre
+        //         delete attachmentInline.thumb
+        //     }
+
+        //     dictAttachments[a.fuuid] = attachmentInline
+        // })
 
         console.debug("Dict attachments combines : %O", dictAttachments)
 
-        const liste = attachments.map(fuuid=>dictAttachments[fuuid])
+        const liste = attachments.map(attachment=>dictAttachments[attachment.fuuid])
         const listeMappee = liste.map(item=>mapper(item, workers))
         console.debug("Liste mappee : %O", listeMappee)
 
         setAttachmentsList(listeMappee)
 
-    }, [workers, attachments, attachments_inline, fichiersCharges, setAttachmentsList])
+    }, [workers, attachments, fichiersCharges, setAttachmentsList])
 
     if(!attachmentsList) return ''
 
@@ -212,7 +241,16 @@ function BoutonsFormat(props) {
     )
 }
 
-async function chargerFichiers(workers, fuuids, setFichiersCharges) {
+async function chargerFichiers(workers, attachments, setFichiersCharges) {
+    const fuuids = attachments.map(item=>item.fuuid)
     console.debug("Charges fichiers avec fuuids : %O", fuuids)
-
+    if(!fuuids || fuuids.length === 0) return  // Rien a faire
+    try {
+        const reponse = await workers.connexion.getDocumentsParFuuid(fuuids)
+        console.debug("Reponse chargerFichiers : %O", reponse)
+        if(reponse.fichiers) setFichiersCharges(reponse.fichiers)
+        else console.warn("Erreur chargement fichiers par fuuid : %O", reponse)
+    } catch(err) {
+        console.error("Erreur chargement fichiers par fuuid : %O", err)
+    }
 }

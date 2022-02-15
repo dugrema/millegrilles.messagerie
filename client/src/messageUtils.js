@@ -1,3 +1,6 @@
+import { getClesAttachments } from './cles'
+import { base64 } from "multiformats/bases/base64"
+
 export async function posterMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     
     const { connexion } = workers
@@ -36,6 +39,27 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
         if(opts[nomChamp]) message[nomChamp] = opts[nomChamp]
     })
 
+    if(attachments) {
+        // Preparer l'information de dechiffrage (cle) pour tous les attachements
+        const fuuids = attachments.map(item=>item.fuuid)
+        const cles = await getClesAttachments(workers, fuuids)
+        console.debug("Reponse cles : %O", cles)
+        const attachmentsCles = attachments.map( attachment => {
+            const { fuuid } = attachment
+            const cle = cles[fuuid]
+            const cleSecreteBase64 = base64.encode(new Buffer.from(cle.cleSecrete, 'binary'))
+            return {
+                ...attachment,
+                cleSecrete: cleSecreteBase64, 
+                format: cle.format,
+                iv: cle.iv,
+                tag: cle.tag,
+            }
+        })
+
+        message.attachments = attachmentsCles
+    }
+
     // Signer le message
     console.debug("Signer message : %O", message)
     const messageSigne = await connexion.formatterMessage(message, 'message')
@@ -61,8 +85,12 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
         to: destinataires,
         fingerprint_certificat: messageSigne['en-tete']['fingerprint_certificat'],
     }
+
     if(bcc) enveloppeMessage.bcc = bccFiltre
-    if(attachments) enveloppeMessage.attachments = attachments
+    
+    if(attachments) {
+        enveloppeMessage.attachments = attachments.map(item=>item.fuuid)
+    }
 
     return { enveloppeMessage, commandeMaitrecles }
 }

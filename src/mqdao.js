@@ -142,6 +142,10 @@ function getDocuments(socket, params) {
     return transmettreRequete(socket, params, 'documentsParTuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
 
+function getDocumentsParFuuid(socket, params) {
+    return transmettreRequete(socket, params, 'documentsParFuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
 function getFavoris(socket, params) {
     return transmettreRequete(socket, params, 'favoris', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
@@ -150,6 +154,9 @@ function getCollection(socket, params) {
     return transmettreRequete(socket, params, 'contenuCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
 
+function getPermissionCles(socket, params) {
+    return transmettreRequete(socket, params, 'getClesFichiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
 
 // Fonctions generiques
 
@@ -208,7 +215,7 @@ module.exports = {
     initialiserProfil,
 
     // GrosFichiers
-    getDocuments, getFavoris, getCollection,
+    getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 

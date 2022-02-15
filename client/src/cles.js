@@ -66,6 +66,51 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
 
 }
 
+export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
+    opts = opts || {}
+
+    const cles = {}
+    const clesInconnues = liste_hachage_bytes.reduce((acc, item)=>{
+        acc[item] = true
+        return acc
+    }, {})
+
+    // console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
+    for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
+        const hachage_bytes = liste_hachage_bytes[idx]
+        // console.debug("Charger localement cle : %s", hachage_bytes)
+        const cle = await getCleDechiffree(hachage_bytes)
+        if(cle) {
+            // console.debug("Cle locale chargee : %O", cle)
+            cles[cle.hachage_bytes] = cle
+            delete clesInconnues[cle.hachage_bytes]
+        } else {
+            // console.debug("Cle %s manquante localement", hachage_bytes)
+        }
+    }
+    if(Object.keys(clesInconnues).length === 0) {
+        // console.debug('Toutes les cles ont ete trouvees localement : %O', cles)
+        return cles
+    } else {
+        // console.debug("Cles manquantes : %O", Object.keys(clesInconnues))
+    }
+
+    // const reponseCles = await workers.connexion.getClesFichiers(clesInconnues)
+    // const cles = reponseCles.cles
+    // // console.debug("Reponse cles : %O", reponseCles)
+    // for(let cle_hachage_bytes in cles) {
+    //     const cle = cles[cle_hachage_bytes]
+    //     // Dechiffrer cle
+    //     const cleDechiffree = await workers.chiffrage.dechiffrerCleSecrete(cle.cle)
+    //     console.debug("Cle dechiffrer %s : %O", cle_hachage_bytes, cleDechiffree)
+    //     await saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
+    //     cle.cleSecrete = cleDechiffree
+    // }
+
+    return cles
+
+}
+
 // async function chargerClesMessages(workers, listeMessages) {
 //     const { connexion, chiffrage } = workers
 

@@ -44,6 +44,26 @@ function marquerLu(uuid_message, flag_lu) {
 
 // GrosFichiers pour attachements
 
+async function getClesFichiers(fuuids, usager, opts) {
+  opts = opts || {}
+
+  if(opts.cache) console.warn("TODO - supporter cache cles dans idb")
+
+  // TODO - tenter de charger via idb
+
+  const extensions = usager || {}
+  const delegationGlobale = extensions.delegationGlobale
+
+  if(!delegationGlobale) {
+    const params = { fuuids }
+    return ConnexionClient.emitBlocking('getPermissionCles', params, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'getClesFichiers', ajouterCertificat: true})
+  } else {
+    const permission = opts.permission
+    const params = { liste_hachage_bytes: fuuids, permission }
+    return ConnexionClient.emitBlocking('getClesFichiers', params, {domaine: CONST_DOMAINE_MAITREDESCLES, action: 'dechiffrage', ajouterCertificat: true})
+  }
+}
+
 function getCollection(tuuidsDocuments) {
   const params = {tuuid_collection: tuuidsDocuments}
   return ConnexionClient.emitBlocking('getCollection', params, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'contenuCollection', ajouterCertificat: true})
@@ -54,6 +74,14 @@ function getDocuments(tuuids) {
     'getDocuments',
     {tuuids_documents: tuuids},
     {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'documentsParTuuid', attacherCertificat: true}
+  )
+}
+
+function getDocumentsParFuuid(fuuids) {
+  return ConnexionClient.emitBlocking(
+    'getDocumentsParFuuid',
+    {fuuids_documents: fuuids},
+    {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'documentsParFuuid', attacherCertificat: true}
   )
 }
 
@@ -88,6 +116,6 @@ expose({
     initialiserProfil,
 
     // GrosFichiers pour attachements
-    getCollection, getDocuments, getFavoris,
+    getClesFichiers, getCollection, getDocuments, getDocumentsParFuuid, getFavoris,
 
 })
