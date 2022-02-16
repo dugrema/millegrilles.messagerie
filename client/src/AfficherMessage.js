@@ -6,14 +6,17 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup'
 
 import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
 
+import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
+
 import { dechiffrerMessage } from './cles'
-import { mapper, onContextMenu } from './mapperFichier'
+import { mapper } from './mapperFichier'
 
 const { extraireExtensionsMillegrille } = forgecommon
 
 function AfficherMessage(props) {
+    // console.debug("AfficherMessage proppys: %O", props)
 
-    const { workers, etatConnexion, uuidSelectionne, setUuidSelectionne } = props
+    const { workers, etatConnexion, downloadAction, uuidSelectionne, setUuidSelectionne } = props
     const [message, setMessage] = useState('')
     const [messageDechiffre, setMessageDechiffre] = useState('')
 
@@ -53,7 +56,12 @@ function AfficherMessage(props) {
             <p>Afficher message</p>
             <Button onClick={retour}>Retour</Button>
 
-            <RenderMessage workers={workers} message={messageDechiffre} infoMessage={message} />
+            <RenderMessage 
+                workers={workers} 
+                etatConnexion={etatConnexion}
+                downloadAction={downloadAction}
+                message={messageDechiffre} 
+                infoMessage={message} />
         </>
     )
 
@@ -62,8 +70,9 @@ function AfficherMessage(props) {
 export default AfficherMessage
 
 function RenderMessage(props) {
+    // console.debug("RenderMessage proppys : %O", props)
 
-    const { workers, message, infoMessage } = props
+    const { workers, message, infoMessage, etatConnexion, downloadAction } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const { date_reception, lu } = infoMessage
 
@@ -81,7 +90,12 @@ function RenderMessage(props) {
             <p>Sujet: {subject}</p>
             <div>{content}</div>
 
-            <AfficherAttachments workers={workers} attachments={attachments} attachments_inline={attachments_inline} />
+            <AfficherAttachments 
+                workers={workers} 
+                etatConnexion={etatConnexion}
+                downloadAction={downloadAction}
+                attachments={attachments} 
+                attachments_inline={attachments_inline} />
         </>
     )
 }
@@ -96,13 +110,18 @@ async function marquerMessageLu(workers, uuid_transaction) {
 }
 
 function AfficherAttachments(props) {
-    console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments } = props
+    // console.debug("AfficherAttachments proppys : %O", props)
+    const { workers, attachments, etatConnexion, downloadAction } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
     const [attachmentsList, setAttachmentsList] = useState('')
     const [fichiersCharges, setFichierCharges] = useState('')
+    const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
+    const [selection, setSelection] = useState('')
+
+    const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
+    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
@@ -125,6 +144,10 @@ function AfficherAttachments(props) {
                 // Insertion information fichier
                 const fuuid = item.fuuid_v_courante
                 dictAttachments[fuuid] = {...dictAttachments[fuuid], ...item}
+
+                // Retirer tuuid, force l'utilisation du fuuid comme selecteur
+                dictAttachments[fuuid]._tuuid = dictAttachments[fuuid].tuuid
+                delete dictAttachments[fuuid].tuuid
             })
             console.debug("Fichiers combines avec reponse GrosFichiers : %O", dictAttachments)
         }
@@ -194,14 +217,27 @@ function AfficherAttachments(props) {
                 modeView={modeView}
                 colonnes={colonnes}
                 rows={attachmentsList} 
-                // onClick={onClick} 
-                // onDoubleClick={onDoubleClick}
-                // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                // onSelection={onSelectionLignes}
+                // onClick={...pas utilise...} 
+                // onDoubleClick={...pas utilise...}
+                onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                onSelection={onSelectionLignes}
                 onClickEntete={colonne=>{
                     // console.debug("Entete click : %s", colonne)
                 }}
             />
+            
+            <MenuContextuel
+                workers={workers}
+                contextuel={contextuel} 
+                fermerContextuel={fermerContextuel}
+                attachments={attachments}
+                selection={selection}
+                // showPreview={showPreviewAction}
+                // showInfoModalOuvrir={showInfoModalOuvrir}
+                downloadAction={downloadAction}
+                etatConnexion={etatConnexion}
+            />            
+
         </div>
     )
 }
@@ -241,7 +277,33 @@ function BoutonsFormat(props) {
     )
 }
 
+function MenuContextuel(props) {
+    // console.debug("MenuContextuel proppys : %O", props)
+
+    const { contextuel, attachments, selection } = props
+
+    if(!contextuel.show) return ''
+
+    console.debug("!!! Selection : %s, FICHIERS : %O", selection, attachments)
+
+    if( selection && selection.length > 1 ) {
+        console.warn("!!! Multiselect TODO !!!")
+        return ''
+        // return <MenuContextuelAttacherMultiselect {...props} />
+    } else if(selection.length>0) {
+        const fuuid = selection[0]
+        const attachment = attachments.filter(item=>item.fuuid===fuuid).pop()
+        if(attachment) {
+            return <MenuContextuelAfficherAttachments attachment={attachment} {...props} />
+        }
+    }
+
+    return ''
+}
+
 async function chargerFichiers(workers, attachments, setFichiersCharges) {
+    if(!attachments || attachments.length === 0) return  // Rien a faire
+
     const fuuids = attachments.map(item=>item.fuuid)
     console.debug("Charges fichiers avec fuuids : %O", fuuids)
     if(!fuuids || fuuids.length === 0) return  // Rien a faire

@@ -1,5 +1,6 @@
 import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
 import { proxy } from 'comlink'
+import { base64 } from "multiformats/bases/base64"
 
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
@@ -13,6 +14,7 @@ import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 import './App.css'
 
 import Menu from './Menu'
+import TransfertModal from './TransfertModal'
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
@@ -27,6 +29,8 @@ function App() {
   const [idmg, setIdmg] = useState('')
   const [certificatMaitreDesCles, setCertificatMaitreDesCles] = useState('')
   const [dnsMessagerie, setDnsMessagerie] = useState('')
+  const [etatTransfert, setEtatTransfert] = useState('')
+  const [showTransfertModal, setShowTransfertModal] = useState(false)
 
   const { connexion, transfertFichiers } = workers
 
@@ -35,25 +39,35 @@ function App() {
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   const [uuidSelectionne, setUuidSelectionne] = useState('')
 
-  const downloadAction = useCallback( fichier => {
-    //console.debug("Download fichier %O", fichier)
-    const { fuuid, mimetype, nom: filename, taille } = fichier
+  const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
+  const showTransfertModalFermer = useCallback(()=>{ setShowTransfertModal(false) }, [setShowTransfertModal])
 
-    connexion.getClesFichiers([fuuid], usager)
-      .then(reponseCle=>{
+  const downloadAction = useCallback( fichier => {
+    console.debug("Download fichier %O", fichier)
+    const { 
+      fuuid, mimetype, nom: filename, taille, 
+      cleSecrete, iv, tag, format,
+    } = fichier
+
+    // Creer dict de cles avec info secrete pour dechiffrer le fichier
+    // const password = base64.decode(cleSecrete)
+    // const cles = {[fuuid]: {cleSecrete: cle, iv, tag, format}}
+
+    // connexion.getClesFichiers([fuuid], usager)
+    //   .then(reponseCle=>{
         // console.debug("REPONSE CLE pour download : %O", reponseCle)
-        if(reponseCle.code === 1) {
+        // if(reponseCle.code === 1) {
           // Permis
-          const {cle, iv, tag, format} = reponseCle.cles[fuuid]
-          transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, passwordChiffre: cle, iv, tag, format})
+          // const {cle, iv, tag, format} = reponseCle.cles[fuuid]
+          transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, password: cleSecrete, iv, tag, format})
               .catch(err=>{console.error("Erreur debut download : %O", err)})
-          } else {
-              console.warn("Cle refusee/erreur (code: %s) pour %s", reponseCle.code, fuuid)
-          }
-      })
-      .catch(err=>{
-        console.error("Erreur declenchement download fichier : %O", err)
-      })
+          // } else {
+          //     console.warn("Cle refusee/erreur (code: %s) pour %s", reponseCle.code, fuuid)
+          // }
+    //   })
+    //   .catch(err=>{
+    //     console.error("Erreur declenchement download fichier : %O", err)
+    //   })
 
   }, [connexion, transfertFichiers, usager])
 
@@ -119,9 +133,11 @@ function App() {
           workers={workers} 
           usager={usager} 
           etatConnexion={etatConnexion} 
+          etatTransfert={etatTransfert}
           setAfficherNouveauMessage={setAfficherNouveauMessage}
           setUuidSelectionne={setUuidSelectionne}
           setAfficherContacts={setAfficherContacts}
+          showTransfertModal={showTransfertModalOuvrir}
         />
       </HeaderApplication>
 
@@ -147,6 +163,13 @@ function App() {
       <FooterApplication>
         <Footer workers={workers} idmg={idmg} />
       </FooterApplication>
+
+      <TransfertModal 
+        show={showTransfertModal}
+        fermer={showTransfertModalFermer} 
+        workers={workers}
+        setEtatTransfert={setEtatTransfert}
+      />
 
     </LayoutApplication>
   )

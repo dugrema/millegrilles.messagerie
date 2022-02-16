@@ -13,7 +13,7 @@ import { chargerProfilUsager } from './profil'
 
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
-import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect } from './MenuContextuel'
+import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
 
 import { loadThumbnailChiffre } from './mapperFichier'
 
@@ -331,7 +331,7 @@ function MenuContextuel(props) {
         return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
         const fichierTuuid = selection[0]
-        const attachment = attachments.filter(item=>(item.folderId||item.fileId)===fichierTuuid).pop()
+        const attachment = attachments.filter(item=>item.fuuid===fichierTuuid).pop()
         if(attachment) {
             return <MenuContextuelAttacher attachment={attachment} {...props} />
         }
@@ -352,13 +352,4 @@ function preparerColonnes() {
         // tri: {colonne: 'nom', ordre: 1},
     }
     return params
-}
-
-export function onContextMenu(event, value, setContextuel) {
-    event.preventDefault()
-    const {clientX, clientY} = event
-
-    const params = {show: true, x: clientX, y: clientY}
-
-    setContextuel(params)
 }
