@@ -13,6 +13,7 @@ import { chargerProfilUsager } from './profil'
 
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
+import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect } from './MenuContextuel'
 
 import { loadThumbnailChiffre } from './mapperFichier'
 
@@ -149,7 +150,11 @@ function NouveauMessage(props) {
                 </Col>
             </Row>
 
-            <AfficherAttachments attachments={attachments} />
+            <AfficherAttachments 
+                workers={workers} 
+                etatConnexion={etatConnexion} 
+                attachments={attachments} 
+                setAttachments={setAttachments} />
 
             <br className="clear"/>
 
@@ -238,14 +243,19 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
 }
 
 function AfficherAttachments(props) {
-    const { attachments } = props
+    const { workers, attachments, setAttachments, etatConnexion } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
+    const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
+    const [selection, setSelection] = useState('')
+
+    const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
+    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
-    if(!attachments) return ''
+    if(!attachments || attachments.length === 0) return ''
 
     return (
         <div>
@@ -263,14 +273,27 @@ function AfficherAttachments(props) {
                 modeView={modeView}
                 colonnes={colonnes}
                 rows={attachments} 
-                // onClick={onClick} 
-                // onDoubleClick={onDoubleClick}
-                // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                // onSelection={onSelectionLignes}
+                // onClick={...pas utilise...} 
+                // onDoubleClick={... pas utilise...}
+                onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                onSelection={onSelectionLignes}
                 onClickEntete={colonne=>{
                     // console.debug("Entete click : %s", colonne)
                 }}
             />
+
+            <MenuContextuel
+                workers={workers}
+                contextuel={contextuel} 
+                fermerContextuel={fermerContextuel}
+                attachments={attachments}
+                setAttachments={setAttachments}
+                selection={selection}
+                // showPreview={showPreviewAction}
+                // showInfoModalOuvrir={showInfoModalOuvrir}
+                // downloadAction={downloadAction}
+                etatConnexion={etatConnexion}
+            />            
         </div>
     )
 }
@@ -296,6 +319,27 @@ function BoutonsFormat(props) {
     )
 }
 
+function MenuContextuel(props) {
+
+    const { contextuel, attachments, selection } = props
+
+    if(!contextuel.show) return ''
+
+    console.debug("!!! Selection : %s, FICHIERS : %O", selection, attachments)
+
+    if( selection && selection.length > 1 ) {
+        return <MenuContextuelAttacherMultiselect {...props} />
+    } else if(selection.length>0) {
+        const fichierTuuid = selection[0]
+        const attachment = attachments.filter(item=>(item.folderId||item.fileId)===fichierTuuid).pop()
+        if(attachment) {
+            return <MenuContextuelAttacher attachment={attachment} {...props} />
+        }
+    }
+
+    return ''
+}
+
 function preparerColonnes() {
     const params = {
         ordreColonnes: ['nom', 'taille', 'mimetype', 'boutonDetail'],
@@ -308,4 +352,13 @@ function preparerColonnes() {
         // tri: {colonne: 'nom', ordre: 1},
     }
     return params
+}
+
+export function onContextMenu(event, value, setContextuel) {
+    event.preventDefault()
+    const {clientX, clientY} = event
+
+    const params = {show: true, x: clientX, y: clientY}
+
+    setContextuel(params)
 }
