@@ -42,6 +42,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     if(attachments) {
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
         const fuuids = attachments.map(item=>item.fuuid)
+        console.debug("Get cles attachments fuuids : %O", fuuids)
         const cles = await getClesAttachments(workers, fuuids)
         console.debug("Reponse cles : %O", cles)
         const attachmentsCles = attachments.map( attachment => {

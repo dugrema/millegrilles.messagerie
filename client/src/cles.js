@@ -69,6 +69,8 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
 export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
     opts = opts || {}
 
+    const usager = opts.usager
+
     const cles = {}
     const clesInconnues = liste_hachage_bytes.reduce((acc, item)=>{
         acc[item] = true
@@ -95,20 +97,21 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
         // console.debug("Cles manquantes : %O", Object.keys(clesInconnues))
     }
 
-    // const reponseCles = await workers.connexion.getClesFichiers(clesInconnues)
-    // const cles = reponseCles.cles
-    // // console.debug("Reponse cles : %O", reponseCles)
-    // for(let cle_hachage_bytes in cles) {
-    //     const cle = cles[cle_hachage_bytes]
-    //     // Dechiffrer cle
-    //     const cleDechiffree = await workers.chiffrage.dechiffrerCleSecrete(cle.cle)
-    //     console.debug("Cle dechiffrer %s : %O", cle_hachage_bytes, cleDechiffree)
-    //     await saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
-    //     cle.cleSecrete = cleDechiffree
-    // }
+    const reponseCles = await workers.connexion.getClesFichiers(Object.keys(clesInconnues), usager)
+    const clesRecues = reponseCles.cles
+    console.debug("Reponse cles : %O", reponseCles)
+    for(let cle_hachage_bytes in clesRecues) {
+        const cle = clesRecues[cle_hachage_bytes]
+        // Dechiffrer cle
+        const cleDechiffree = await workers.chiffrage.dechiffrerCleSecrete(cle.cle)
+        // console.debug("Conserver cle dechiffrer %s : %O", cle_hachage_bytes, cleDechiffree)
+        await saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
+        cle.cleSecrete = cleDechiffree
+
+        cles[cle_hachage_bytes] = cle
+    }
 
     return cles
-
 }
 
 // async function chargerClesMessages(workers, listeMessages) {
