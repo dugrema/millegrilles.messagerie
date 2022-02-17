@@ -113,7 +113,7 @@ export function MenuContextuelAfficherAttachments(props) {
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
             {/* <Row><Col><Button variant="link" onClick={showPreviewAction} disabled={!previewDisponible}><i className="fa fa-search"/> Preview</Button></Col></Row> */}
-            <Row><Col><Button variant="link" onClick={downloadEvent}><i className="fa fa-download"/> Download!</Button></Col></Row>
+            <Row><Col><Button variant="link" onClick={downloadEvent}><i className="fa fa-download"/> Download</Button></Col></Row>
             {/* <Row><Col><Button variant="link" onClick={infoAction}><i className="fa fa-info-circle"/> Info</Button></Col></Row> */}
         </MenuContextuel>
     )
