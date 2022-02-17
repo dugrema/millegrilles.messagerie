@@ -5,6 +5,7 @@ import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
 import { base64 } from 'multiformats/bases/base64'
+import ReactQuill from 'react-quill'
 
 import { ListeFichiers, FormatteurTaille } from '@dugrema/millegrilles.reactjs'
 
@@ -14,8 +15,6 @@ import { chargerProfilUsager } from './profil'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
-
-import { loadThumbnailChiffre } from './mapperFichier'
 
 function NouveauMessage(props) {
 
@@ -44,7 +43,7 @@ function NouveauMessage(props) {
     const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
     const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
     const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
-    const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
+    // const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
@@ -136,12 +135,14 @@ function NouveauMessage(props) {
             
             <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
-                <Form.Control 
+                {/* <Form.Control 
                     as="textarea" 
                     name="content"
                     value={content}
                     onChange={contentChange}
-                    rows={15} />
+                    rows={15} /> */}
+
+                <Editeur content={content} setContent={setContent} />
             </Form.Group>
 
             <Row>
@@ -178,6 +179,18 @@ function NouveauMessage(props) {
 }
 
 export default NouveauMessage
+
+function Editeur(props) {
+    const { content, setContent } = props
+    const handleChange = useCallback(value=>setContent(value), [setContent])
+    return (
+        <>
+            <br className="clear"/>
+            <ReactQuill className="editeur-body" value={content} onChange={handleChange} />
+            <br className="clear"/>
+        </>
+    )
+}
 
 async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}

@@ -33,3 +33,16 @@
 .clear {
     clear: left;
 }
+
+.editeur-body {
+    height: 15rem;
+    padding-bottom: 2rem;
+}
+
+.afficher DIV.ql-editor {
+    padding: 0;
+}
+
+.sujet {
+    padding-top: 1rem;
+}

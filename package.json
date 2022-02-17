@@ -26,7 +26,7 @@
     "@dugrema/millegrilles.utiljs": "https://github.com/dugrema/millegrilles.utiljs.git#2022.1",
     "axios": "^0.24.0",
     "debug": "^4.3.3",
-    "express": "^4.17.2"
+    "express": "^4.17.3"
   },
   "homepage": "https://github.com/dugrema/millegrilles.messagerie#readme"
 }

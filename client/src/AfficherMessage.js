@@ -3,6 +3,7 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
+import ReactQuill from 'react-quill'
 
 import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
 
@@ -82,13 +83,12 @@ function RenderMessage(props) {
 
     return (
         <>
-            <p>From: {from}</p>
-            <p>Reply To: {reply_to}</p>
-            <p>To: {to.join('; ')}</p>
-            <p>CC: {cc}</p>
-            <p>Date reception : <FormatterDate value={date_reception}/></p>
-            <p>Sujet: {subject}</p>
-            <div>{content}</div>
+            <Header>
+                <AfficherAdresses from={from} reply_to={reply_to} to={to} cc={cc} />
+                <AfficherDateSujet date_reception={date_reception} subject={subject} />
+            </Header>
+
+            <AfficherMessageQuill content={content} />
 
             <AfficherAttachments 
                 workers={workers} 
@@ -96,6 +96,98 @@ function RenderMessage(props) {
                 downloadAction={downloadAction}
                 attachments={attachments} 
                 attachments_inline={attachments_inline} />
+        </>
+    )
+}
+
+function Header(props) {
+    return (
+        <>
+        {props.children}
+        <hr/>
+        </>
+    )
+}
+
+function AfficherDateSujet(props) {
+
+    const { date_reception, subject } = props
+
+    return (
+        <>
+            <Row>
+                <Col xs={12} md={2}>Recu:</Col>
+                <Col><FormatterDate value={date_reception}/></Col>
+            </Row>
+            <Row className="sujet">
+                <Col><strong>{subject}</strong></Col>
+            </Row>
+        </>
+    )
+}
+
+function AfficherAdresses(props) {
+    const { from, reply_to, to, cc } = props
+    let afficherReplyTo = reply_to && reply_to !== from
+
+    const [toFormatte, setToFormatte] = useState('')
+    const [ccFormatte, setCcFormatte] = useState('')
+
+    useEffect(()=>{
+        if(to) {
+            const toFormatte = to.join('; ')
+            setToFormatte(toFormatte)
+        } else {
+            setToFormatte('')
+        }
+    }, [to, setToFormatte])
+
+    useEffect(()=>{
+        if(cc) {
+            const ccFormatte = cc.join('; ')
+            setCcFormatte(ccFormatte)
+        } else {
+            setCcFormatte('')
+        }
+    }, [cc, setCcFormatte])
+
+    return (
+        <>
+            <Row>
+                <Col xs={12} md={2}>From:</Col>
+                <Col>{from}</Col>
+            </Row>
+            
+            {afficherReplyTo?
+            <Row>
+                <Col xs={12} md={2}>Reply to:</Col>
+                <Col>{reply_to}</Col>
+            </Row>
+            :''
+            }
+
+            <Row>
+                <Col xs={12} md={2}>To:</Col>
+                <Col>{toFormatte}</Col>
+            </Row>
+
+            {ccFormatte?
+                <Row>
+                    <Col xs={12} md={2}>To:</Col>
+                    <Col>{ccFormatte}</Col>
+                </Row>
+                :''
+            }
+        </>
+    )
+}
+
+function AfficherMessageQuill(props) {
+    const { content } = props
+    return (
+        <>
+            <ReactQuill className="afficher" value={content} readOnly={true} theme=''/>
+            <br className="clear"/>
         </>
     )
 }
@@ -202,10 +294,8 @@ function AfficherAttachments(props) {
     if(!attachmentsList) return ''
 
     return (
-        <div>
-            <Row>
-                <Col>Attachment</Col>
-            </Row>
+        <>
+            <h2>Attachements</h2>
 
             <Row>
                 <Col>
@@ -238,7 +328,7 @@ function AfficherAttachments(props) {
                 etatConnexion={etatConnexion}
             />            
 
-        </div>
+        </>
     )
 }
 
