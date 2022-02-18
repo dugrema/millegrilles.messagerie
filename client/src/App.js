@@ -1,6 +1,4 @@
 import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
-import { proxy } from 'comlink'
-import { base64 } from "multiformats/bases/base64"
 
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
@@ -15,6 +13,7 @@ import './App.css'
 
 import Menu from './Menu'
 import TransfertModal from './TransfertModal'
+import { Alert } from 'react-bootstrap'
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
@@ -31,6 +30,7 @@ function App() {
   const [dnsMessagerie, setDnsMessagerie] = useState('')
   const [etatTransfert, setEtatTransfert] = useState('')
   const [showTransfertModal, setShowTransfertModal] = useState(false)
+  const [confirmation, setConfirmation] = useState(false)
 
   const { connexion, transfertFichiers } = workers
 
@@ -41,6 +41,12 @@ function App() {
 
   const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
   const showTransfertModalFermer = useCallback(()=>{ setShowTransfertModal(false) }, [setShowTransfertModal])
+  const showConfirmation = useCallback((confirmation, opts)=>{
+    opts = opts || {}
+    const autoclose = opts.autoclose!==false?5000:false
+    setConfirmation(confirmation)
+    if(autoclose) setTimeout(()=>setConfirmation(''), 5000)
+  }, [setConfirmation])
 
   const downloadAction = useCallback( fichier => {
     console.debug("Download fichier %O", fichier)
@@ -143,6 +149,12 @@ function App() {
 
       <Container>
         <Suspense fallback={<Attente />}>
+
+          <Alert show={confirmation?true:false} variant="success" onClose={()=>setConfirmation('')} dismissible>
+            <Alert.Heading>Confirmation</Alert.Heading>
+            <pre>{confirmation}</pre>
+          </Alert>
+
           <Contenu 
             workers={workers} 
             usager={usager}
@@ -156,6 +168,7 @@ function App() {
             dnsMessagerie={dnsMessagerie}
             afficherContacts={afficherContacts}
             setAfficherContacts={setAfficherContacts}
+            showConfirmation={showConfirmation}
           />
         </Suspense>
       </Container>

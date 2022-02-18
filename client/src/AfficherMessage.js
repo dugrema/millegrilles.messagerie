@@ -8,6 +8,7 @@ import ReactQuill from 'react-quill'
 import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
+import ModalSelectionnerCollection from './ModalSelectionnerCollection'
 
 import { dechiffrerMessage } from './cles'
 import { mapper } from './mapperFichier'
@@ -17,11 +18,28 @@ const { extraireExtensionsMillegrille } = forgecommon
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
-    const { workers, etatConnexion, downloadAction, uuidSelectionne, setUuidSelectionne } = props
+    const { workers, etatConnexion, downloadAction, uuidSelectionne, setUuidSelectionne, certificatMaitreDesCles } = props
     const [message, setMessage] = useState('')
     const [messageDechiffre, setMessageDechiffre] = useState('')
+    const [showChoisirCollection, setChoisirCollection] = useState(false)
+    const [attachmentACopier, setAttachmentACopier] = useState('')
 
     const retour = useCallback(()=>{setUuidSelectionne('')}, [setUuidSelectionne])
+    const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
+    const choisirCollectionCb = useCallback(
+        attachment => {
+            setAttachmentACopier(attachment)
+            setChoisirCollection(true)
+        },
+        [setChoisirCollection, setAttachmentACopier]
+    )
+
+    const copierVersCollection = useCallback( cuuid => {
+        const attachment = attachmentACopier
+        setAttachmentACopier('')  // Reset attachment
+        copierAttachmentVersCollection(workers, attachment, cuuid, certificatMaitreDesCles)
+            .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
+    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles])
 
     useEffect( () => { 
         if(!etatConnexion) return
@@ -62,7 +80,15 @@ function AfficherMessage(props) {
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
                 message={messageDechiffre} 
-                infoMessage={message} />
+                infoMessage={message} 
+                choisirCollectionCb={choisirCollectionCb} />
+
+            <ModalSelectionnerCollection 
+                show={showChoisirCollection} 
+                etatConnexion={etatConnexion}
+                workers={workers} 
+                fermer={fermerChoisirCollectionCb} 
+                selectionner={copierVersCollection} />
         </>
     )
 
@@ -73,7 +99,7 @@ export default AfficherMessage
 function RenderMessage(props) {
     // console.debug("RenderMessage proppys : %O", props)
 
-    const { workers, message, infoMessage, etatConnexion, downloadAction } = props
+    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const { date_reception, lu } = infoMessage
 
@@ -95,7 +121,8 @@ function RenderMessage(props) {
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
                 attachments={attachments} 
-                attachments_inline={attachments_inline} />
+                attachments_inline={attachments_inline} 
+                choisirCollectionCb={choisirCollectionCb} />
         </>
     )
 }
@@ -203,7 +230,7 @@ async function marquerMessageLu(workers, uuid_transaction) {
 
 function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments, etatConnexion, downloadAction } = props
+    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -326,6 +353,7 @@ function AfficherAttachments(props) {
                 // showInfoModalOuvrir={showInfoModalOuvrir}
                 downloadAction={downloadAction}
                 etatConnexion={etatConnexion}
+                choisirCollectionCb={choisirCollectionCb}
             />            
 
         </>
@@ -405,4 +433,24 @@ async function chargerFichiers(workers, attachments, setFichiersCharges) {
     } catch(err) {
         console.error("Erreur chargement fichiers par fuuid : %O", err)
     }
+}
+
+async function copierAttachmentVersCollection(workers, attachment, cuuid, certificatMaitreDesCles) {
+    console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
+    const {connexion} = workers
+    const {cleSecrete, fuuid} = attachment
+    // Chiffrer la cle secrete pour le certificat de maitre des cles
+    // Va servir de preuve d'acces au fichier
+    const chiffrage = workers.chiffrage
+    const cleChiffree = await chiffrage.chiffrerSecret([cleSecrete], certificatMaitreDesCles, {DEBUG: true})
+    const preuveAcces = {preuve: [{hachage_bytes: fuuid, cle: cleChiffree[0]}]}
+    const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
+    delete preuveAccesSignee['_certificat']
+    console.debug("Preuve acces : %O", preuveAccesSignee)
+
+    // Transaction associerFuuids pour GrosFichiers
+    const transaction = {
+        
+    }
+
 }

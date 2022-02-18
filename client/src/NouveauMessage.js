@@ -15,10 +15,14 @@ import { chargerProfilUsager } from './profil'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
+import { Alert } from 'react-bootstrap'
 
 function NouveauMessage(props) {
 
-    const { workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie } = props
+    const { 
+        workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie, 
+        showConfirmation
+    } = props
 
     const [to, setTo] = useState('')
     const [cc, setCc] = useState('')
@@ -31,14 +35,18 @@ function NouveauMessage(props) {
     const [showContacts, setShowContacts] = useState(false)
     const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
     const [attachments, setAttachments] = useState('')
+    const [erreur, setErreur] = useState('')
 
     const envoyerCb = useCallback(()=>{
         envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc, reply_to: replyTo, attachments})
-    }, [workers, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content, attachments])
-    const annuler = useCallback(()=>{
-        setAfficherNouveauMessage(false)
-    }, [setAfficherNouveauMessage])
+            .then(()=>{showConfirmation("Message envoye"); fermer();})
+            .catch(err=>{
+                console.error("Erreur envoi message : %O", err)
+                setErreur("Erreur envoi message\n%s", ''+err)
+            })
+    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content, attachments])
 
+    const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
     const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
     const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
@@ -49,6 +57,7 @@ function NouveauMessage(props) {
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
+    const fermerErreur = useCallback(()=>setErreur(''), [setErreur])
 
     const ajouterTo = useCallback(adresses=>{
         if(!adresses) return
@@ -85,6 +94,11 @@ function NouveauMessage(props) {
     return (
         <>
             <p>Nouveau message</p>
+
+            <Alert show={erreur?true:false} variant="danger" onClose={fermerErreur} dismissible>
+                <Alert.Heading>Erreur</Alert.Heading>
+                <pre>{erreur}</pre>
+            </Alert>
 
             <Form.Label htmlFor="replyTo">Reply to</Form.Label>
             <Form.Control
@@ -162,7 +176,7 @@ function NouveauMessage(props) {
             <Row>
                 <Col>
                     <Button onClick={envoyerCb}>Envoyer</Button>
-                    <Button variant="secondary" onClick={annuler}>Annuler</Button>
+                    <Button variant="secondary" onClick={fermer}>Annuler</Button>
                 </Col>
             </Row>
 
@@ -204,12 +218,16 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
         // Mapper data attachments
         opts.attachments.forEach( attachment => {
             const { fuuid, version_courante } = attachment
-            attachmentsMapping[fuuid] = {
+            const mapping = {
                 fuuid,
                 nom: attachment.nom,
                 mimetype: version_courante.mimetype,
                 taille: version_courante.taille,
             }
+            if(attachment.images) mapping.images = {...attachment.images}
+            if(attachment.video) mapping.video = {...attachment.video}
+
+            attachmentsMapping[fuuid] = mapping
         })
 
         // Inline all thumbnails

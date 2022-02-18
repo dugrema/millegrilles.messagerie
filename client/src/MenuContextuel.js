@@ -76,6 +76,7 @@ export function MenuContextuelAfficherAttachments(props) {
     const { 
         workers, attachment, contextuel, 
         fermerContextuel, downloadAction,
+        choisirCollectionCb,
     } = props
 
     // // Determiner si preview est disponible
@@ -108,12 +109,15 @@ export function MenuContextuelAfficherAttachments(props) {
         [attachment, downloadAction, fermerContextuel]
     )
 
+    const copierCb = useCallback( () => choisirCollectionCb(attachment), [attachment, choisirCollectionCb] )
+
     // const infoAction = useCallback( () => infoModal(fermerContextuel, showInfoModalOuvrir), [fermerContextuel, showInfoModalOuvrir] )
 
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
             {/* <Row><Col><Button variant="link" onClick={showPreviewAction} disabled={!previewDisponible}><i className="fa fa-search"/> Preview</Button></Col></Row> */}
             <Row><Col><Button variant="link" onClick={downloadEvent}><i className="fa fa-download"/> Download</Button></Col></Row>
+            <Row><Col><Button variant="link" onClick={copierCb}><i className="fa fa-copy"/> Copier</Button></Col></Row>
             {/* <Row><Col><Button variant="link" onClick={infoAction}><i className="fa fa-info-circle"/> Info</Button></Col></Row> */}
         </MenuContextuel>
     )
