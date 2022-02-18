@@ -51,11 +51,13 @@ export function mapper(row, workers, opts) {
             // Mini (inline) thumbnail loader
             let miniLoader = null
             if(thumbnail) {
-                const cle = {...cles[thumbnail.hachage]}
-                if(thumbnail.data_chiffre && cle) {
+                if(thumbnail.data_chiffre && cles[thumbnail.hachage]) {
+                    const cle = {...cles[thumbnail.hachage]}
                     console.debug("Decoder cle : %O", cle)
                     // cle.cleSecrete = base64.decode(cle.cleSecrete)
                     miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {cle, dataChiffre: thumbnail.data_chiffre})
+                } else if(thumbnail.data_chiffre) {
+                    miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
                 }
             }
 
@@ -66,7 +68,10 @@ export function mapper(row, workers, opts) {
 
                     if(loadSmall && small) {
                         console.debug("Load small hachage %s", small.hachage)
-                        const cle = {...cles[small.hachage]}
+                        let cle = null
+                        if(cles[small.hachage]) {
+                            cle = {...cles[small.hachage]}
+                        }
                         // cle.cleSecrete = base64.decode(cle.cleSecrete)
                         smallLoader = loadThumbnailChiffre(small.hachage, workers, {cle})
                         try {

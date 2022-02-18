@@ -49,7 +49,7 @@ export async function getFichierChiffre(fuuid, opts) {
     const cleFichierFct = async () => {
         let cleFichier = opts.cle || await getCleDechiffree(fuuid)
         // Convertir cle base64 au besoin
-        if(typeof(cleFichier.cleSecrete) === 'string') cleFichier = {...cleFichier, cleSecrete: base64.decode(cleFichier.cleSecrete)}
+        if(cleFichier && typeof(cleFichier.cleSecrete) === 'string') cleFichier = {...cleFichier, cleSecrete: base64.decode(cleFichier.cleSecrete)}
         if(cleFichier) return cleFichier
 
         const reponse = await connexion.getClesFichiers([fuuid])
