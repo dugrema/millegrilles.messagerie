@@ -1,4 +1,5 @@
 import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
+import { base64 } from "multiformats/bases/base64"
 
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
@@ -52,8 +53,10 @@ function App() {
     console.debug("Download fichier %O", fichier)
     const { 
       fuuid, mimetype, nom: filename, taille, 
-      cleSecrete, iv, tag, format,
+      cle
     } = fichier
+    let { cleSecrete, iv, tag, format } = cle || {}
+    if(typeof(cleSecrete) === 'string') cleSecrete = base64.decode(cleSecrete)
 
     // Creer dict de cles avec info secrete pour dechiffrer le fichier
     // const password = base64.decode(cleSecrete)

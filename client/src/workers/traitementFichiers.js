@@ -3,6 +3,7 @@ import multibase from 'multibase'
 import { saveCleDechiffree, getCleDechiffree } from '@dugrema/millegrilles.reactjs/src/dbUsager'
 import { trouverLabelImage, trouverLabelVideo } from '@dugrema/millegrilles.reactjs/src/labelsRessources'
 import { getThumbnail as getIdbThumbnail, saveThumbnailDechiffre } from '../idbCollections'
+import { base64 } from 'multiformats/bases/base64'
 
 var _workers = null
 
@@ -40,7 +41,9 @@ export async function getFichierChiffre(fuuid, opts) {
 
     // Recuperer la cle de fichier
     const cleFichierFct = async () => {
-        let cleFichier = await getCleDechiffree(fuuid)
+        let cleFichier = opts.cle || await getCleDechiffree(fuuid)
+        // Convertir cle base64 au besoin
+        if(typeof(cleFichier.cle) === 'string') cleFichier = {...cleFichier, cle: base64.decode(cleFichier.cle)}
         if(cleFichier) return cleFichier
 
         const reponse = await connexion.getClesFichiers([fuuid])

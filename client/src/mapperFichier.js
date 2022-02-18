@@ -17,10 +17,12 @@ const Icones = {
 
 export { Icones }
 
-export function mapper(row, workers) {
+export function mapper(row, workers, opts) {
+    opts = opts || {}
     const { tuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
 
-    // console.debug("!!! MAPPER %O", row)
+    let cles = opts.cles || {}
+    console.debug("!!! MAPPER %O\nOpts: %O", row, opts)
 
     let date_version = '', 
         mimetype_fichier = '',
@@ -34,7 +36,7 @@ export function mapper(row, workers) {
         ids.folderId = tuuid  // Collection, tuuid est le folderId
         thumbnailIcon = Icones.ICONE_FOLDER
     } else {
-        // console.debug("mapper fichier, info courante : %O", version_courante)
+        console.debug("mapper fichier, info courante : %O", version_courante)
         const { mimetype, date_fichier, taille, images, video } = version_courante
         mimetype_fichier = mimetype
         date_version = date_fichier
@@ -45,39 +47,47 @@ export function mapper(row, workers) {
         if(workers && images) {
             const thumbnail = images.thumb || images.thumbnail,
                   small = images.small || images.poster
-            let miniLoader = null, smallLoader
+            
+            // Mini (inline) thumbnail loader
+            let miniLoader = null
             if(thumbnail) {
-                if (thumbnail.data) {
-                    // console.debug("!!! Loader thumbnail data non chiffre: %O", thumbnail)
-                    const dataArray = base64.decode(thumbnail.data)
-                    const blob = new Blob([dataArray])
-                    const objectUrl = URL.createObjectURL(blob)
-                    // console.debug("Object url pour thumbnail : %O", objectUrl)
-                    miniLoader = {
-                        load: setter => setter(objectUrl),
-                        unload: () => URL.revokeObjectURL(objectUrl)
-                    }
-                } else if (thumbnail.data_chiffre) {
-                    console.debug("!!! Loader thumbnail chiffre : %O", thumbnail)
-                    miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
+                const cle = {...cles[thumbnail.hachage]}
+                if(thumbnail.data_chiffre && cle) {
+                    console.debug("Decoder cle : %O", cle)
+                    // cle.cleSecrete = base64.decode(cle.cleSecrete)
+                    miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {cle, dataChiffre: thumbnail.data_chiffre})
                 }
             }
-            // if(small) {
-            //     smallLoader = loadThumbnailChiffre(small.hachage, workers)
-            // }
+
+            let smallLoader = null
             thumbnailLoader = {
                 load: async (setSrc, opts) => {
                     let loadSmall = (opts.mini?false:true)
-                    try {
-                        await miniLoader.load(setSrc)
-                    } catch(err) {
-                        console.error("Erreur chargement mini thumbnail pour image %s : %O", tuuid, err)
-                        loadSmall = true  // Tenter de charger small en remplacement
-                    }
 
                     if(loadSmall && small) {
-                        smallLoader = loadThumbnailChiffre(small.hachage, workers)
-                        await smallLoader.load(setSrc)
+                        console.debug("Load small hachage %s", small.hachage)
+                        const cle = {...cles[small.hachage]}
+                        // cle.cleSecrete = base64.decode(cle.cleSecrete)
+                        smallLoader = loadThumbnailChiffre(small.hachage, workers, {cle})
+                        try {
+                            await smallLoader.load(setSrc)
+                        } catch(err) {
+                            if(miniLoader) {
+                                console.warn("Erreur chargement small %s, fallback mini", small.hachage)
+                                await miniLoader.load(setSrc)
+                            } else {
+                                console.error("Erreur chargement small %s : %O", small.hachage, err)
+                            }
+                        }
+                    } else {
+                        console.debug("Load mini mini du fichier %s", small.hachage)
+                        try {
+                            await miniLoader.load(setSrc)
+                            return
+                        } catch(err) {
+                            console.error("Erreur chargement mini thumbnail pour image %s : %O", tuuid, err)
+                            loadSmall = true  // Tenter de charger small en remplacement
+                        }
                     }
                 },
                 unload: () => {
@@ -135,22 +145,17 @@ export function onContextMenu(event, value, setContextuel) {
 }
 
 function loadThumbnailChiffre(fuuid, workers, opts) {
-    console.debug("!!! loadThumbnailChiffre workers : %O", workers)
+    console.debug("loadThumbnailChiffre fuuid %s, opts : %O", fuuid, opts)
     const { traitementFichiers } = workers
     const blobPromise = traitementFichiers.getThumbnail(fuuid, opts)
-        .then(blob=>{
-            // console.debug("!!! BLOB cree : %O", blob)
-            return URL.createObjectURL(blob)
-        })
-        .catch(err=>{
-            console.error("Erreur creation blob thumbnail %s : %O", fuuid, err)
-        })
+        .then(blob=>URL.createObjectURL(blob))
+        .catch(err=>console.error("Erreur creation blob thumbnail %s : %O", fuuid, err))
     
     return {
         load: async setSrc => {
             opts = opts || {}
             const urlBlob = await blobPromise
-            // console.debug("!!! Blob charger pour thumbnail %s (opts: %O)", fuuid, opts)
+            console.debug("!!! Blob charger pour thumbnail %s (opts: %O)", fuuid, opts)
             setSrc(urlBlob)
         },
         unload: async () => {

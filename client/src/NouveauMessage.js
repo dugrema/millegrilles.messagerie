@@ -209,63 +209,73 @@ function Editeur(props) {
 async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-
     if(opts.attachments) {
         let attachmentsMapping = {}
+        let fuuids = []
 
         console.debug("Traiter attachments : %O", opts.attachments)
 
         // Mapper data attachments
         opts.attachments.forEach( attachment => {
             const { fuuid, version_courante } = attachment
+            fuuids.push(fuuid)
+
             const mapping = {
                 fuuid,
                 nom: attachment.nom,
                 mimetype: version_courante.mimetype,
                 taille: version_courante.taille,
             }
-            if(attachment.images) mapping.images = {...attachment.images}
-            if(attachment.video) mapping.video = {...attachment.video}
+            if(version_courante.images) {
+                const images = version_courante.images
+                mapping.images = {...images}
+                Object.values(images).map(image=>fuuids.push(image.hachage))
+            }
+            if(version_courante.video) {
+                const videos = version_courante.video
+                mapping.video = {...videos}
+                Object.values(videos).map(video=>fuuids.push(video.hachage))
+            }
 
             attachmentsMapping[fuuid] = mapping
         })
 
         // Inline all thumbnails
-        const mediaAttachments = opts.attachments.filter(
-            item => item.version_courante && item.version_courante.images && item.version_courante.images.thumb)
-        for(let idx=0; idx<mediaAttachments.length; idx++) {
-            const attachment = mediaAttachments[idx]
-            const thumbnail = attachment.version_courante.images.thumb
-            // const miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
-            const blobThumbnail = await workers.traitementFichiers.getThumbnail(thumbnail.hachage, {dataChiffre: thumbnail.data_chiffre})
+        // const mediaAttachments = opts.attachments.filter(
+        //     item => item.version_courante && item.version_courante.images && item.version_courante.images.thumb)
+        // for(let idx=0; idx<mediaAttachments.length; idx++) {
+        //     const attachment = mediaAttachments[idx]
+        //     const thumbnail = attachment.version_courante.images.thumb
+        //     // const miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
+        //     const blobThumbnail = await workers.traitementFichiers.getThumbnail(thumbnail.hachage, {dataChiffre: thumbnail.data_chiffre})
 
-            console.debug("Blob thumbnail : %O", blobThumbnail)
+        //     console.debug("Blob thumbnail : %O", blobThumbnail)
 
-            const thumbnailData = await blobThumbnail.arrayBuffer()
-            console.debug("Bytes thumbnail : %O", thumbnailData)
+        //     const thumbnailData = await blobThumbnail.arrayBuffer()
+        //     console.debug("Bytes thumbnail : %O", thumbnailData)
 
-            // Encoder en multibase
-            const thumbnailBase64 = base64.encode(new Uint8Array(thumbnailData))
-            console.debug("Thumbnail inline : %O", thumbnailBase64)
-            const thumbnailInfo = {...thumbnail, data: thumbnailBase64}
-            delete thumbnailInfo.data_chiffre
+        //     // Encoder en multibase
+        //     const thumbnailBase64 = base64.encode(new Uint8Array(thumbnailData))
+        //     console.debug("Thumbnail inline : %O", thumbnailBase64)
+        //     const thumbnailInfo = {...thumbnail, data: thumbnailBase64}
+        //     delete thumbnailInfo.data_chiffre
 
-            // if(!attachments_inline) {
-            //     attachments_inline = []
-            //     // opts.attachments_inline = attachments_inline
-            // }
+        //     // if(!attachments_inline) {
+        //     //     attachments_inline = []
+        //     //     // opts.attachments_inline = attachments_inline
+        //     // }
 
-            attachmentsMapping[attachment.fuuid].thumb = thumbnailInfo
-            // attachments_inline.push({
-            //     fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
-            //     thumb: thumbnailInfo, 
-            // })
-        }
+        //     attachmentsMapping[attachment.fuuid].thumb = thumbnailInfo
+        //     // attachments_inline.push({
+        //     //     fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
+        //     //     thumb: thumbnailInfo, 
+        //     // })
+        // }
 
         // Mapper le fuuid seulement
         // const attachments = opts.attachments.map(item=>item.fuuid)
         // opts = {...opts, attachments, attachments_inline}
-        opts = {...opts, attachments: Object.values(attachmentsMapping)}
+        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids}
 
     }
 

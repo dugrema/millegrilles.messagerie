@@ -244,48 +244,62 @@ function AfficherAttachments(props) {
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
-    useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
+    // useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
 
+        const { cles, fichiers } = attachments
+
         const dictAttachments = {}
-        attachments.forEach( attachment => {
+        fichiers.forEach( attachment => {
             const fuuid = attachment.fuuid
+            const version_courante = {
+                mimetype: attachment.mimetype || 'application/bytes',
+            }
+            if(attachment.images) {
+                 version_courante.images = attachment.images
+                 delete attachment.images
+            }
+            if(attachment.video) {
+                version_courante.video = attachment.video
+                delete attachment.video
+            }
             dictAttachments[fuuid] = {
                 ...attachment, 
                 fileId: fuuid, fuuid_v_courante: fuuid, 
-                version_courante: {mimetype: 'application/bytes'}
-        }})
-        if(fichiersCharges) {
-            console.debug("Combiner fichiers charges: %O", fichiersCharges)
-            fichiersCharges.forEach(item=>{
-                // Insertion information fichier
-                const fuuid = item.fuuid_v_courante
-                dictAttachments[fuuid] = {...dictAttachments[fuuid], ...item}
+                version_courante,
+            }
+        })
+        // if(fichiersCharges) {
+        //     console.debug("Combiner fichiers charges: %O", fichiersCharges)
+        //     fichiersCharges.forEach(item=>{
+        //         // Insertion information fichier
+        //         const fuuid = item.fuuid_v_courante
+        //         dictAttachments[fuuid] = {...dictAttachments[fuuid], ...item}
 
-                // Retirer tuuid, force l'utilisation du fuuid comme selecteur
-                dictAttachments[fuuid]._tuuid = dictAttachments[fuuid].tuuid
-                delete dictAttachments[fuuid].tuuid
-            })
-            console.debug("Fichiers combines avec reponse GrosFichiers : %O", dictAttachments)
-        }
+        //         // Retirer tuuid, force l'utilisation du fuuid comme selecteur
+        //         dictAttachments[fuuid]._tuuid = dictAttachments[fuuid].tuuid
+        //         delete dictAttachments[fuuid].tuuid
+        //     })
+        //     console.debug("Fichiers combines avec reponse GrosFichiers : %O", dictAttachments)
+        // }
 
         // Remettre thumbnails dechiffres en place si applicable
-        attachments.filter(attachment=>attachment.thumb).forEach( attachment => {
-            const { fuuid, thumb } = attachment
-            // delete attachment.thumb
+        // attachments.filter(attachment=>attachment.thumb).forEach( attachment => {
+        //     const { fuuid, thumb } = attachment
+        //     // delete attachment.thumb
 
-            const attachmentMappe = dictAttachments[fuuid]
-            delete attachmentMappe.thumb
-            let { version_courante } = attachmentMappe
-            let images = version_courante.images || {}
-            version_courante.images = images
-            let thumbCopie = images.thumb || {}
-            thumbCopie = {...thumbCopie, ...thumb}
-            images.thumb = thumbCopie
-            delete thumbCopie.data_chiffre
-        })
+        //     const attachmentMappe = dictAttachments[fuuid]
+        //     delete attachmentMappe.thumb
+        //     let { version_courante } = attachmentMappe
+        //     let images = version_courante.images || {}
+        //     version_courante.images = images
+        //     let thumbCopie = images.thumb || {}
+        //     thumbCopie = {...thumbCopie, ...thumb}
+        //     images.thumb = thumbCopie
+        //     delete thumbCopie.data_chiffre
+        // })
 
         // attachments_inline.forEach(a=>{
         //     let attachmentInline = {...dictAttachments[a.fuuid], ...a}
@@ -310,8 +324,8 @@ function AfficherAttachments(props) {
 
         console.debug("Dict attachments combines : %O", dictAttachments)
 
-        const liste = attachments.map(attachment=>dictAttachments[attachment.fuuid])
-        const listeMappee = liste.map(item=>mapper(item, workers))
+        const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
+        const listeMappee = liste.map(item=>mapper(item, workers, {cles}))
         console.debug("Liste mappee : %O", listeMappee)
 
         setAttachmentsList(listeMappee)
@@ -410,30 +424,30 @@ function MenuContextuel(props) {
         // return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
         const fuuid = selection[0]
-        const attachment = attachments.filter(item=>item.fuuid===fuuid).pop()
+        const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
         if(attachment) {
-            return <MenuContextuelAfficherAttachments attachment={attachment} {...props} />
+            return <MenuContextuelAfficherAttachments attachment={attachment} cles={attachments.cles} {...props} />
         }
     }
 
     return ''
 }
 
-async function chargerFichiers(workers, attachments, setFichiersCharges) {
-    if(!attachments || attachments.length === 0) return  // Rien a faire
+// async function chargerFichiers(workers, attachments, setFichiersCharges) {
+//     if(!attachments || attachments.length === 0) return  // Rien a faire
 
-    const fuuids = attachments.map(item=>item.fuuid)
-    console.debug("Charges fichiers avec fuuids : %O", fuuids)
-    if(!fuuids || fuuids.length === 0) return  // Rien a faire
-    try {
-        const reponse = await workers.connexion.getDocumentsParFuuid(fuuids)
-        console.debug("Reponse chargerFichiers : %O", reponse)
-        if(reponse.fichiers) setFichiersCharges(reponse.fichiers)
-        else console.warn("Erreur chargement fichiers par fuuid : %O", reponse)
-    } catch(err) {
-        console.error("Erreur chargement fichiers par fuuid : %O", err)
-    }
-}
+//     const fuuids = attachments.map(item=>item.fuuid)
+//     console.debug("Charges fichiers avec fuuids : %O", fuuids)
+//     if(!fuuids || fuuids.length === 0) return  // Rien a faire
+//     try {
+//         const reponse = await workers.connexion.getDocumentsParFuuid(fuuids)
+//         console.debug("Reponse chargerFichiers : %O", reponse)
+//         if(reponse.fichiers) setFichiersCharges(reponse.fichiers)
+//         else console.warn("Erreur chargement fichiers par fuuid : %O", reponse)
+//     } catch(err) {
+//         console.error("Erreur chargement fichiers par fuuid : %O", err)
+//     }
+// }
 
 async function copierAttachmentVersCollection(workers, attachment, cuuid, certificatMaitreDesCles) {
     console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)

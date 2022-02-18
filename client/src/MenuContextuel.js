@@ -72,9 +72,9 @@ export function MenuContextuelAttacherMultiselect(props) {
 }
 
 export function MenuContextuelAfficherAttachments(props) {
-    // console.debug("MenuContextuelAfficherAttachments proppys : %O", props)
+    console.debug("MenuContextuelAfficherAttachments proppys : %O", props)
     const { 
-        workers, attachment, contextuel, 
+        workers, attachment, cles, contextuel, 
         fermerContextuel, downloadAction,
         choisirCollectionCb,
     } = props
@@ -104,7 +104,10 @@ export function MenuContextuelAfficherAttachments(props) {
     const downloadEvent = useCallback( 
         event => { 
             console.debug("Downloader attachment : %O", attachment)
-            downloadAction(attachment)
+            const fuuid = attachment.fuuid
+            const cle = cles[fuuid]
+            const attachmentInfo = {...attachment, cle}
+            downloadAction(attachmentInfo)
         }, 
         [attachment, downloadAction, fermerContextuel]
     )
