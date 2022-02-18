@@ -77,29 +77,31 @@ export function MenuContextuelAfficherAttachments(props) {
         workers, attachment, cles, contextuel, 
         fermerContextuel, downloadAction,
         choisirCollectionCb,
+        showPreview,
     } = props
 
-    // // Determiner si preview est disponible
-    // let previewDisponible = false
-    // if(fichier) {
-    //     const mimetype = fichier.mimetype || '',
-    //           mimetypeBase = mimetype.split('/').shift()
-    //     if(mimetype === 'application/pdf') {
-    //         previewDisponible = true
-    //     } else {
-    //         const versionCourante = fichier.version_courante || {}
-    //         if(mimetypeBase === 'image' && versionCourante.images) {
-    //             previewDisponible = true
-    //         } else if(mimetypeBase === 'video' && versionCourante.video) {
-    //             previewDisponible = true
-    //         }
-    //     }
-    // }
+    // Determiner si preview est disponible
+    let previewDisponible = false
+    if(attachment) {
+        const mimetype = attachment.mimetype || '',
+              mimetypeBase = mimetype.split('/').shift()
+        if(mimetype === 'application/pdf') {
+            previewDisponible = true
+        } else {
+            const versionCourante = attachment.version_courante || {}
+            if(mimetypeBase === 'image' && versionCourante.images) {
+                previewDisponible = true
+            } else if(mimetypeBase === 'video' && versionCourante.video) {
+                previewDisponible = true
+            }
+        }
+    }
 
-    // const showPreviewAction = useCallback( event => {
-    //     if(previewDisponible) showPreview(fichier.fileId)
-    //     fermerContextuel()
-    // }, [fichier, previewDisponible, fermerContextuel])
+    const showPreviewAction = useCallback( event => {
+        console.debug("Show preview : %O", attachment.fuuid)
+        if(previewDisponible) showPreview(attachment.fuuid)
+        fermerContextuel()
+    }, [attachment, previewDisponible, fermerContextuel])
 
     const downloadEvent = useCallback( 
         event => { 
@@ -118,7 +120,7 @@ export function MenuContextuelAfficherAttachments(props) {
 
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
-            {/* <Row><Col><Button variant="link" onClick={showPreviewAction} disabled={!previewDisponible}><i className="fa fa-search"/> Preview</Button></Col></Row> */}
+            <Row><Col><Button variant="link" onClick={showPreviewAction} disabled={!previewDisponible}><i className="fa fa-search"/> Preview</Button></Col></Row>
             <Row><Col><Button variant="link" onClick={downloadEvent}><i className="fa fa-download"/> Download</Button></Col></Row>
             <Row><Col><Button variant="link" onClick={copierCb}><i className="fa fa-copy"/> Copier</Button></Col></Row>
             {/* <Row><Col><Button variant="link" onClick={infoAction}><i className="fa fa-info-circle"/> Info</Button></Col></Row> */}

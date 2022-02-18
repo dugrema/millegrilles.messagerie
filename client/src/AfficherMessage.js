@@ -9,11 +9,11 @@ import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@du
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
+import PreviewFichiers from './FilePlayer'
 
 import { dechiffrerMessage } from './cles'
 import { mapper } from './mapperFichier'
-
-const { extraireExtensionsMillegrille } = forgecommon
+import { detecterSupport } from './fonctionsFichiers'
 
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
@@ -235,13 +235,29 @@ function AfficherAttachments(props) {
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
     const [attachmentsList, setAttachmentsList] = useState('')
-    const [fichiersCharges, setFichierCharges] = useState('')
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
     const [selection, setSelection] = useState('')
+    const [showPreview, setShowPreview] = useState(false)
+    const [support, setSupport] = useState({})
+    const [fuuidSelectionne, setFuuidSelectionne] = useState('')
 
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+    const showPreviewCb = useCallback( async fuuid => {
+        console.debug("Show preview cb : %O", fuuid)
+        await setFuuidSelectionne(fuuid)
+        setShowPreview(true)
+    }, [setShowPreview, setFuuidSelectionne])
+    const showPreviewSelection = useCallback( async () => {
+        if(selection && selection.length > 0) {
+            let fuuid = [...selection].pop()
+            console.debug("Show preview cb : %O", fuuid)
+            await setFuuidSelectionne(fuuid)
+            setShowPreview(true)
+        }
+    }, [selection, setShowPreview, setFuuidSelectionne])
 
+    useEffect(()=>detecterSupport(setSupport), [setSupport])
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
     // useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
@@ -271,57 +287,7 @@ function AfficherAttachments(props) {
                 version_courante,
             }
         })
-        // if(fichiersCharges) {
-        //     console.debug("Combiner fichiers charges: %O", fichiersCharges)
-        //     fichiersCharges.forEach(item=>{
-        //         // Insertion information fichier
-        //         const fuuid = item.fuuid_v_courante
-        //         dictAttachments[fuuid] = {...dictAttachments[fuuid], ...item}
-
-        //         // Retirer tuuid, force l'utilisation du fuuid comme selecteur
-        //         dictAttachments[fuuid]._tuuid = dictAttachments[fuuid].tuuid
-        //         delete dictAttachments[fuuid].tuuid
-        //     })
-        //     console.debug("Fichiers combines avec reponse GrosFichiers : %O", dictAttachments)
-        // }
-
-        // Remettre thumbnails dechiffres en place si applicable
-        // attachments.filter(attachment=>attachment.thumb).forEach( attachment => {
-        //     const { fuuid, thumb } = attachment
-        //     // delete attachment.thumb
-
-        //     const attachmentMappe = dictAttachments[fuuid]
-        //     delete attachmentMappe.thumb
-        //     let { version_courante } = attachmentMappe
-        //     let images = version_courante.images || {}
-        //     version_courante.images = images
-        //     let thumbCopie = images.thumb || {}
-        //     thumbCopie = {...thumbCopie, ...thumb}
-        //     images.thumb = thumbCopie
-        //     delete thumbCopie.data_chiffre
-        // })
-
-        // attachments_inline.forEach(a=>{
-        //     let attachmentInline = {...dictAttachments[a.fuuid], ...a}
-        //     if(attachmentInline.thumb) {
-        //         // Override images.thumb.data_chiffre par .data
-        //         let { version_courante } = attachmentInline
-        //         version_courante = {...version_courante, ...a}
-        //         attachmentInline.version_courante = version_courante
-        //         delete version_courante.data
-        //         delete version_courante.thumb
-        //         let images = version_courante.images || {}
-        //         version_courante.images = images
-        //         let thumb = images.thumb || {}
-        //         thumb = {...thumb, ...a.thumb}
-        //         images.thumb = thumb
-        //         delete thumb.data_chiffre
-        //         delete attachmentInline.thumb
-        //     }
-
-        //     dictAttachments[a.fuuid] = attachmentInline
-        // })
-
+ 
         console.debug("Dict attachments combines : %O", dictAttachments)
 
         const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
@@ -330,7 +296,7 @@ function AfficherAttachments(props) {
 
         setAttachmentsList(listeMappee)
 
-    }, [workers, attachments, fichiersCharges, setAttachmentsList])
+    }, [workers, attachments, setAttachmentsList])
 
     if(!attachmentsList) return ''
 
@@ -349,7 +315,7 @@ function AfficherAttachments(props) {
                 colonnes={colonnes}
                 rows={attachmentsList} 
                 // onClick={...pas utilise...} 
-                // onDoubleClick={...pas utilise...}
+                onDoubleClick={showPreviewSelection}
                 onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
                 onSelection={onSelectionLignes}
                 onClickEntete={colonne=>{
@@ -362,13 +328,22 @@ function AfficherAttachments(props) {
                 contextuel={contextuel} 
                 fermerContextuel={fermerContextuel}
                 attachments={attachments}
+                attachmentsList={attachmentsList}
                 selection={selection}
-                // showPreview={showPreviewAction}
+                showPreview={showPreviewCb}
                 // showInfoModalOuvrir={showInfoModalOuvrir}
                 downloadAction={downloadAction}
                 etatConnexion={etatConnexion}
                 choisirCollectionCb={choisirCollectionCb}
             />            
+
+            <PreviewFichiers 
+                showPreview={showPreview} 
+                setShowPreview={setShowPreview}
+                fuuid={fuuidSelectionne}
+                fichiers={attachmentsList}
+                support={support}
+            />
 
         </>
     )
@@ -412,7 +387,7 @@ function BoutonsFormat(props) {
 function MenuContextuel(props) {
     // console.debug("MenuContextuel proppys : %O", props)
 
-    const { contextuel, attachments, selection } = props
+    const { contextuel, attachments, attachmentsList, selection } = props
 
     if(!contextuel.show) return ''
 
@@ -424,7 +399,7 @@ function MenuContextuel(props) {
         // return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
         const fuuid = selection[0]
-        const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
+        const attachment = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
         if(attachment) {
             return <MenuContextuelAfficherAttachments attachment={attachment} cles={attachments.cles} {...props} />
         }
