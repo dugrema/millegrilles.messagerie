@@ -9,6 +9,12 @@ var _workers = null
 
 export function setWorkers(workers) {
     _workers = workers
+    
+    // Configuration idb
+    if(workers) {
+        console.debug("Workers : %O", workers)
+        workers.transfertFichiers.down_setNomIdb('messagerie')
+    }
 }
 
 export async function getThumbnail(fuuid, opts) {
@@ -43,7 +49,7 @@ export async function getFichierChiffre(fuuid, opts) {
     const cleFichierFct = async () => {
         let cleFichier = opts.cle || await getCleDechiffree(fuuid)
         // Convertir cle base64 au besoin
-        if(typeof(cleFichier.cle) === 'string') cleFichier = {...cleFichier, cle: base64.decode(cleFichier.cle)}
+        if(typeof(cleFichier.cleSecrete) === 'string') cleFichier = {...cleFichier, cleSecrete: base64.decode(cleFichier.cleSecrete)}
         if(cleFichier) return cleFichier
 
         const reponse = await connexion.getClesFichiers([fuuid])
