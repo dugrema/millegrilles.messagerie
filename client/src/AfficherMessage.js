@@ -4,6 +4,7 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import ReactQuill from 'react-quill'
+import { base64 } from 'multiformats/bases/base64'
 
 import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
 
@@ -37,9 +38,13 @@ function AfficherMessage(props) {
     const copierVersCollection = useCallback( cuuid => {
         const attachment = attachmentACopier
         setAttachmentACopier('')  // Reset attachment
-        copierAttachmentVersCollection(workers, attachment, cuuid, certificatMaitreDesCles)
+
+        console.debug("Copier attachment pour message : %O", messageDechiffre)
+        const cles = messageDechiffre.attachments.cles
+
+        copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles])
+    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
 
     useEffect( () => { 
         if(!etatConnexion) return
@@ -391,7 +396,7 @@ function MenuContextuel(props) {
 
     if(!contextuel.show) return ''
 
-    console.debug("!!! Selection : %s, FICHIERS : %O", selection, attachments)
+    console.debug("!!! Selection : %s, FICHIERS : %O, mappes : %O", selection, attachments, attachmentsList)
 
     if( selection && selection.length > 1 ) {
         console.warn("!!! Multiselect TODO !!!")
@@ -399,9 +404,11 @@ function MenuContextuel(props) {
         // return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
         const fuuid = selection[0]
-        const attachment = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
+        const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
+        const attachmentListDetail = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
+        const attachmentDetail = {...attachmentListDetail, ...attachment}
         if(attachment) {
-            return <MenuContextuelAfficherAttachments attachment={attachment} cles={attachments.cles} {...props} />
+            return <MenuContextuelAfficherAttachments attachment={attachmentDetail} cles={attachments.cles} {...props} />
         }
     }
 
@@ -424,22 +431,50 @@ function MenuContextuel(props) {
 //     }
 // }
 
-async function copierAttachmentVersCollection(workers, attachment, cuuid, certificatMaitreDesCles) {
+async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles) {
     console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
-    const {connexion} = workers
-    const {cleSecrete, fuuid} = attachment
+    const {connexion, chiffrage} = workers
+    const {fuuid, version_courante} = attachment
+
+    const dictClesSecretes = Object.keys(cles).reduce((acc, fuuid)=>{
+        acc[fuuid] = cles[fuuid].cleSecrete
+        return acc
+    }, {})
+    console.debug("Cles secretes : %O", dictClesSecretes)
+
     // Chiffrer la cle secrete pour le certificat de maitre des cles
     // Va servir de preuve d'acces au fichier
-    const chiffrage = workers.chiffrage
-    const cleChiffree = await chiffrage.chiffrerSecret([cleSecrete], certificatMaitreDesCles, {DEBUG: true})
-    const preuveAcces = {preuve: [{hachage_bytes: fuuid, cle: cleChiffree[0]}]}
+    const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
+    console.debug("Cles chiffrees : %O", clesChiffrees)
+    // const clesRechiffrees = clesChiffrees.reduce((acc, cle, idx)=>{
+    //     const fuuid = listeClesSecrete[idx].fuuid
+    //     acc[fuuid] = cle
+    //     return acc
+    // }, {})
+
+    const preuveAcces = { cles: clesChiffrees.cles, partition: clesChiffrees.partition }
     const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
     delete preuveAccesSignee['_certificat']
     console.debug("Preuve acces : %O", preuveAccesSignee)
 
     // Transaction associerFuuids pour GrosFichiers
-    const transaction = {
-        
+    const fichier = {
+        fuuid, cuuid,
+        mimetype: attachment.mimetype,
+        nom: attachment.nom,
+        taille: attachment.taille,
+        dateFichier: attachment.dateFichier,
+        ...version_courante,
     }
+    const champsOptionnels = ['width', 'height']
+    for(let champ in champsOptionnels) {
+        if(attachment[champ]) fichier[champ] = attachment[champ]
+    }
+    const transactionCopierVersTiersSignee = await connexion.formatterMessage(fichier, 'GrosFichiers', {action: 'copierFichierTiers'})
+    delete transactionCopierVersTiersSignee['_certificat']
 
+    const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
+    console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
+    const reponse = await connexion.copierFichierTiers(commandeCopierVersTiers)
+    console.debug("Reponse commande copier vers tiers : %O", reponse)
 }

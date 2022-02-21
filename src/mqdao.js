@@ -158,6 +158,10 @@ function getPermissionCles(socket, params) {
     return transmettreRequete(socket, params, 'getClesFichiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
 
+function copierFichierTiers(socket, params) {
+    return transmettreCommande(socket, params, 'copierFichierTiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
 // Fonctions generiques
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -215,7 +219,7 @@ module.exports = {
     initialiserProfil,
 
     // GrosFichiers
-    getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles,
+    getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles, copierFichierTiers,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 

@@ -221,19 +221,24 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
             fuuids.push(fuuid)
 
             const mapping = {
+                ...version_courante,
                 fuuid,
-                nom: attachment.nom,
-                mimetype: version_courante.mimetype,
-                taille: version_courante.taille,
+                // nom: attachment.nom,
+                // mimetype: version_courante.mimetype,
+                // taille: version_courante.taille,
+                // dateFichier: dateAjout,
             }
+            delete mapping.tuuid
+            console.debug("Mapping attachment : %O", mapping)
+
             if(version_courante.images) {
                 const images = version_courante.images
-                mapping.images = {...images}
+                // mapping.images = {...images}
                 Object.values(images).map(image=>fuuids.push(image.hachage))
             }
             if(version_courante.video) {
                 const videos = version_courante.video
-                mapping.video = {...videos}
+                // mapping.video = {...videos}
                 Object.values(videos).map(video=>fuuids.push(video.hachage))
             }
 

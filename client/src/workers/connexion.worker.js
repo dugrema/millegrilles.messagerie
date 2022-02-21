@@ -103,6 +103,11 @@ async function getDomainesMessagerie() {
   return ConnexionClient.emitBlocking('getDomainesMessagerie', {})
 }
 
+function copierFichierTiers(commande) {
+  return ConnexionClient.emitBlocking('copierFichierTiers', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'copierFichierTiers', ajouterCertificat: true})
+}
+
+
 // Exposer methodes du Worker
 expose({
     ...ConnexionClient, 
@@ -112,6 +117,7 @@ expose({
     getProfil, getMessages, getPermissionMessages,
     posterMessage,
     getDomainesMessagerie, getContacts, majContact, marquerLu,
+    copierFichierTiers,
 
     initialiserProfil,
 
