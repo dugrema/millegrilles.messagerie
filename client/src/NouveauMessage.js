@@ -6,6 +6,7 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
 import { base64 } from 'multiformats/bases/base64'
 import ReactQuill from 'react-quill'
+import { useDropzone } from 'react-dropzone'
 
 import { ListeFichiers, FormatteurTaille } from '@dugrema/millegrilles.reactjs'
 
@@ -57,7 +58,6 @@ function NouveauMessage(props) {
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
-    const uploaderFichiersCb = useCallback(event=>preparerUploaderFichiers(workers), [workers])
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
     const fermerErreur = useCallback(()=>setErreur(''), [setErreur])
 
@@ -78,6 +78,17 @@ function NouveauMessage(props) {
         const fuuidsMaj = [...attachments, ...selection]
         setAttachments(fuuidsMaj)
     }, [attachments, setAttachments])
+
+    const onDrop = useCallback(acceptedFiles=>preparerUploaderFichiers(workers, acceptedFiles), [workers])
+
+    const dzHook = useDropzone({onDrop})
+    const {getRootProps, getInputProps, isDragActive, open: openDropzone} = dzHook
+
+    const uploaderFichiersAction = useCallback(event=>{
+        event.stopPropagation()
+        event.preventDefault()
+        openDropzone()
+    }, [openDropzone])
 
     useEffect(()=>{
         const from = `@${usager.nomUsager}/${dnsMessagerie}`
@@ -165,7 +176,10 @@ function NouveauMessage(props) {
             <h2>Attachements</h2>
             <Row>
                 <Col>
-                    <Button variant="secondary" onClick={uploaderFichiersCb}>Uploader</Button>
+                    <div {...getRootProps()}>
+                        <input {...getInputProps()}/>
+                        <Button>Upload</Button>
+                    </div>
                     <Button variant="secondary" onClick={choisirFichiersAttaches}>Collections</Button>
                 </Col>
             </Row>
@@ -258,13 +272,16 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
     console.debug("Resultat posterMessage : %O", resultat)
 }
 
-async function preparerUploaderFichiers(workers) {
+async function preparerUploaderFichiers(workers, acceptedFiles) {
     console.debug("Preparer upload fichiers")
     const { connexion } = workers
 
     // Obtenir tuuid de la collection d'upload
     const infoCollectionUpload = await connexion.getCollectionUpload()
     console.debug("Information collection upload : %O", infoCollectionUpload)
+    const cuuid = infoCollectionUpload.tuuid  // Collection destination pour l'upload
+
+    uploaderFichiers(workers, cuuid, acceptedFiles)
 }
 
 function AfficherAttachments(props) {
