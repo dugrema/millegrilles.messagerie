@@ -80,15 +80,8 @@ function NouveauMessage(props) {
     }, [attachments, setAttachments])
 
     const onDrop = useCallback(acceptedFiles=>preparerUploaderFichiers(workers, acceptedFiles), [workers])
-
     const dzHook = useDropzone({onDrop})
-    const {getRootProps, getInputProps, isDragActive, open: openDropzone} = dzHook
-
-    const uploaderFichiersAction = useCallback(event=>{
-        event.stopPropagation()
-        event.preventDefault()
-        openDropzone()
-    }, [openDropzone])
+    const {getRootProps, getInputProps} = dzHook
 
     useEffect(()=>{
         const from = `@${usager.nomUsager}/${dnsMessagerie}`
@@ -106,7 +99,7 @@ function NouveauMessage(props) {
 
     return (
         <>
-            <p>Nouveau message</p>
+            <h2>Nouveau message</h2>
 
             <Alert show={erreur?true:false} variant="danger" onClose={fermerErreur} dismissible>
                 <Alert.Heading>Erreur</Alert.Heading>
@@ -162,16 +155,8 @@ function NouveauMessage(props) {
             
             <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
-                {/* <Form.Control 
-                    as="textarea" 
-                    name="content"
-                    value={content}
-                    onChange={contentChange}
-                    rows={15} /> */}
-
                 <Editeur content={content} setContent={setContent} />
             </Form.Group>
-
 
             <h2>Attachements</h2>
             <Row>
@@ -281,7 +266,8 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
     console.debug("Information collection upload : %O", infoCollectionUpload)
     const cuuid = infoCollectionUpload.tuuid  // Collection destination pour l'upload
 
-    uploaderFichiers(workers, cuuid, acceptedFiles)
+    const reponseUpload = await uploaderFichiers(workers, cuuid, acceptedFiles)
+    console.debug("Reponse upload : %O", reponseUpload)
 }
 
 function AfficherAttachments(props) {
