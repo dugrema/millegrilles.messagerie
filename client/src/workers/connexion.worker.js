@@ -1,5 +1,6 @@
 import { expose } from 'comlink'
 import * as ConnexionClient from '@dugrema/millegrilles.reactjs/src/connexionClient'
+import {formatterDateString} from '@dugrema/millegrilles.reactjs/src/formatterUtils'
 
 const CONST_DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MAITREDESCLES = 'MaitreDesCles',
@@ -107,6 +108,17 @@ function copierFichierTiers(commande) {
   return ConnexionClient.emitBlocking('copierFichierTiers', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'copierFichierTiers', ajouterCertificat: true})
 }
 
+function getCollectionUpload() {
+  const dateFormattee = formatterDateString({format: 'YYYY-MM-DD'})
+  const commande = {
+    favoris_id: 'messagerie',
+    path_collections: [
+      'outgoing',
+      dateFormattee,
+    ]
+  }
+  return ConnexionClient.emitBlocking('getCollectionUpload', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'favorisCreerPath', ajouterCertificat: true})
+}
 
 // Exposer methodes du Worker
 expose({
@@ -117,7 +129,7 @@ expose({
     getProfil, getMessages, getPermissionMessages,
     posterMessage,
     getDomainesMessagerie, getContacts, majContact, marquerLu,
-    copierFichierTiers,
+    copierFichierTiers, getCollectionUpload,
 
     initialiserProfil,
 

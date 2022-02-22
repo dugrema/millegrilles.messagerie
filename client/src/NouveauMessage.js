@@ -11,6 +11,7 @@ import { ListeFichiers, FormatteurTaille } from '@dugrema/millegrilles.reactjs'
 
 import { posterMessage } from './messageUtils'
 import { chargerProfilUsager } from './profil'
+import { uploaderFichiers } from './fonctionsFichiers'
 
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
@@ -56,6 +57,7 @@ function NouveauMessage(props) {
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
+    const uploaderFichiersCb = useCallback(event=>preparerUploaderFichiers(workers), [workers])
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
     const fermerErreur = useCallback(()=>setErreur(''), [setErreur])
 
@@ -117,7 +119,7 @@ function NouveauMessage(props) {
                 value={to}
                 onChange={toChange}
             />
-            <Button onClick={choisirContacts}>Contacts</Button>
+            <Button variant="secondary" onClick={choisirContacts}>Contacts</Button>
             <p></p>
 
             <Form.Label htmlFor="inputCc">Cc</Form.Label>
@@ -159,9 +161,12 @@ function NouveauMessage(props) {
                 <Editeur content={content} setContent={setContent} />
             </Form.Group>
 
+
+            <h2>Attachements</h2>
             <Row>
                 <Col>
-                    <Button onClick={choisirFichiersAttaches}>Attacher</Button>
+                    <Button variant="secondary" onClick={uploaderFichiersCb}>Uploader</Button>
+                    <Button variant="secondary" onClick={choisirFichiersAttaches}>Collections</Button>
                 </Col>
             </Row>
 
@@ -245,47 +250,21 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
             attachmentsMapping[fuuid] = mapping
         })
 
-        // Inline all thumbnails
-        // const mediaAttachments = opts.attachments.filter(
-        //     item => item.version_courante && item.version_courante.images && item.version_courante.images.thumb)
-        // for(let idx=0; idx<mediaAttachments.length; idx++) {
-        //     const attachment = mediaAttachments[idx]
-        //     const thumbnail = attachment.version_courante.images.thumb
-        //     // const miniLoader = loadThumbnailChiffre(thumbnail.hachage, workers, {dataChiffre: thumbnail.data_chiffre})
-        //     const blobThumbnail = await workers.traitementFichiers.getThumbnail(thumbnail.hachage, {dataChiffre: thumbnail.data_chiffre})
-
-        //     console.debug("Blob thumbnail : %O", blobThumbnail)
-
-        //     const thumbnailData = await blobThumbnail.arrayBuffer()
-        //     console.debug("Bytes thumbnail : %O", thumbnailData)
-
-        //     // Encoder en multibase
-        //     const thumbnailBase64 = base64.encode(new Uint8Array(thumbnailData))
-        //     console.debug("Thumbnail inline : %O", thumbnailBase64)
-        //     const thumbnailInfo = {...thumbnail, data: thumbnailBase64}
-        //     delete thumbnailInfo.data_chiffre
-
-        //     // if(!attachments_inline) {
-        //     //     attachments_inline = []
-        //     //     // opts.attachments_inline = attachments_inline
-        //     // }
-
-        //     attachmentsMapping[attachment.fuuid].thumb = thumbnailInfo
-        //     // attachments_inline.push({
-        //     //     fuuid: attachment.fuuid, nom: attachment.nom, taille: attachment.taille, mimetype: attachment.mimetype,
-        //     //     thumb: thumbnailInfo, 
-        //     // })
-        // }
-
-        // Mapper le fuuid seulement
-        // const attachments = opts.attachments.map(item=>item.fuuid)
-        // opts = {...opts, attachments, attachments_inline}
+        // Ajouter attachments et fuuids aux opts
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids}
-
     }
 
     const resultat = await posterMessage(workers, certificatChiffragePem, from, to, subject, content, opts)
     console.debug("Resultat posterMessage : %O", resultat)
+}
+
+async function preparerUploaderFichiers(workers) {
+    console.debug("Preparer upload fichiers")
+    const { connexion } = workers
+
+    // Obtenir tuuid de la collection d'upload
+    const infoCollectionUpload = await connexion.getCollectionUpload()
+    console.debug("Information collection upload : %O", infoCollectionUpload)
 }
 
 function AfficherAttachments(props) {
@@ -305,10 +284,6 @@ function AfficherAttachments(props) {
 
     return (
         <div>
-            <Row>
-                <Col>Attachment</Col>
-            </Row>
-
             <Row>
                 <Col>
                     <BoutonsFormat modeView={modeView} setModeView={setModeView} />
