@@ -9,7 +9,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, su
     console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
     // poster
-    const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles )
+    const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles)
     console.debug("Reponse poster : %O", reponse)
 
     return reponse
@@ -91,22 +91,32 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
 
-    const destinataires = [...toFiltre, ...ccFiltre]
+    const destinataires = [...new Set([...toFiltre, ...ccFiltre, ...bccFiltre])]  // dedupe
 
     // Preparer l'enveloppe du message
     const enveloppeMessage = {
         message_chiffre: messageChiffre.ciphertext,
         'hachage_bytes': commandeMaitrecles['hachage_bytes'],
         //'attachments': attachments,
-        to: destinataires,
+        // to: destinataires,
         fingerprint_certificat: messageSigne['en-tete']['fingerprint_certificat'],
     }
-
-    if(bcc) enveloppeMessage.bcc = bccFiltre
-    
+   
     if(attachments) {
         enveloppeMessage.attachments = fuuidsCles
     }
 
-    return { enveloppeMessage, commandeMaitrecles }
+    const enveloppeMessageSigne = await connexion.formatterMessage(enveloppeMessage, 'Messagerie')
+    delete enveloppeMessageSigne['_certificat']
+
+    const routageMessage = {
+        destinataires: destinataires,
+        message: enveloppeMessageSigne,
+    }
+    if(bcc) routageMessage.bcc = bccFiltre
+
+    const enveloppeRoutage = await connexion.formatterMessage(
+        routageMessage, 'Messagerie', {action: 'poster', ajouterCertificat: true})
+
+    return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles }
 }
