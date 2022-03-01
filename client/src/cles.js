@@ -1,4 +1,5 @@
 import { saveCleDechiffree, getCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import pako from 'pako'
 
 export async function dechiffrerMessage(workers, message) {
     const {uuid_transaction, hachage_bytes, message_chiffre} = message
@@ -12,9 +13,13 @@ export async function dechiffrerMessage(workers, message) {
     const cle = cles[hachage_bytes],
           cleDechiffree = cle.cleSecrete
     // console.debug("dechiffrerMessage params cle: %O, cleDechiffree: %O\nMessage: %O", cle, cleDechiffree, message_chiffre)
-    const messageDechiffre = await workers.chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag)
+    let messageDechiffre = await workers.chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag)
+    // console.debug("Message dechiffre : %O", messageDechiffre)
+    messageDechiffre = pako.inflate(messageDechiffre).buffer
+    // console.debug("Message gunzip : %O", messageDechiffre)
+    messageDechiffre = new TextDecoder().decode(messageDechiffre)
     // console.debug("dechiffrerMessage Message dechiffrage raw : %O", messageDechiffre)
-    const messageDict = JSON.parse(new TextDecoder().decode(messageDechiffre))
+    const messageDict = JSON.parse(messageDechiffre)
 
     return messageDict
 }

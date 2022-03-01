@@ -1,5 +1,6 @@
 import { getClesAttachments } from './cles'
 import { base64 } from "multiformats/bases/base64"
+import pako from 'pako'
 
 export async function posterMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     
@@ -77,17 +78,23 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     }
 
     // Signer le message
-    console.debug("Signer message : %O", message)
+    // console.debug("Signer message : %O", message)
     const messageSigne = await connexion.formatterMessage(message, 'message')
-    console.debug("Message signe : %O", messageSigne)
+    delete messageSigne['_certificat']  // Retirer certificat
+    // console.debug("Message signe : %O", messageSigne)
+    
+    // Compresser le message en gzip
+    let messageBytes = JSON.stringify(messageSigne)
+    // console.debug("Message signe taille %d", messageBytes.length)
+    messageBytes = pako.deflate(new TextEncoder().encode(messageBytes))
+    // console.debug("Message signe gzippe : %O", messageBytes)
 
     // Chiffrer le message 
-    delete messageSigne['_certificat']  // Retirer certificat
     const messageChiffre = await chiffrage.chiffrerDocument(
-        messageSigne, 'Messagerie', certifcatChiffragePem, 
-        {DEBUG: true, identificateurs_document: {'message': 'true'}}
+        messageBytes, 'Messagerie', certifcatChiffragePem, 
+        {DEBUG: true, identificateurs_document: {'message': 'true'}, nojson: true, type: 'binary'}
     )
-    console.debug("Message chiffre : %O", messageChiffre)
+    // console.debug("Message chiffre : %O", messageChiffre)
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
 
