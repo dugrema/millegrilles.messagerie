@@ -20,7 +20,7 @@ async function app(params) {
         configurerEvenements,
         {
             pathApp: '/messagerie', 
-            verifierAuthentification: (req, res, next) => {verifierAuthentification(amqpdaoInst, req, res, next)},
+            verifierAuthentification: (req, res, next) => verifierAuthentification(amqpdaoInst, req, res, next),
             verifierAutorisation, 
             exchange: '2.prive'
         }
@@ -57,8 +57,6 @@ async function app(params) {
 
 function verifierAuthentification(amqpdaoInst, req, res, next) {
     
-    debug("REQ : %O", amqpdaoInst.pki)
-
     const url = req.url
     debug("verifier authentification path %s", url)
 
@@ -113,7 +111,7 @@ async function appliquerRateLimit(amqpdaoInst, req, typeRate, opts) {
     const cleRedis = `messagerie:${typeRate}:${adresseExterne}`
     
     const quota = await getCleRedis(redisClient, cleRedis)
-    debug("getCleRedis Resultat chargement %O", quota)
+    debug("getCleRedis Resultat chargement adresse: %s = %O", adresseExterne, quota)
     if(quota) {
         const quotaInt = Number.parseInt(quota)
         if(quotaInt > 0) {
@@ -135,38 +133,13 @@ async function appliquerRateLimit(amqpdaoInst, req, typeRate, opts) {
     return false  // Limite n'est pas atteinte
 }
 
-async function getCleRedis(redisClient, cleRedis) {
-    const resultat = await new Promise((resolve, reject) => {
+function getCleRedis(redisClient, cleRedis) {
+    return new Promise((resolve, reject) => {
         redisClient.get(cleRedis, async (err, data)=>{
             if(err) return reject(err)
             resolve(data)
         })
     })
-
-    return resultat
-
-    // try {
-    //   const contenuData = JSON.parse(data)   //splitPEMCerts(data)
-
-    //   const fingerprintCalcule = await hacherCertificat(listePems[0])
-    //   var fingerprintMatch = false
-    //   if(fingerprintCalcule === fingerprint) {
-    //     fingerprintMatch = true
-    //   }
-    //   if( ! fingerprintMatch ) {
-    //     // Supprimer certificat invalide
-    //     redisClient.del(cleCert)
-    //     return reject('Fingerprint ' + fingerprintCalcule + ' ne correspond pas a : ' + fingerprint + '. Entree supprimee de redis.');
-    //   }
-
-    //   // Touch - reset expiration
-    //   redisClient.expire(cleCert, EXPIRATION_REDIS_CERT)
-
-    //   resolve(chaineForge)
-    // } catch(err) {
-    //   return reject(err)
-    // }
-
 }
 
 function verifierAutorisation(socket, securite, certificatForge) {
