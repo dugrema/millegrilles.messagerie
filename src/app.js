@@ -49,7 +49,7 @@ async function app(params) {
 
     // Route /messagerie
     app.use('/messagerie', route)
-    route.get('/poster', poster())
+    route.post('/poster', poster())
     route.use(routeMessagerie(amqpdaoInst))
 
     return server
@@ -62,10 +62,11 @@ function verifierAuthentification(amqpdaoInst, req, res, next) {
 
     new Promise(async (resolve, reject) => {
         try {
-            const pathUrl = url.split('/')
-            const action = pathUrl.pop();
+            // Parse URL (dummy host) pour trouver
+            const urlParsed = new URL('https://localhost' + url)
+            const pathname = urlParsed.pathname
             
-            if(action === 'poster') {
+            if(pathname === '/messagerie/poster') {
                 // Verifier si on a exces de connexions provenant du meme IP
                 if(await appliquerRateLimit(amqpdaoInst, req, 'poster')) {
                     // On a un exces d'appel provenant du meme IP
