@@ -20,7 +20,7 @@ async function app(params) {
         configurerEvenements,
         {
             pathApp: '/messagerie', 
-            verifierAuthentification: (req, res, next) => verifierAuthentification(amqpdaoInst, req, res, next),
+            verifierAuthentification: (_req, _res, next) => {next()},  // Override global, gerer par route
             verifierAutorisation, 
             exchange: '2.prive'
         }
@@ -49,52 +49,48 @@ async function app(params) {
 
     // Route /messagerie
     app.use('/messagerie', route)
-    route.post('/poster', poster())
-    route.use(routeMessagerie(amqpdaoInst))
+    route.post('/poster', verifierAuthentificationPoster, poster())
+    route.use(verifierAuthentification, routeMessagerie(amqpdaoInst))
 
     return server
 }
 
-function verifierAuthentification(amqpdaoInst, req, res, next) {
+function verifierAuthentification(req, res, next) {
+    try {
+        const session = req.session
+        if( ! (session.nomUsager && session.userId) ) {
+            debug("Nom usager/userId ne sont pas inclus dans les req.headers : %O", req.headers)
+            res.append('Access-Control-Allow-Origin', '*')  // S'assurer que le message est recu cross-origin
+            res.sendStatus(403)
+            return
+        } else {
+            return next()
+        }
+    } catch(err) {
+        console.error("apps.verifierAuthentification Erreur : %O", err)
+    }
+}
+
+function verifierAuthentificationPoster(req, res, next) {
     
-    const url = req.url
-    debug("verifier authentification path %s", url)
-
-    new Promise(async (resolve, reject) => {
+    new Promise(async resolve => {
         try {
-            // Parse URL (dummy host) pour trouver
-            const urlParsed = new URL('https://localhost' + url)
-            const pathname = urlParsed.pathname
-            
-            if(pathname === '/messagerie/poster') {
-                // Verifier si on a exces de connexions provenant du meme IP
-                if(await appliquerRateLimit(amqpdaoInst, req, 'poster')) {
-                    // On a un exces d'appel provenant du meme IP
-                    res.sendStatus(429)  // Too many requests
-                    return resolve()
-                }
-
-                // Aucune authentification requise
-                next()
+            const amqpdaoInst = req.amqpdaoInst
+            // Verifier si on a exces de connexions provenant du meme IP
+            if(await appliquerRateLimit(amqpdaoInst, req, 'poster')) {
+                // On a un exces d'appel provenant du meme IP
+                res.sendStatus(429)  // Too many requests
                 return resolve()
             }
+
+            // Aucune authentification requise
+            next()
         } catch(err) {
             debug("verifierAuthentification Erreur verification path %s : %O", url, err)
             // Erreur parse, on procede avec verification de la session
         }
 
-        try {
-            const session = req.session
-            if( ! (session.nomUsager && session.userId) ) {
-                debug("Nom usager/userId ne sont pas inclus dans les req.headers : %O", req.headers)
-                res.append('Access-Control-Allow-Origin', '*')  // S'assurer que le message est recu cross-origin
-                res.sendStatus(403)
-            }
-            resolve()
-        } catch(err) {
-            reject(err)
-        }
-        
+        resolve()
     })
     .catch(err=>{
         console.error("apps.verifierAuthentification Erreur traitement : %O", err)
