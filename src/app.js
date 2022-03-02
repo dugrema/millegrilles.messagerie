@@ -48,7 +48,7 @@ async function app(params) {
   
     // Route /messagerie
     app.use('/messagerie', route)
-    route.post('/poster', verifierAuthentificationPoster, poster())
+    route.post('/poster', verifierAuthentificationPoster, poster(amqpdaoInst))
     route.use(verifierAuthentification, routeMessagerie(amqpdaoInst))
 
     return server
