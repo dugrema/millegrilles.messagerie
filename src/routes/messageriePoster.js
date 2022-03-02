@@ -43,23 +43,17 @@ async function traiterPoster(req) {
     const resultat = await pki.verifierMessage(body, {tiers: true})
     debug("poster Resultat verification signature : %O", resultat)
 
-    let ok = true, err = null, code = 201
-
     if ( ! await sauvegarderCle(req, body.chiffrage) ) {
-        ok = false
-        err = 'Erreur sauvegarde cle'
-        code = 1
-    }
+        debug("Sauvegarder cle erreur")
+        return {ok: false, err: 'Erreur sauvegarde cle', code: 1}
+    } 
     
     if ( ! await sauvegarderMessage(req, body) ) {
-        ok = false
-        err = 'Erreur sauvegarde message'
-        code = 2
+        debug("Sauvegarder message erreur")
+        return {ok: false, err: 'Erreur sauvegarde message', code: 2}
     }
 
-    const reponse = {ok, err, code}
-    
-    return reponse
+    return {ok: true, code: 201}
 }
 
 async function sauvegarderCle(req, cleInfo) {
@@ -93,6 +87,7 @@ async function sauvegarderCle(req, cleInfo) {
 
         if(reponse.ok === true) {
             // Cle recue et conservee, on n'a pas besoin d'emettre les autres cles
+            debug("Cle conservee OK")
             return true
         }
     }
