@@ -19,8 +19,20 @@ function poster(req, res) {
     const body = req.body
     debug("Message body\n%O", body)
 
-    const reponse = {hostname: host, idmg}
-    return res.send(reponse)
+    const pki = req.amqpdaoInst.pki
+
+    // Verifier message incoming
+    pki.verifierMessage(body, {tiers: true})
+        .then(resultat=>{
+            debug("poster Resultat verification signature : %O", resultat)
+            const reponse = {hostname: host, idmg}
+            res.send(reponse)
+        })
+        .catch(err=>{
+            debug("poster Erreur verification signature : %O", err)
+            return res.sendStatus(500)
+        })
+    
 }
 
 module.exports = route

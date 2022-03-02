@@ -46,7 +46,6 @@ async function app(params) {
         next()
     })
   
-
     // Route /messagerie
     app.use('/messagerie', route)
     route.post('/poster', verifierAuthentificationPoster, poster())
