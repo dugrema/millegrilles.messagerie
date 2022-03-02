@@ -32,19 +32,32 @@ function poster(req, res) {
 }
 
 async function traiterPoster(req) {
-    const idmg = req.idmg
-    const host = req.headers.host
+    // const idmg = req.idmg
+    // const host = req.headers.host
     const body = req.body
     debug("Message body\n%O", body)
 
     const pki = req.amqpdaoInst.pki
 
-    await sauvegarderCle(req, body.chiffrage)
-
     // Verifier message incoming
     const resultat = await pki.verifierMessage(body, {tiers: true})
     debug("poster Resultat verification signature : %O", resultat)
-    const reponse = {hostname: host, idmg}
+
+    let ok = true, err = null, code = 201
+
+    if ( ! await sauvegarderCle(req, body.chiffrage) ) {
+        ok = false
+        err = 'Erreur sauvegarde cle'
+        code = 1
+    }
+    
+    if ( ! await sauvegarderMessage(req, body) ) {
+        ok = false
+        err = 'Erreur sauvegarde message'
+        code = 2
+    }
+
+    const reponse = {ok, err, code}
     
     return reponse
 }
@@ -84,6 +97,21 @@ async function sauvegarderCle(req, cleInfo) {
         }
     }
 
+    return false
+}
+
+async function sauvegarderMessage(req, infoMessage) {
+    const amqpdaoInst = req.amqpdaoInst
+    const commande = {
+        destinataires: infoMessage.destinataires,
+        message: infoMessage.message,
+    }
+
+    debug("Commande recevoir pour messagerie :\n%O", commande)
+    const reponse = await amqpdaoInst.transmettreCommande('Messagerie', commande, {action: 'recevoir'})
+    debug("Reponse commande recevoir :\n%O", reponse)
+
+    return reponse.ok === true
 }
 
 module.exports = route
