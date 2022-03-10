@@ -49,6 +49,8 @@ async function app(params) {
     // Route /messagerie
     app.use('/messagerie', route)
     route.post('/poster', verifierAuthentificationPoster, poster(amqpdaoInst))
+    route.put('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
+    route.put('/poster/*/*', verifierAuthentificationPoster, poster(amqpdaoInst))
     route.use(verifierAuthentification, routeMessagerie(amqpdaoInst))
 
     return server
@@ -78,7 +80,8 @@ function verifierAuthentificationPoster(req, res, next) {
             // Verifier si on a exces de connexions provenant du meme IP
             if(await appliquerRateLimit(amqpdaoInst, req, 'poster')) {
                 // On a un exces d'appel provenant du meme IP
-                res.sendStatus(429)  // Too many requests
+                res.set('Retry-After', '60')    // Par defaut, demander d'attendre 60 secondes
+                res.sendStatus(429)             // Too many requests
                 return resolve()
             }
 
