@@ -102,6 +102,14 @@ function marquerLu(socket, params) {
     return transmettreCommande(socket, params, 'lu')
 }
 
+function attachmentsRequis(socket, fuuids) {
+    return socket.amqpdao.transmettreRequete(
+        DOMAINE_MESSAGERIE, 
+        {fuuids}, 
+        {action: 'attachmentRequis', exchange: L2Prive, noformat: false, decoder: true}
+    )
+}
+
 async function getDomainesMessagerie(socket, params) {
     let domainesApplications = _domainesApplications
     if(!domainesApplications) {
@@ -217,7 +225,8 @@ function verifierMessage(message, domaine, action) {
 module.exports = {
     challenge, getClesChiffrage,
     getProfil, getMessages, getPermissionMessages, getClesFichiers, getContacts,
-    posterMessage, majContact, marquerLu,
+    posterMessage, majContact, marquerLu, 
+    attachmentsRequis,
     
     getDomainesMessagerie,
     initialiserProfil,

@@ -90,12 +90,22 @@ function verifierPermissionUploadAttachment(req, res, next) {
             validateStatus: validateStatusHead,
             timeout: 1500,
         })
-        .then(response=>{
+        .then(async response=>{
             const status = response.status
             debug("Reponse axios : %s", status)
             if(status === 404) {
-                // Le fichier n'existe pas, on poursuit
-                next()
+                // Le fichier n'existe pas, verifier s'il est requis pour au moins 1 attachment
+                const reponseRequis = await req.mqdao.attachmentsRequis({amqpdao: req.amqpdaoInst}, [fuuid])
+                debug("Reponse attachments requis : %O", reponseRequis)
+                const valeurFuuids = reponseRequis.fuuids || {}
+                if(valeurFuuids[fuuid] !== true) {
+                    // Le fichier n'est pas requis par au moins 1 message
+                    const resultat = {ok: false, status: 6, fuuid}
+                    res.status(403).send(resultat)
+                } else {
+                    // Le fichier est requis (OK)
+                    next()
+                }
             } else {
                 const resultat = {
                     ok: status === 200,
