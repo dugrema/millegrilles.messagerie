@@ -5,6 +5,7 @@ const express = require('express')
 const fs = require('fs')
 const fsPromises = require('fs/promises')
 const path = require('path')
+const readdirp = require('readdirp')
 
 const { VerificateurHachage } = require('@dugrema/millegrilles.nodejs/src/hachage')
 
@@ -38,6 +39,7 @@ function route(amqpdaoInst) {
     const route = express.Router()
     route.put('/poster/:fuuid/:position', verifierPermissionUploadAttachment, posterAttachment)
     route.put('/poster/:fuuid', verifierPermissionUploadAttachment, posterAttachment)
+    route.post('/poster/:fuuid', traiterPostUpload)
     route.post('/poster', jsonParser, poster)
     return route
 }
@@ -100,7 +102,7 @@ function verifierPermissionUploadAttachment(req, res, next) {
                 const valeurFuuids = reponseRequis.fuuids || {}
                 if(valeurFuuids[fuuid] !== true) {
                     // Le fichier n'est pas requis par au moins 1 message
-                    const resultat = {ok: false, status: 6, fuuid}
+                    const resultat = {ok: false, code: 6, fuuid}
                     res.status(403).send(resultat)
                 } else {
                     // Le fichier est requis (OK)
@@ -111,6 +113,7 @@ function verifierPermissionUploadAttachment(req, res, next) {
                     ok: status === 200,
                     status,
                     fuuid,
+                    code: 7,
                     headers: response.headers,
                 }
                 res.status(200).send(resultat)
@@ -235,7 +238,7 @@ async function traiterUpload(req, res) {
     let writer = null
     if(modeTraitementMultiple) {
         // Verifier si le repertoire existe, le creer au besoin
-        const pathCorrelation = path.join(_pathStaging, fuuid)
+        const pathCorrelation = path.join(_pathStaging, fuuid + '.work')
         try {
             await fsPromises.mkdir(pathCorrelation, {recursive: true})
         } catch(err) {
@@ -365,12 +368,12 @@ async function verifierUploadSimple(req, res) {
 
 async function traiterPostUpload(req, res) {
     const fuuid = req.params.fuuid
-    const pathCorrelation = path.join(_pathStaging, fuuid)
+    const pathCorrelation = path.join(_pathStaging, fuuid + '.work')
   
     const informationFichier = req.body
     debug("Traitement post %s upload %O", fuuid, informationFichier)
   
-    const verificateurHachage = new VerificateurHachage(hachage)
+    const verificateurHachage = new VerificateurHachage(fuuid)
   
     // Verifier le hachage
     try {
@@ -391,7 +394,7 @@ async function traiterPostUpload(req, res) {
 
         for(let idx in files) {
             const file = files[idx]
-            debug("Charger fichier %s position %d", correlation, file)
+            debug("Charger fichier %s position %d", fuuid, file)
             const pathFichier = path.join(pathCorrelation, file + '.part')
             const fileReader = fs.createReadStream(pathFichier)
     
@@ -408,20 +411,21 @@ async function traiterPostUpload(req, res) {
             })
     
             await promise
-            debug("Taille fichier %s : %d", pathOutput, total)
+            debug("Taille fichier %s : %d", fuuid, total)
         }
   
         await verificateurHachage.verify()
-        debug("Fichier correlation %s OK\nhachage %s", correlation, hachage)
+        debug("Fichier correlation %s OK", fuuid)
        
         // Fichier OK, marquer repertoire. On va le transferer vers le back-end des que possible.
+        const pathReady = path.join(_pathStaging, fuuid + '.ready')
+        await fsPromises.rename(pathCorrelation, pathReady)
+        
+        // Lancer processus d'upload (promise en parallele)
+
 
         // Code indique que le traitement n'est pas fini mais tout est OK
-        const reponse = {
-            ok: true,
-            code: 1,
-            fuuid,
-        }
+        const reponse = {ok: true, code: 1, fuuid}
         res.status(202).send(reponse)
   
     } catch(err) {

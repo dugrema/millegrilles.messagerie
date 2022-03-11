@@ -9,8 +9,8 @@ const routeMessagerie = require('./routes/messagerie.js')
 const poster = require('./routes/messageriePoster')
 const mqdao = require('./mqdao.js')
 
-const EXPIRATION_RATE_REDIS = 60  // en secondes
-const HIT_RATE_REDIS = 5  // Hits max par periode
+const EXPIRATION_RATE_REDIS = 120  // en secondes
+const HIT_RATE_REDIS = 1000  // Hits max par periode
 
 async function app(params) {
     debug("Server app params %O", params)
@@ -49,6 +49,7 @@ async function app(params) {
     // Route /messagerie
     app.use('/messagerie', route)
     route.post('/poster', verifierAuthentificationPoster, poster(amqpdaoInst))
+    route.post('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
     route.put('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
     route.put('/poster/*/*', verifierAuthentificationPoster, poster(amqpdaoInst))
     route.use(verifierAuthentification, routeMessagerie(amqpdaoInst))
