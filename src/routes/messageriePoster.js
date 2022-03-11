@@ -8,7 +8,8 @@ const path = require('path')
 
 const { VerificateurHachage } = require('@dugrema/millegrilles.nodejs/src/hachage')
 
-const MESSAGE_LIMIT = 5 * 1024 * 1024
+const MESSAGE_LIMIT = 5 * 1024 * 1024,
+      TIMEOUT_LIMIT = 15 * 60 * 1000
 
 const jsonParser = express.json({limit: MESSAGE_LIMIT})
 
@@ -21,14 +22,16 @@ function route(amqpdaoInst) {
     // Utilise pour ignorer lors de la creation de la commande MaitreDesCles
     const pki = amqpdaoInst.pki
     _fingerprintCA = pki.fingerprintCa
+    const cert = pki.chainePEM,
+          key = pki.cle,
+          ca = pki.ca
     debug("route Chargement certificat CA, fingerprint : %s", _fingerprintCA)
 
-    _urlFichiers = new URL(process.env.FICHIERS)
+    _urlFichiers = new URL(process.env.FICHIERS_TRANSFERT)
     _httpsAgent = new https.Agent({
+        keepAlive: true,
         rejectUnauthorized: false,
-        // ca: pki.ca,
-        cert: pki.chainePEM,
-        key: pki.cle,
+        cert, key, ca,
     })
     debug("Https agent : %O", _httpsAgent)
 
@@ -53,39 +56,60 @@ function poster(req, res) {
 }
 
 function verifierPermissionUploadAttachment(req, res, next) {
-    const fuuid = req.params.fuuid
-    debug("verifierPermissionUploadAttachment %s", fuuid)
+    const fuuid = req.params.fuuid,
+          position = req.params.position
+    debug("verifierPermissionUploadAttachment %s, position", fuuid, position)
 
     const urlFichiers = new URL(''+_urlFichiers)
     urlFichiers.pathname = urlFichiers.pathname + '/' + fuuid
 
     debug("Verifier existance de %O", urlFichiers)
-    axios({
-        method: 'HEAD',
-        url: ''+urlFichiers,
-        httpsAgent: _httpsAgent,
-        validateStatus: validateStatusHead,
-        timeout: 1500,
+
+    // Path fichier/repertoire selon type
+    const modeTraitementMultiple = !isNaN(position)
+    const pathFichier = modeTraitementMultiple?path.join(_pathStaging, fuuid + '.ready'):path.join(_pathStaging, fuuid + '.dat')
+
+    fsPromises.stat(pathFichier)
+    .then(stat=>{
+        // Le fichier/repertoire existe deja et est completement valide. Refuser demande upload, confirmer fichier OK.
+        debug("Stat fichier/repertoire existant : %O", stat)
+        const resultat = { ok: 200, status: 1, fuuid }
+        res.status(200).send(resultat)
     })
-    .then(response=>{
-        const status = response.status
-        debug("Reponse axios : %s", status)
-        if(status === 404) {
-            // Le fichier n'existe pas, on poursuit
-            next()
-        } else {
-            const resultat = {
-                ok: status === 200,
-                status,
-                fuuid,
-                headers: response.headers,
-            }
-            res.status(200).send(resultat)
+    .catch(async err=>{
+        if(err.code !== 'ENOENT') {
+            // Erreur, mais le fichier n'existe pas. On continue.
+            return next()
         }
-    })
-    .catch(err=>{
-        console.error("messageriePoster.verifierPermissionUploadAttachment Erreur %O", err)
-        res.sendStatus(503)
+
+        // Le fichier n'existe pas localement, on verifie dans le back-end
+        axios({
+            method: 'HEAD',
+            url: ''+urlFichiers,
+            httpsAgent: _httpsAgent,
+            validateStatus: validateStatusHead,
+            timeout: 1500,
+        })
+        .then(response=>{
+            const status = response.status
+            debug("Reponse axios : %s", status)
+            if(status === 404) {
+                // Le fichier n'existe pas, on poursuit
+                next()
+            } else {
+                const resultat = {
+                    ok: status === 200,
+                    status,
+                    fuuid,
+                    headers: response.headers,
+                }
+                res.status(200).send(resultat)
+            }
+        })
+        .catch(err=>{
+            console.error("messageriePoster.verifierPermissionUploadAttachment Erreur %O", err)
+            res.sendStatus(503)
+        })
     })
 
 }
@@ -195,14 +219,13 @@ async function traiterUpload(req, res) {
   
     // const pathStaging = req.pathConsignation.consignationPathUploadStaging
   
-    // Verifier si le repertoire existe, le creer au besoin
-    const pathCorrelation = path.join(_pathStaging, fuuid)
-    
-    const modeTraitementMultiple = position >= 0
+    const modeTraitementMultiple = !isNaN(position)
 
     // Creer output stream
     let writer = null
     if(modeTraitementMultiple) {
+        // Verifier si le repertoire existe, le creer au besoin
+        const pathCorrelation = path.join(_pathStaging, fuuid)
         try {
             await fsPromises.mkdir(pathCorrelation, {recursive: true})
         } catch(err) {
@@ -211,16 +234,32 @@ async function traiterUpload(req, res) {
                 throw err
             }
         }
-      
         const pathFichier = path.join(pathCorrelation, position + '.part')
         writer = fs.createWriteStream(pathFichier)
     } else {
         // One-shot upload
-        const pathFichier = path.join(pathCorrelation + '.dat')
+        try {
+            await fsPromises.mkdir(_pathStaging, {recursive: true})
+        } catch(err) {
+            if(err.code !== 'EEXIST') {
+                debug("Erreur creation repertoire staging : %O", err)
+                throw err
+            }
+        }        
+        const pathFichier = path.join(_pathStaging, fuuid + '.dat.work')
         writer = fs.createWriteStream(pathFichier)
     }
   
     const promise = new Promise((resolve, reject)=>{
+        let compteurData = 0
+        req.on('data', data => {
+            compteurData += data.length
+            if(compteurData > MESSAGE_LIMIT) {
+                const error = new Error("Taille PUT depasse la limite")
+                error.code = 413
+                reject(error)
+            }
+        })
         req.on('end', _=>{
             resolve()
         })
@@ -229,20 +268,32 @@ async function traiterUpload(req, res) {
         })
     })
     req.pipe(writer)
-    await promise
 
-    if(modeTraitementMultiple) {
-        // Part conserve, pret pour prochain
-        const reponse = {ok: true, code: 1, fuuid}
-        res.status(200).send(reponse)
-    } else {
-        await verifierUploadSimple(req, res)
+    try {
+        await promise
+
+        if(modeTraitementMultiple) {
+            // Part conserve, pret pour prochain
+            const reponse = {ok: true, code: 1, fuuid}
+            res.status(200).send(reponse)
+        } else {
+            await verifierUploadSimple(req, res)
+        }
+    } catch(err) {
+        if(err.code) {
+            console.error("Taille PUT %s depasse la limite de %d", fuuid, MESSAGE_LIMIT)
+            const reponse = { ok: false, code: 3, fuuid, err: ''+err }
+            return res.status(err.code).send(reponse)
+        } else {
+            throw err
+        }
     }
 }
 
 async function verifierUploadSimple(req, res) {
     const fuuid = req.params.fuuid
-    const pathFichier = path.join(_pathStaging, fuuid + '.dat')
+    const pathFichier = path.join(_pathStaging, fuuid + '.dat.work')
+    const pathFichierDat = pathFichier.replace('.work', '')
     debug("Verifier hachage fichier %s", pathFichier)
     const verificateurHachage = new VerificateurHachage(fuuid)
 
@@ -263,19 +314,6 @@ async function verifierUploadSimple(req, res) {
 
     try {
         await verificateurHachage.verify()
-        debug("Fichier correlation %s OK", fuuid)
-
-        // Uploader fichier immediatement
-
-        // Completer
-        const reponse = {
-            ok: true,
-            code: 1,
-            fuuid,
-        }
-
-        // Reponse fichier cree, transfert complete
-        res.status(201).send(reponse)
     } catch(err) {
         debug("Fichier %s hachage invalide : %O", fuuid, err)
         const reponse = {
@@ -284,8 +322,35 @@ async function verifierUploadSimple(req, res) {
             fuuid,
             err: 'Hachage invalide'
         }
-        res.status(200).send(reponse)
+        return res.status(200).send(reponse)
     }
+
+    await fsPromises.rename(pathFichier, pathFichierDat)
+    debug("Fichier correlation %s OK", fuuid)
+
+    try {
+        // Uploader fichier immediatement
+        await transfererFichierLocal(fuuid, pathFichierDat, false)
+
+        // Completer
+        const reponse = {ok: true, code: 1, fuuid}
+
+        // Reponse fichier cree, transfert complete
+        res.status(201).send(reponse)
+
+        // Transfert complete, on efface le fichier
+        fsPromises.rm(pathFichierDat)
+            .catch(err=>console.error("messageriePoster.verifierUploadSimple Erreur suppression fichier (upload local complete) %s : %O", pathFichierDat, err))
+
+    } catch(err) {
+        debug("Fichier %s hachage invalide : %O", fuuid, err)
+        const reponse = {
+            ok: true, code: 5, fuuid,
+            err: 'Delai transfert fichier local, on va reessayer plus tard.'
+        }
+        return res.status(202).send(reponse)
+    }
+
 }
 
 async function traiterPostUpload(req, res) {
@@ -359,6 +424,65 @@ async function traiterPostUpload(req, res) {
         }
         res.status(500).send(reponse)
     }
+}
+
+async function transfererFichierLocal(fuuid, pathFichier, modeTraitementMultiple) {
+    debug("transfererFichierLocal modeTraitementMultiple: %s, Path %s", modeTraitementMultiple, pathFichier)
+    if(modeTraitementMultiple) {
+        throw new Error("TODO")
+    } else {
+        const reponsePut = await putFichierLocal(fuuid, pathFichier)
+        // debug("transfererFichierLocal Reponse PUT fichier local : %O", reponse)
+        if(reponsePut.status !== 200) throw new Error(`Erreur transfert fichier local ${reponsePut.status}`)
+    }
+
+    const reponsePost = await finaliserFichierLocal(fuuid)
+    if(reponsePost.status !== 200) throw new Error(`Erreur verification fichier local ${reponsePost.status}`)
+}
+
+async function putFichierLocal(fuuid, pathFichier, position) {
+    debug("transfererFichierLocal position: %s, Path %s", position, pathFichier)
+    const modeTraitementMultiple = ! isNaN(position)
+    const statFichier = await fsPromises.stat(pathFichier)
+    const fileSize = statFichier.size
+    if(fileSize > MESSAGE_LIMIT) {
+        throw new Error("Erreur taille fichier : %d > MESSAGE_LIMIT", fileSize)
+    }
+    const headers = {
+        'Content-Type': 'application/stream',
+        'Content-Length': fileSize,
+    }
+    const readStream = fs.createReadStream(pathFichier)
+    const urlFichiers = new URL(''+_urlFichiers)
+    if(modeTraitementMultiple) {
+        urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid, position)
+    } else {
+        urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid, ''+0)
+    }
+    return axios({
+        method: 'PUT',
+        url: ''+urlFichiers,
+        headers,
+        data: readStream,
+        httpsAgent: _httpsAgent,
+        maxBodyLength: MESSAGE_LIMIT,
+        timeout: TIMEOUT_LIMIT,  // 15 minutes upload limit
+    })
+}
+
+async function finaliserFichierLocal(fuuid) {
+    debug("finaliserFichierLocal fuuid %s", fuuid)
+    const headers = {
+    }
+    const urlFichiers = new URL(''+_urlFichiers)
+    urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid)
+    return axios({
+        method: 'POST',
+        url: ''+urlFichiers,
+        headers,
+        httpsAgent: _httpsAgent,
+        timeout: 3 * 60 * 1000,  // 3 minutes attente limite
+    })
 }
 
 module.exports = route
