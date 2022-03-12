@@ -447,9 +447,9 @@ async function transfererFichierLocal(fuuid, pathFichier, modeTraitementMultiple
         var files = await readdirp.promise(pathFichier, {fileFilter: '*.part'})
         for(let idx in files) {
             const file = files[idx]
-            debug("PUT fichier local %s", file.path)
             const pathFichierPart = path.join(pathFichier, file.path)
             const position = Number(file.path.split('.')[0])
+            debug("PUT fichier local position %d : %s", position, file.path)
             const reponsePut = await putFichierLocal(fuuid, pathFichierPart, position)
             // debug("transfererFichierLocal Reponse PUT fichier local : %O", reponse)
             if(reponsePut.status !== 200) throw new Error(`Erreur transfert put fichier local ${reponsePut.status}`)
