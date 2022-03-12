@@ -216,6 +216,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
     if(opts.attachments) {
         let attachmentsMapping = {}
         let fuuids = []
+        let fuuidsCleSeulement = []
 
         console.debug("Traiter attachments : %O", opts.attachments)
 
@@ -238,19 +239,30 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
             if(version_courante.images) {
                 const images = version_courante.images
                 // mapping.images = {...images}
-                Object.values(images).map(image=>fuuids.push(image.hachage))
+                Object.values(images)
+                    .map(image=>{
+                        if(image.data_chiffre || image.data) {
+                            fuuidsCleSeulement.push(image.hachage)
+                        } else {
+                            // console.debug("Attacher image : %O", image)
+                            fuuids.push(image.hachage)
+                        }
+                    })
             }
             if(version_courante.video) {
                 const videos = version_courante.video
                 // mapping.video = {...videos}
-                Object.values(videos).map(video=>fuuids.push(video.hachage))
+                Object.values(videos).map(video=>{
+                    // console.debug("Attache video : %O", video)
+                    fuuids.push(video.hachage)
+                })
             }
 
             attachmentsMapping[fuuid] = mapping
         })
 
         // Ajouter attachments et fuuids aux opts
-        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids}
+        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
     }
 
     const resultat = await posterMessage(workers, certificatChiffragePem, from, to, subject, content, opts)

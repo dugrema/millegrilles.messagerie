@@ -22,7 +22,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     console.debug("Signer message, params opts : %O", opts)
 
     const {connexion, chiffrage} = workers
-    const {cc, bcc, attachments, fuuids} = opts
+    const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())
@@ -44,6 +44,9 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     if(attachments) {
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
         fuuidsCles = fuuidsCles || attachments.map(item=>item.fuuid)
+        if(fuuidsCleSeulement) {
+            fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
+        }
         console.debug("Get cles attachments fuuids : %O", fuuidsCles)
         const cles = await getClesAttachments(workers, fuuidsCles)
         console.debug("Reponse cles : %O", cles)
