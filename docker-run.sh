@@ -18,6 +18,7 @@ export MG_MQ_CAFILE=/certs/pki.millegrille.cert
 export MG_MQ_CERTFILE=/certs/pki.messagerie_web.cert
 export MG_MQ_KEYFILE=/certs/pki.messagerie_web.key
 export MG_MQ_URL=amqps://$HOST_MQ:5673
+export MG_FICHIERS_URL=https://mg-dev5:3021
 export MG_REDIS_HOST=mg-dev5
 export PORT=3039
 
@@ -29,6 +30,7 @@ docker run --rm -it \
   -v /home/mathieu/mgdev/certs:/certs \
   -e MG_MQ_CAFILE -e MG_MQ_CERTFILE -e MG_MQ_KEYFILE \
   -e MG_MQ_URL -e HOST -e PORT \
+  -e MG_FICHIERS_URL \
   -e MG_REDIS_HOST \
   -e DEBUG \
   $IMAGE_DOCKER
