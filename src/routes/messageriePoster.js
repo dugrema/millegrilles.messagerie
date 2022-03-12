@@ -422,7 +422,8 @@ async function traiterPostUpload(req, res) {
         await fsPromises.rename(pathCorrelation, pathReady)
         
         // Lancer processus d'upload (promise en parallele)
-
+        transfererFichierLocal(fuuid, pathReady, true)
+            .catch(err=>console.error("messageriePoster.traiterPostUpload Erreur upload fichier batch %s : %O", fuuid, err))
 
         // Code indique que le traitement n'est pas fini mais tout est OK
         const reponse = {ok: true, code: 1, fuuid}
@@ -443,7 +444,16 @@ async function traiterPostUpload(req, res) {
 async function transfererFichierLocal(fuuid, pathFichier, modeTraitementMultiple) {
     debug("transfererFichierLocal modeTraitementMultiple: %s, Path %s", modeTraitementMultiple, pathFichier)
     if(modeTraitementMultiple) {
-        throw new Error("TODO")
+        var files = await readdirp.promise(pathFichier, {fileFilter: '*.part'})
+        for(let idx in files) {
+            const file = files[idx]
+            debug("PUT fichier local %s", file.path)
+            const pathFichierPart = path.join(pathFichier, file.path)
+            const position = Number(file.path.split('.')[0])
+            const reponsePut = await putFichierLocal(fuuid, pathFichierPart, position)
+            // debug("transfererFichierLocal Reponse PUT fichier local : %O", reponse)
+            if(reponsePut.status !== 200) throw new Error(`Erreur transfert put fichier local ${reponsePut.status}`)
+        }
     } else {
         const reponsePut = await putFichierLocal(fuuid, pathFichier)
         // debug("transfererFichierLocal Reponse PUT fichier local : %O", reponse)
@@ -469,7 +479,7 @@ async function putFichierLocal(fuuid, pathFichier, position) {
     const readStream = fs.createReadStream(pathFichier)
     const urlFichiers = new URL(''+_urlFichiers)
     if(modeTraitementMultiple) {
-        urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid, position)
+        urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid, ''+position)
     } else {
         urlFichiers.pathname = path.join(urlFichiers.pathname, fuuid, ''+0)
     }
