@@ -1,6 +1,6 @@
 {
   "name": "millegrilles.messagerie",
-  "version": "2022.1.0",
+  "version": "2022.2.0",
   "description": "Messagerie pour MilleGrilles (web)",
   "main": "index.js",
   "scripts": {
@@ -22,8 +22,8 @@
     "url": "https://github.com/dugrema/millegrilles.messagerie/issues"
   },
   "dependencies": {
-    "@dugrema/millegrilles.utiljs": "github:dugrema/millegrilles.utiljs#2022.1",
-    "@dugrema/millegrilles.nodejs": "github:dugrema/millegrilles.nodejs#2022.1",
+    "@dugrema/millegrilles.utiljs": "github:dugrema/millegrilles.utiljs#2022.2",
+    "@dugrema/millegrilles.nodejs": "github:dugrema/millegrilles.nodejs#2022.2",
     "axios": "^0.24.0",
     "debug": "^4.3.3",
     "express": "^4.17.3",

@@ -44,21 +44,13 @@ function cacheRes(req, res, next) {
     const url = req.url
     debug("Cache res URL : %s", url)
     
-    if(url.endsWith('.chunk.js') || url.endsWith('.chunk.css')) {
-
+    if(url.endsWith('.chunk.js') || url.endsWith('.chunk.css') || url.endsWith('.worker.js') || url.endsWith('.map')) {
         // Pour les .chunk.js, on peut faire un cache indefini (immuable)
-        res.append('Cache-Control', 'max-age=86400')
-        res.append('Cache-Control', 'immutable')
-
+        res.append('Cache-Control', 'public, max-age=86400, immutable')
     } else {
-
-        // Pour les autres, faire un cachee limite (e.g. .worker.js, nom ne change pas)
-        res.append('Cache-Control', 'max-age=60')
-
+        // Pour les autres, faire un cachee limite
+        res.append('Cache-Control', 'public, max-age=600')
     }
-
-    // res.append('Cache-Control', 'max-age=86400')
-    res.append('Cache-Control', 'public')
 
     next()
 }

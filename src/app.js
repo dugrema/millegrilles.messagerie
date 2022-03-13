@@ -1,7 +1,7 @@
 const debug = require('debug')('app')
 const express = require('express')
 
-const { server5 } = require('@dugrema/millegrilles.nodejs/src/server5')
+const server6 = require('@dugrema/millegrilles.nodejs/src/server6')
 const { extraireExtensionsMillegrille } = require('@dugrema/millegrilles.utiljs/src/forgecommon')
 
 const { configurerEvenements } = require('./appSocketIo.js')
@@ -15,7 +15,7 @@ const HIT_RATE_REDIS = 1000  // Hits max par periode
 async function app(params) {
     debug("Server app params %O", params)
     const app = express()
-    const {server, socketIo, amqpdao: amqpdaoInst} = await server5(
+    const {server, socketIo, amqpdao: amqpdaoInst} = await server6(
         app,
         configurerEvenements,
         {
