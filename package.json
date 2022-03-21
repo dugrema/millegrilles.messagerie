@@ -22,12 +22,14 @@
     "url": "https://github.com/dugrema/millegrilles.messagerie/issues"
   },
   "dependencies": {
-    "@dugrema/millegrilles.utiljs": "github:dugrema/millegrilles.utiljs#2022.2",
     "@dugrema/millegrilles.nodejs": "github:dugrema/millegrilles.nodejs#2022.2",
-    "axios": "^0.24.0",
-    "debug": "^4.3.3",
     "express": "^4.17.3",
     "readdirp": "^3.6.0"
+  },
+  "peerDependencies": {
+    "@dugrema/millegrilles.utiljs": "github:dugrema/millegrilles.utiljs#2022.2",
+    "axios": "^0",
+    "debug": "^4"
   },
   "homepage": "https://github.com/dugrema/millegrilles.messagerie#readme"
 }
