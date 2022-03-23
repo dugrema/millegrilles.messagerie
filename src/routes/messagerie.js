@@ -1,5 +1,6 @@
 const debug = require('debug')('messagerie')
 const express = require('express')
+const routeMessagerieFichiers = require('./messagerieFichiers.js')
 
 // const debug = debugLib('collections');
 
@@ -7,10 +8,21 @@ function app(amqpdao, opts) {
     if(!opts) opts = {}
     const idmg = amqpdao.pki.idmg
 
+    let fichierUploadUrl = process.env['MG_CONSIGNATION_URL']
+    if(fichierUploadUrl) {
+        new URL(fichierUploadUrl)  // Validation du format
+    } else {
+        // Mettre url par defaut pour upload sur instance protegee (MQ_HOST, port 443)
+        const hostMQ = process.env['MQ_HOST']
+        const urlConsignation = new URL(`https://${hostMQ}/fichiers_transfert`)
+        fichierUploadUrl = ''+urlConsignation
+    }
+
     debug("IDMG: %s, AMQPDAO : %s", idmg, amqpdao !== undefined)
 
     const route = express.Router()
     route.get('/info.json', routeInfo)
+    route.use(routeMessagerieFichiers(amqpdao, fichierUploadUrl, opts))
     ajouterStaticRoute(route)
 
     debug("Route /messagerie de MessagerieWeb est initialisee")
