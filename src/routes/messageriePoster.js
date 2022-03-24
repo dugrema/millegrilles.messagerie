@@ -28,12 +28,12 @@ function route(amqpdaoInst) {
           ca = pki.ca
     debug("route Chargement certificat CA, fingerprint : %s", _fingerprintCA)
 
-    let urlFichiers = process.env.MG_FICHIERSTRANSFERT_URL
+    let urlFichiers = process.env.MG_CONSIGNATION_URL
     if(!urlFichiers) {
         if(process.env.MG_FICHIERS_URL) {
             urlFichiers = process.env.MG_FICHIERS_URL + '/fichiers_transfert'
         } else {
-            throw new Error("env MG_FICHIERSTRANSFERT_URL et MG_FICHIERS_URL manquants - au moins un requis pour upload attachments")
+            throw new Error("env MG_CONSIGNATION_URL et MG_FICHIERS_URL manquants - au moins un requis pour upload attachments")
         }
     }
 
