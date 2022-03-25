@@ -2,12 +2,10 @@ const debug = require('debug')('messagerie:poster')
 const axios = require('axios')
 const https = require('https')
 const express = require('express')
-const fs = require('fs')
 const fsPromises = require('fs/promises')
 const path = require('path')
-const readdirp = require('readdirp')
 
-const { VerificateurHachage } = require('@dugrema/millegrilles.nodejs/src/hachage')
+const messagesBackingStore = require('@dugrema/millegrilles.nodejs/src/messageQueueBackingStore')
 
 const MESSAGE_LIMIT = 5 * 1024 * 1024,
       TIMEOUT_LIMIT = 15 * 60 * 1000
@@ -46,6 +44,9 @@ function init(amqpdao, backingStore, opts) {
     })
     debug("Https agent : %O", _httpsAgent)
 
+    // Setup thread transfert messages
+    messagesBackingStore.configurerThreadTransfertMessages(amqpdao, message=>traiterMessage(amqpdao, message), {novalid: true})
+
     const route = express.Router()
 
     route.use((req, _res, next)=>{
@@ -70,27 +71,24 @@ function init(amqpdao, backingStore, opts) {
     const middlewareDeleteStaging = backingStore.middlewareDeleteStaging(opts)
     route.delete('/:correlation', middlewareDeleteStaging)
     
-    // route.put('/poster/:fuuid/:position', verifierPermissionUploadAttachment, posterAttachment)
-    // route.put('/poster/:fuuid', verifierPermissionUploadAttachment, posterAttachment)
-    // route.post('/poster/:fuuid', traiterPostUpload)
-
-    route.post('/', jsonParser, poster)
+    const middlewareRecevoirMessage = messagesBackingStore.middlewareRecevoirMessage({successStatus: 202, novalid: true})
+    route.post('/', jsonParser, verifierPoster, middlewareRecevoirMessage)
 
     return route
 }
 
-function poster(req, res) {
-    debug("poster Headers: %O", req.headers)
+// function poster(req, res) {
+//     debug("poster Headers: %O", req.headers)
 
-    // Verifier message incoming
-    traiterPoster(req)
-        .then(reponse=>res.send(reponse))
-        .catch(err=>{
-            debug("poster Erreur verification signature : %O", err)
-            res.sendStatus(500)
-        })
+//     // Verifier message incoming
+//     traiterPoster(req)
+//         .then(reponse=>res.send(reponse))
+//         .catch(err=>{
+//             debug("poster Erreur verification signature : %O", err)
+//             res.sendStatus(500)
+//         })
     
-}
+// }
 
 function verifierPermissionUploadAttachment(req, res, next) {
     const fuuid = req.params.correlation,
@@ -183,7 +181,7 @@ function validateStatusHead(status) {
 //     })
 // }
 
-async function traiterPoster(req) {
+async function verifierPoster(req, res, next) {
     // const idmg = req.idmg
     // const host = req.headers.host
     const body = req.body
@@ -196,23 +194,45 @@ async function traiterPoster(req) {
         const resultat = await pki.verifierMessage(body, {tiers: true})
         debug("poster Resultat verification signature : %O", resultat)
     } catch(err) {
-        return {ok: false, err: ''+err, code: 2}
+        debug("poster Erreur verification signature : %O", err)
+        return res.status(500).send({ok: false, err: ''+err, code: 2})
     }
 
-    if ( ! await sauvegarderCle(req, body.chiffrage) ) {
-        debug("Sauvegarder cle erreur")
-        return {ok: false, err: 'Erreur sauvegarde cle', code: 1}
-    } 
-    
-    if ( ! await sauvegarderMessage(req, body) ) {
-        debug("Sauvegarder message erreur")
-        return {ok: false, err: 'Erreur sauvegarde message', code: 2}
-    }
-
-    return {ok: true, code: 201}
+    next()
 }
 
-async function sauvegarderCle(req, cleInfo) {
+async function traiterMessage(amqpdao, message) {
+    debug("Message a transmettre\n%O", message)
+
+    const pki = amqpdao.pki
+
+    // Verifier message incoming
+    try {
+        const resultat = await pki.verifierMessage(message, {tiers: true})
+        debug("poster Resultat verification signature : %O", resultat)
+    } catch(err) {
+        err.code = 2
+        throw err
+    }
+
+    if ( ! await sauvegarderCle(amqpdao, message.chiffrage) ) {
+        debug("Sauvegarder cle erreur")
+        const err = new Error('Erreur sauvegarde cle')
+        err.code = 1
+        throw err
+    } 
+    
+    if ( ! await sauvegarderMessage(amqpdao, message) ) {
+        debug("Sauvegarder message erreur")
+        const err = new Error('Erreur sauvegarde message')
+        err.code = 2
+        throw err
+    }
+
+    return true
+}
+
+async function sauvegarderCle(amqpdao, cleInfo) {
     debug("sauvegarderCle Cles\n%O", cleInfo)
     // chiffrage: {
     //     cles: {
@@ -226,7 +246,6 @@ async function sauvegarderCle(req, cleInfo) {
     //     tag: 'mzdgV+iZVHrxiFlNY/aw+iw'
     // }
 
-    const amqpdaoInst = req.amqpdao
     for(const partition in cleInfo.cles) {
         debug("Partition : %s", partition)
         if(partition === _fingerprintCA) continue  // Skip, on utilise une partition autre que CA
@@ -238,7 +257,7 @@ async function sauvegarderCle(req, cleInfo) {
         commande.identificateurs_document = { message: 'true' }
 
         debug("Commande maitre des cles vers %s:\n%O", partition, commande)
-        const reponse = await amqpdaoInst.transmettreCommande('MaitreDesCles', commande, {partition, action: 'sauvegarderCle'})
+        const reponse = await amqpdao.transmettreCommande('MaitreDesCles', commande, {partition, action: 'sauvegarderCle'})
         debug("Reponse sauvegarde cle :\n%O", reponse)
 
         if(reponse.ok === true) {
@@ -248,18 +267,19 @@ async function sauvegarderCle(req, cleInfo) {
         }
     }
 
+    debug("Erreur sauvegarde cles, seule la cle CA est present (if any) : %O", cleInfo.cles)
+
     return false
 }
 
-async function sauvegarderMessage(req, infoMessage) {
-    const amqpdaoInst = req.amqpdao
+async function sauvegarderMessage(amqpdao, infoMessage) {
     const commande = {
         destinataires: infoMessage.destinataires,
         message: infoMessage.message,
     }
 
     debug("Commande recevoir pour messagerie :\n%O", commande)
-    const reponse = await amqpdaoInst.transmettreCommande('Messagerie', commande, {action: 'recevoir'})
+    const reponse = await amqpdao.transmettreCommande('Messagerie', commande, {action: 'recevoir'})
     debug("Reponse commande recevoir :\n%O", reponse)
 
     return reponse.ok === true

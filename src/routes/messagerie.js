@@ -1,7 +1,7 @@
 const debug = require('debug')('messagerie')
 const express = require('express')
 
-const backingStore = require('@dugrema/millegrilles.nodejs/src/fichiersTransfertBackingstore')
+const fichiersBackingStore = require('@dugrema/millegrilles.nodejs/src/fichiersTransfertBackingstore')
 
 const poster = require('./messageriePoster')
 const routeMessagerieFichiers = require('./messagerieFichiers.js')
@@ -25,15 +25,15 @@ function app(amqpdao, opts) {
     debug("IDMG: %s, AMQPDAO : %s", idmg, amqpdao !== undefined)
 
     debug("messagerieFichiers url upload consignation : %s", fichierUploadUrl)
-    backingStore.configurerThreadPutFichiersConsignation(''+fichierUploadUrl, amqpdao)
+    fichiersBackingStore.configurerThreadPutFichiersConsignation(''+fichierUploadUrl, amqpdao)
 
     const route = express.Router()
 
     route.use((req, _res, next)=>{debug("Route messagerie, url %s", req.url); next()})
 
     route.get('/info.json', routeInfo)
-    route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiers(amqpdao, backingStore, opts))
-    route.use('/poster', verifierAuthentificationPoster, poster(amqpdao, backingStore, opts))
+    route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiers(amqpdao, fichiersBackingStore, opts))
+    route.use('/poster', verifierAuthentificationPoster, poster(amqpdao, fichiersBackingStore, opts))
     ajouterStaticRoute(route)
 
     debug("Route /messagerie de MessagerieWeb est initialisee")
