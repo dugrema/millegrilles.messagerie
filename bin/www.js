@@ -4,13 +4,13 @@ const debug = require('debug')('www')
 const app = require('../src/app.js')
 
 // const debug = debugLib('www')
-debug("Demarrer server5")
+debug("Demarrer server6")
 
 // Initialiser le serveur
 app()
     .catch(err=>{
-        console.error("serveur5.www Erreur execution app : %O", err)
+        console.error("serveur6.www Erreur execution app : %O", err)
     })
     .finally(()=>{
-        debug("Fin initialisation serveur5.www")
+        debug("Fin initialisation serveur6.www")
     })

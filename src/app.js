@@ -6,11 +6,8 @@ const { extraireExtensionsMillegrille } = require('@dugrema/millegrilles.utiljs/
 
 const { configurerEvenements } = require('./appSocketIo.js')
 const routeMessagerie = require('./routes/messagerie.js')
-const poster = require('./routes/messageriePoster')
+// const poster = require('./routes/messageriePoster')
 const mqdao = require('./mqdao.js')
-
-const EXPIRATION_RATE_REDIS = 120  // en secondes
-const HIT_RATE_REDIS = 1000  // Hits max par periode
 
 async function app(params) {
     debug("Server app params %O", params)
@@ -37,10 +34,11 @@ async function app(params) {
 
     // Injecter acces au middleware
     app.use((req, res, next)=>{
-        req.idmg = amqpdaoInst.pki.idmg
+        // req.idmg = amqpdaoInst.pki.idmg
+        req.idmg = req.amqpdao.pki.idmg
 
-        req.amqpdaoInst = amqpdaoInst
-        req.redisClient = amqpdaoInst.pki.redisClient
+        // req.amqpdaoInst = amqpdaoInst
+        // req.redisClient = amqpdaoInst.pki.redisClient
         req.mqdao = mqdao
 
         next()
@@ -48,98 +46,13 @@ async function app(params) {
   
     // Route /messagerie
     app.use('/messagerie', route)
-    route.post('/poster', verifierAuthentificationPoster, poster(amqpdaoInst))
-    route.post('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
-    route.put('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
-    route.put('/poster/*/*', verifierAuthentificationPoster, poster(amqpdaoInst))
-    route.use(verifierAuthentification, routeMessagerie(amqpdaoInst))
+    // route.post('/poster', verifierAuthentificationPoster, poster(amqpdaoInst))
+    // route.post('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
+    // route.put('/poster/*', verifierAuthentificationPoster, poster(amqpdaoInst))
+    // route.put('/poster/*/*', verifierAuthentificationPoster, poster(amqpdaoInst))
+    route.use(routeMessagerie(amqpdaoInst))
 
     return server
-}
-
-function verifierAuthentification(req, res, next) {
-    try {
-        const session = req.session
-        if( ! (session.nomUsager && session.userId) ) {
-            debug("Nom usager/userId ne sont pas inclus dans les req.headers : %O", req.headers)
-            res.append('Access-Control-Allow-Origin', '*')  // S'assurer que le message est recu cross-origin
-            res.sendStatus(403)
-            return
-        } else {
-            return next()
-        }
-    } catch(err) {
-        console.error("apps.verifierAuthentification Erreur : %O", err)
-    }
-}
-
-function verifierAuthentificationPoster(req, res, next) {
-    
-    new Promise(async resolve => {
-        try {
-            const amqpdaoInst = req.amqpdaoInst
-            // Verifier si on a exces de connexions provenant du meme IP
-            if(await appliquerRateLimit(amqpdaoInst, req, 'poster')) {
-                // On a un exces d'appel provenant du meme IP
-                res.set('Retry-After', '60')    // Par defaut, demander d'attendre 60 secondes
-                res.sendStatus(429)             // Too many requests
-                return resolve()
-            }
-
-            // Aucune authentification requise
-            next()
-        } catch(err) {
-            debug("verifierAuthentification Erreur verification path %s : %O", url, err)
-            // Erreur parse, on procede avec verification de la session
-        }
-
-        resolve()
-    })
-    .catch(err=>{
-        console.error("apps.verifierAuthentification Erreur traitement : %O", err)
-        res.sendStatus(500)
-    })
-
-}
-
-// Applique un compteur de nombre d'acces dans redis pour une periode TTL
-async function appliquerRateLimit(amqpdaoInst, req, typeRate, opts) {
-    opts = opts || {}
-
-    const redisClient = amqpdaoInst.pki.redisClient
-    const adresseExterne = req.headers['x-forwarded-for'] || req.headers['x-real-ip']
-    const cleRedis = `messagerie:${typeRate}:${adresseExterne}`
-    
-    const quota = await getCleRedis(redisClient, cleRedis)
-    debug("getCleRedis Resultat chargement adresse: %s = %O", adresseExterne, quota)
-    if(quota) {
-        const quotaInt = Number.parseInt(quota)
-        if(quotaInt > 0) {
-            // Decrementer quota pour la periode TTL deja etablie
-            const quotaMaj = '' + (quotaInt-1)
-            redisClient.set(cleRedis, quotaMaj, 'KEEPTTL')
-        } else {
-            return true  // Limite atteinte
-        }
-    } else {
-        // Entree initiale pour la periode TTL
-        const limite = opts.limite || HIT_RATE_REDIS
-        const quotaInt = Number.parseInt(limite)
-        const quotaMaj = '' + (quotaInt-1)
-        const expiration = opts.expiration || EXPIRATION_RATE_REDIS
-        redisClient.set(cleRedis, quotaMaj, 'NX', 'EX', expiration)
-    }
-
-    return false  // Limite n'est pas atteinte
-}
-
-function getCleRedis(redisClient, cleRedis) {
-    return new Promise((resolve, reject) => {
-        redisClient.get(cleRedis, async (err, data)=>{
-            if(err) return reject(err)
-            resolve(data)
-        })
-    })
 }
 
 function verifierAutorisation(socket, securite, certificatForge) {
