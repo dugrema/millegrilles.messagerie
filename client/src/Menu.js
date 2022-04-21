@@ -88,7 +88,7 @@ function DropDownUsager(props) {
           <NavDropdown.Item href="/millegrilles">
             <i className="fa fa-home" /> {' '} Portail
           </NavDropdown.Item>
-          <NavDropdown.Item href="/fermer">
+          <NavDropdown.Item href="/millegrilles/authentification/fermer">
             <i className="fa fa-close" /> {' '} Deconnecter
           </NavDropdown.Item>
         </NavDropdown>

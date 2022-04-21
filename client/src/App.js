@@ -213,7 +213,7 @@ function initDb() {
 
 function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
   console.debug("Info domaines messagerie : %O", infoDns)
-  const listeMessagerie = infoDns.filter(item=>item.application==='messagerie')
+  const listeMessagerie = infoDns.filter(item=>item.application==='messagerie_web')
   if(listeMessagerie.length === 0) {
     throw new Error("Serveur de messagerie n'est pas installe ou demarre")
   } if(listeMessagerie.length === 1) {
