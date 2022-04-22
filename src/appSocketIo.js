@@ -59,7 +59,6 @@ function configurerEvenements(socket) {
 }
 
 async function traiter(socket, methode, {params, cb}) {
-  debug("appSocketIo.traiter %s = %O", methode, params)
   const reponse = await methode(socket, params)
   if(cb) cb(reponse)
 }

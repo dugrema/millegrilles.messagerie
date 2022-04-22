@@ -8,6 +8,7 @@ const routeMessagerieFichiers = require('./messagerieFichiers.js')
 
 const EXPIRATION_RATE_REDIS = 120  // en secondes
 const HIT_RATE_REDIS = 1000  // Hits max par periode
+const CONST_PORT_TRANSFERT = 444
 
 function app(amqpdao, opts) {
     if(!opts) opts = {}
@@ -17,9 +18,9 @@ function app(amqpdao, opts) {
     if(fichierUploadUrl) {
         fichierUploadUrl = new URL(fichierUploadUrl)  // Validation du format
     } else {
-        // Mettre url par defaut pour upload sur instance protegee (MQ_HOST, port 443)
+        // Mettre url par defaut pour upload sur instance protegee (MQ_HOST, port 444)
         const hostMQ = process.env['MQ_HOST']
-        fichierUploadUrl = new URL(`https://${hostMQ}/fichiers_transfert`)
+        fichierUploadUrl = new URL(`https://${hostMQ}:${CONST_PORT_TRANSFERT}/fichiers_transfert`)
     }
 
     debug("IDMG: %s, AMQPDAO : %s", idmg, amqpdao !== undefined)
@@ -31,8 +32,11 @@ function app(amqpdao, opts) {
 
     route.use((req, _res, next)=>{debug("Route messagerie, url %s", req.url); next()})
 
+    const routeMessagerieFichiersHandler = routeMessagerieFichiers(amqpdao, fichiersBackingStore, opts)
+
     route.get('/info.json', routeInfo)
-    route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiers(amqpdao, fichiersBackingStore, opts))
+    route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiersHandler)
+    route.all('/upload/*', verifierAuthentification, routeMessagerieFichiersHandler)
     route.use('/poster', verifierAuthentificationPoster, poster(amqpdao, fichiersBackingStore, opts))
     ajouterStaticRoute(route)
 
