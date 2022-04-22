@@ -25,7 +25,7 @@ supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.wa
 export { Icones }
 
 export function mapper(row, workers) {
-    const { tuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
+    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
 
     // console.debug("!!! MAPPER %O", row)
 
@@ -48,7 +48,7 @@ export function mapper(row, workers) {
         mimetype_fichier = mimetype
         date_version = date_fichier
         taille_fichier = taille
-        ids.fileId = tuuid    // Fichier, tuuid est le fileId
+        ids.fileId = tuuid || fuuid  // Fichier, tuuid est le fileId pour selection attachment, fuuid pour messages recus
         const mimetypeBase = mimetype.split('/').shift()
 
         if(workers && workers.traitementFichiers) {

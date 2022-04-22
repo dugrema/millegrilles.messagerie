@@ -247,7 +247,10 @@ function AfficherAttachments(props) {
     const [fuuidSelectionne, setFuuidSelectionne] = useState('')
 
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
-    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+    const onSelectionLignes = useCallback(selection=>{
+        // console.debug("!!! setSelectioN: %O", selection)
+        setSelection(selection)
+    }, [setSelection])
     const showPreviewCb = useCallback( async fuuid => {
         console.debug("Show preview cb : %O", fuuid)
         await setFuuidSelectionne(fuuid)
@@ -343,6 +346,7 @@ function AfficherAttachments(props) {
             />            
 
             <PreviewFichiers 
+                workers={workers}
                 showPreview={showPreview} 
                 setShowPreview={setShowPreview}
                 fuuid={fuuidSelectionne}
