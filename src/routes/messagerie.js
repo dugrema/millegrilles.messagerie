@@ -35,6 +35,7 @@ function app(amqpdao, opts) {
     const routeMessagerieFichiersHandler = routeMessagerieFichiers(amqpdao, fichiersBackingStore, opts)
 
     route.get('/info.json', routeInfo)
+    route.get('/fichiers/verifier', verifierAutorisationFichier)
     route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiersHandler)
     route.all('/upload/*', verifierAuthentification, routeMessagerieFichiersHandler)
     route.use('/poster', verifierAuthentificationPoster, poster(amqpdao, fichiersBackingStore, opts))
@@ -159,6 +160,12 @@ async function appliquerRateLimit(req, typeRate, opts) {
     }
 
     return false  // Limite n'est pas atteinte
+}
+
+function verifierAutorisationFichier(req, res) {
+    // TODO : valider acces de l'usager au fichier
+    // console.debug("REQ Params, sec : %O", req)
+    return res.sendStatus(200)
 }
 
 module.exports = app
