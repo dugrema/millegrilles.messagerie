@@ -26,6 +26,7 @@ function App() {
   const [workers, setWorkers] = useState('')
   const [usager, setUsager] = useState('')
   const [etatConnexion, setEtatConnexion] = useState(false)
+  const [formatteurPret, setFormatteurPret] = useState(false)
   const [idmg, setIdmg] = useState('')
   const [certificatMaitreDesCles, setCertificatMaitreDesCles] = useState('')
   const [dnsMessagerie, setDnsMessagerie] = useState('')
@@ -34,6 +35,7 @@ function App() {
   const [confirmation, setConfirmation] = useState(false)
 
   const { connexion, transfertFichiers } = workers
+  const etatAuthentifie = usager && formatteurPret
 
   // Selecteurs de page
   const [afficherContacts, setAfficherContacts] = useState(false)
@@ -59,24 +61,8 @@ function App() {
     if(typeof(cleSecrete) === 'string') cleSecrete = base64.decode(cleSecrete)
 
     // Creer dict de cles avec info secrete pour dechiffrer le fichier
-    // const password = base64.decode(cleSecrete)
-    // const cles = {[fuuid]: {cleSecrete: cle, iv, tag, format}}
-
-    // connexion.getClesFichiers([fuuid], usager)
-    //   .then(reponseCle=>{
-        // console.debug("REPONSE CLE pour download : %O", reponseCle)
-        // if(reponseCle.code === 1) {
-          // Permis
-          // const {cle, iv, tag, format} = reponseCle.cles[fuuid]
-          transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, password: cleSecrete, iv, tag, format})
-              .catch(err=>{console.error("Erreur debut download : %O", err)})
-          // } else {
-          //     console.warn("Cle refusee/erreur (code: %s) pour %s", reponseCle.code, fuuid)
-          // }
-    //   })
-    //   .catch(err=>{
-    //     console.error("Erreur declenchement download fichier : %O", err)
-    //   })
+    transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, password: cleSecrete, iv, tag, format})
+        .catch(err=>{console.error("Erreur debut download : %O", err)})
 
   }, [connexion, transfertFichiers, usager])
 
@@ -94,25 +80,15 @@ function App() {
     setWorkersTraitementFichiers(workers)
     if(workers) {
       if(workers.connexion) {
-        connecter(workers, setUsager, setEtatConnexion)
+        connecter(workers, setUsager, setEtatConnexion, setFormatteurPret)
           .then(infoConnexion=>{console.debug("Info connexion : %O", infoConnexion)})
-          .catch(err=>{console.debug("Erreur de connexion")})
+          .catch(err=>{console.debug("Erreur de connexion : %O", err)})
       }
     }
-  }, [workers, setUsager, setEtatConnexion])
+  }, [workers, setUsager, setEtatConnexion, setFormatteurPret])
 
   useEffect(()=>{
-      if(!etatConnexion) return 
-      // workers.connexion.enregistrerCallbackMajFichier(proxy(data=>{
-      //   // console.debug("callbackMajFichier data: %O", data)
-      //   setEvenementFichier(data)
-      // }))
-      //   .catch(err=>{console.error("Erreur enregistrerCallbackMajFichier : %O", err)})
-      // workers.connexion.enregistrerCallbackMajCollection(proxy(data=>{
-      //   // console.debug("callbackMajCollection data: %O", data)
-      //   setEvenementCollection(data)
-      // }))
-      //   .catch(err=>{console.error("Erreur enregistrerCallbackMajCollection : %O", err)})
+      if(!etatAuthentifie) return 
 
       workers.chiffrage.getIdmgLocal()
         .then(idmg=>{
@@ -132,7 +108,7 @@ function App() {
         .then( info => chargerDnsMessagerie(info, setDnsMessagerie) )
         .catch(err=>console.error("Erreur chargement DNS messagerie : %O", err))
 
-  }, [etatConnexion, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
+  }, [etatAuthentifie, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
   
   return (
     <LayoutApplication>
@@ -161,7 +137,8 @@ function App() {
           <Contenu 
             workers={workers} 
             usager={usager}
-            etatConnexion={etatConnexion} 
+            etatConnexion={etatAuthentifie}
+            etatAuthentifie={etatAuthentifie}
             downloadAction={downloadAction}
             certificatMaitreDesCles={certificatMaitreDesCles}
             afficherNouveauMessage={afficherNouveauMessage}
@@ -173,6 +150,7 @@ function App() {
             setAfficherContacts={setAfficherContacts}
             showConfirmation={showConfirmation}
           />
+
         </Suspense>
       </Container>
 
@@ -202,9 +180,9 @@ async function importerWorkers(setWorkers) {
   setWorkers(workers)
 }
 
-async function connecter(workers, setUsager, setEtatConnexion) {
+async function connecter(workers, ...setters) {
   const { connecter: connecterWorker } = await import('./workers/connecter')
-  return connecterWorker(workers, setUsager, setEtatConnexion)
+  return connecterWorker(workers, ...setters)
 }
 
 function initDb() {

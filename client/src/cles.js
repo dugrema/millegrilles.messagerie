@@ -1,4 +1,4 @@
-import { saveCleDechiffree, getCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import { usagerDao /*saveCleDechiffree, getCleDechiffree*/ } from '@dugrema/millegrilles.reactjs'
 import pako from 'pako'
 
 export async function dechiffrerMessage(workers, message) {
@@ -38,7 +38,7 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
         for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
             const hachage_bytes = liste_hachage_bytes[idx]
             // console.debug("Charger localement cle : %s", hachage_bytes)
-            const cle = await getCleDechiffree(hachage_bytes)
+            const cle = await usagerDao.getCleDechiffree(hachage_bytes)
             if(cle) {
                 // console.debug("Cle locale chargee : %O", cle)
                 cles[cle.hachage_bytes] = cle
@@ -63,7 +63,7 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
         // Dechiffrer cle
         const cleDechiffree = await workers.chiffrage.dechiffrerCleSecrete(cle.cle)
         // console.debug("Conserver cle dechiffrer %s : %O", cle_hachage_bytes, cleDechiffree)
-        await saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
+        await usagerDao.saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
         cle.cleSecrete = cleDechiffree
     }
 
@@ -86,7 +86,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
     for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
         const hachage_bytes = liste_hachage_bytes[idx]
         // console.debug("Charger localement cle : %s", hachage_bytes)
-        const cle = await getCleDechiffree(hachage_bytes)
+        const cle = await usagerDao.getCleDechiffree(hachage_bytes)
         if(cle) {
             // console.debug("Cle locale chargee : %O", cle)
             cles[cle.hachage_bytes] = cle
@@ -110,7 +110,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
         // Dechiffrer cle
         const cleDechiffree = await workers.chiffrage.dechiffrerCleSecrete(cle.cle)
         // console.debug("Conserver cle dechiffrer %s : %O", cle_hachage_bytes, cleDechiffree)
-        await saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
+        await usagerDao.saveCleDechiffree(cle_hachage_bytes, cleDechiffree, cle)
         cle.cleSecrete = cleDechiffree
 
         cles[cle_hachage_bytes] = cle

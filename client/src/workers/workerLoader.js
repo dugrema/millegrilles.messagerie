@@ -35,8 +35,15 @@ export function chargerWorkers() {
     transfertFichiers.up_setChiffrage(chiffrage).catch(err=>console.error("Erreur chargement transfertFichiers/up worker : %O", err))
 
     const urlLocal = new URL(window.location.href)
-    urlLocal.pathname = '/fichiers'
-    transfertFichiers.down_setUrlDownload(urlLocal.href)
+    urlLocal.pathname = '/messagerie/fichiers'
+    const downloadHref = urlLocal.href
+    console.debug("Download path : %O", downloadHref)
+    transfertFichiers.down_setUrlDownload(downloadHref)
+    
+    urlLocal.pathname = '/messagerie/upload'
+    const uploadHref = urlLocal.href
+    console.debug("Upload path : %O", uploadHref)
+    transfertFichiers.up_setPathServeur('/messagerie/upload')
 
     return workers
 }
