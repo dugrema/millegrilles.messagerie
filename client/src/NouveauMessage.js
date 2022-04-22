@@ -243,7 +243,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
                     .map(image=>{
                         if(image.data_chiffre || image.data) {
                             fuuidsCleSeulement.push(image.hachage)
-                        } else {
+                        } else if(image.hachage) {
                             // console.debug("Attacher image : %O", image)
                             fuuids.push(image.hachage)
                         }
@@ -254,7 +254,9 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
                 // mapping.video = {...videos}
                 Object.values(videos).map(video=>{
                     // console.debug("Attache video : %O", video)
-                    fuuids.push(video.hachage)
+                    if(video.fuuid_video) {
+                        fuuids.push(video.fuuid_video)
+                    }
                 })
             }
 
