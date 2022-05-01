@@ -63,3 +63,7 @@
 .buttonbar-right BUTTON {
     margin-left: 1em;
 }
+
+label.form-label {
+    padding-top: 1.5em;
+}

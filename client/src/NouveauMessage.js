@@ -4,7 +4,6 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
-import { base64 } from 'multiformats/bases/base64'
 import ReactQuill from 'react-quill'
 import { useDropzone } from 'react-dropzone'
 
@@ -106,6 +105,22 @@ function NouveauMessage(props) {
                 <pre>{erreur}</pre>
             </Alert>
 
+            <Form.Label htmlFor="inputTo">To</Form.Label>
+            <Row>
+                <Col xs={7} md={9} lg={10}>
+                    <Form.Control
+                        type="text"
+                        id="inputTo"
+                        name="to"
+                        value={to}
+                        onChange={toChange}                        
+                    />
+                </Col>
+                <Col className="buttonbar-right">
+                    <Button variant="secondary" onClick={choisirContacts}><i className="fa fa-user-circle"/>{' '}Contacts</Button>
+                </Col>
+            </Row>
+
             <Form.Label htmlFor="replyTo">Reply to</Form.Label>
             <Form.Control
                 type="text"
@@ -115,20 +130,12 @@ function NouveauMessage(props) {
                 onChange={replyToChange}
             />
 
-            <Form.Label htmlFor="inputTo">To</Form.Label>
-            <Form.Control
-                type="text"
-                id="inputTo"
-                name="to"
-                value={to}
-                onChange={toChange}
-            />
-            <Button variant="secondary" onClick={choisirContacts}><i className="fa fa-user-circle"/>{' '}Contacts</Button>
-            
-            <br/>
-
             <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
+                <br/>
+                <Form.Text className="text-muted">
+                    Pour creer un sujet, ecrire sur la premiere ligne et faire deux retours.
+                </Form.Text>
                 <Editeur content={content} setContent={setContent} />
             </Form.Group>
 
