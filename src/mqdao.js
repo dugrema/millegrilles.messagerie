@@ -1,3 +1,7 @@
+const { MilleGrillesAmqpDAO } = require('@dugrema/millegrilles.nodejs')
+const { pki: pkiForge } = require('@dugrema/node-forge')
+const { extraireExtensionsMillegrille } = require('@dugrema/millegrilles.utiljs/src/forgecommon')
+
 const debug = require('debug')('mqdao')
 
 const L2Prive = '2.prive',
@@ -178,15 +182,15 @@ function favorisCreerPath(socket, params) {
 
 const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = ['evenement.Messagerie.{USER_ID}.majContact']
 
-function enregistrerCallbackEvenementContact(socket, params, cb) {
-    const userId = params.userId
+async function enregistrerCallbackEvenementContact(socket, params, cb) {
+    const userId = socket.userId  // Ignorer params, utiliser userId de la session
     const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_CONTACT.map(item=>item.replace("{USER_ID}", userId))
     const opts = { routingKeys, exchanges: ['2.prive'] }
     socket.subscribe(opts, cb)
 }
 
 function retirerCallbackEvenementContact(socket, params, cb) {
-    const userId = params.userId
+    const userId = socket.userId
     const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_CONTACT.map(item=>item.replace("{USER_ID}", userId))
     const opts = { routingKeys, exchanges: ['2.prive'] }
     socket.unsubscribe(opts, cb)

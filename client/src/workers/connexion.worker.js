@@ -120,11 +120,12 @@ function getCollectionUpload() {
   return ConnexionClient.emitBlocking('getCollectionUpload', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'favorisCreerPath', ajouterCertificat: true})
 }
 
-function enregistrerCallbackEvenementContact(params, cb) { 
+async function enregistrerCallbackEvenementContact(params, cb) { 
+  // const commande = await ConnexionClient.formatterMessage(params, 'Messagerie')
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
 
-function retirerCallbackEvenementContact(params, cb) {
+async function retirerCallbackEvenementContact(params, cb) {
   return ConnexionClient.unsubscribe('retirerCallbackEvenementContact', cb, params) 
 }
 
