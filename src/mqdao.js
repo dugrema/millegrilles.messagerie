@@ -174,6 +174,24 @@ function favorisCreerPath(socket, params) {
     return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
 
+// Listeners
+
+const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = ['evenement.Messagerie.{USER_ID}.majContact']
+
+function enregistrerCallbackEvenementContact(socket, params, cb) {
+    const userId = params.userId
+    const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_CONTACT.map(item=>item.replace("{USER_ID}", userId))
+    const opts = { routingKeys, exchanges: ['2.prive'] }
+    socket.subscribe(opts, cb)
+}
+
+function retirerCallbackEvenementContact(socket, params, cb) {
+    const userId = params.userId
+    const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_CONTACT.map(item=>item.replace("{USER_ID}", userId))
+    const opts = { routingKeys, exchanges: ['2.prive'] }
+    socket.unsubscribe(opts, cb)
+}
+
 // Fonctions generiques
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -234,6 +252,9 @@ module.exports = {
     // GrosFichiers
     getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles, copierFichierTiers,
     favorisCreerPath,
+
+    // Evenements
+    enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 

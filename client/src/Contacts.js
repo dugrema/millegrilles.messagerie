@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
+import { proxy } from 'comlink'
+
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -6,10 +8,11 @@ import EditerContact from './EditerContact'
 
 function Contacts(props) {
 
-    const { workers, setAfficherContacts } = props
+    const { workers, etatAuthentifie, usager, setAfficherContacts } = props
 
     const [contacts, setContacts] = useState('')
     const [uuidContactSelectionne, setUuidContactSelectionne] = useState('')
+    const [evenementContact, addEvenementContact] = useState('')
 
     const nouveauContact = useCallback(()=>setUuidContactSelectionne(true), [setUuidContactSelectionne])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
@@ -24,6 +27,26 @@ function Contacts(props) {
             .then( reponse => setContacts(reponse.contacts) )
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
     }, [])
+
+    useEffect(()=>{
+        const { connexion } = workers
+        if(connexion && etatAuthentifie, usager) {
+            const userId = usager.extensions.userId
+
+            console.debug("Enregistrement evenements contacts pour : %s (usager: %O)", userId, usager)
+
+            const cb = proxy(addEvenementContact)
+            const params = { userId }
+            connexion.enregistrerCallbackEvenementContact(params, cb)
+                .catch(err=>console.error("Erreur enregistrement evenements contacts : %O", err))
+            return () => connexion.retirerCallbackEvenementContact(params, cb)
+                .catch(err=>console.debug("Erreur retrait evenements contacts : %O", err))
+        }
+    }, [workers, etatAuthentifie, usager, addEvenementContact])
+
+    useEffect(()=>{
+        console.debug("Evenement contact : %O", evenementContact)
+    }, [evenementContact])
 
     return (
         <>

@@ -45,10 +45,8 @@ function configurerEvenements(socket) {
       { eventName: 'getCollectionUpload', callback: (params, cb) => traiter(socket, mqdao.favorisCreerPath, {params, cb}) },
 
       // Evenements
-      // {eventName: 'ecouterMajFichiers', callback: (_, cb) => {mqdao.ecouterMajFichiers(socket, cb)}},
-      // {eventName: 'ecouterMajCollections', callback: (_, cb) => {mqdao.ecouterMajCollections(socket, cb)}},
-      // {eventName: 'ecouterTranscodageProgres', callback: (params, cb) => {mqdao.ecouterTranscodageProgres(socket, params, cb)}},
-      // {eventName: 'retirerTranscodageProgres', callback: (params, cb) => {mqdao.retirerTranscodageProgres(socket, params, cb)}},
+      {eventName: 'enregistrerCallbackEvenementContact', callback: (params, cb) => {mqdao.enregistrerCallbackEvenementContact(socket, params, cb)}},
+      {eventName: 'retirerCallbackEvenementContact', callback: (params, cb) => {mqdao.retirerCallbackEvenementContact(socket, params, cb)}},
     ],
     listenersProteges: [
       // PROTEGE

@@ -120,6 +120,14 @@ function getCollectionUpload() {
   return ConnexionClient.emitBlocking('getCollectionUpload', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'favorisCreerPath', ajouterCertificat: true})
 }
 
+function enregistrerCallbackEvenementContact(params, cb) { 
+  return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
+}
+
+function retirerCallbackEvenementContact(params, cb) {
+  return ConnexionClient.unsubscribe('retirerCallbackEvenementContact', cb, params) 
+}
+
 // Exposer methodes du Worker
 expose({
     ...ConnexionClient, 
@@ -135,5 +143,8 @@ expose({
 
     // GrosFichiers pour attachements
     getClesFichiers, getCollection, getDocuments, getDocumentsParFuuid, getFavoris,
+
+    // Listeners
+    enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
 
 })
