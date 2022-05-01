@@ -46,3 +46,20 @@
 .sujet {
     padding-top: 1rem;
 }
+
+.buttonbar {
+    text-align: center;
+}
+
+.buttonbar BUTTON {
+    margin-right: 1em;
+    margin-left: 1em;
+}
+
+.buttonbar-right {
+    text-align: right;
+}
+
+.buttonbar-right BUTTON {
+    margin-left: 1em;
+}

@@ -123,52 +123,32 @@ function NouveauMessage(props) {
                 value={to}
                 onChange={toChange}
             />
-            <Button variant="secondary" onClick={choisirContacts}>Contacts</Button>
-            <p></p>
-
-            <Form.Label htmlFor="inputCc">Cc</Form.Label>
-            <Form.Control
-                type="text"
-                id="inputCc"
-                name="cc"
-                value={cc}
-                onChange={ccChange}
-            />
-
-            <Form.Label htmlFor="inputBcc">Bcc</Form.Label>
-            <Form.Control
-                type="text"
-                id="inputBcc"
-                name="bcc"
-                value={bcc}
-                onChange={bccChange}
-            />
-
-            <Form.Label htmlFor="inputSubject">Sujet</Form.Label>
-            <Form.Control
-                type="text"
-                id="inputSubject"
-                name="subject"
-                value={subject}
-                onChange={subjectChange}
-            />
+            <Button variant="secondary" onClick={choisirContacts}><i className="fa fa-user-circle"/>{' '}Contacts</Button>
             
+            <br/>
+
             <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
                 <Editeur content={content} setContent={setContent} />
             </Form.Group>
 
-            <h2>Attachements</h2>
             <Row>
-                <Col>
-                    <div {...getRootProps()}>
+                <Col xs={6} md={4} lg={3}>Attachments</Col>
+                <Col className="buttonbar-right">
+                    <span {...getRootProps()}>
                         <input {...getInputProps()}/>
-                        <Button>Upload</Button>
-                    </div>
-                    <Button variant="secondary" onClick={choisirFichiersAttaches}>Collections</Button>
+                        <Button variant="secondary">
+                            <i className="fa fa-plus" />
+                            {' '}Upload
+                        </Button>
+                    </span>
+                    <Button variant="secondary" onClick={choisirFichiersAttaches}>
+                    <i className="fa fa-folder" />
+                        {' '}Collections
+                    </Button>
                 </Col>
             </Row>
-
+    
             <AfficherAttachments 
                 workers={workers} 
                 etatConnexion={etatConnexion} 
@@ -178,8 +158,8 @@ function NouveauMessage(props) {
             <br className="clear"/>
 
             <Row>
-                <Col>
-                    <Button onClick={envoyerCb}>Envoyer</Button>
+                <Col className="buttonbar">
+                    <Button onClick={envoyerCb}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
                     <Button variant="secondary" onClick={fermer}>Annuler</Button>
                 </Col>
             </Row>
@@ -267,7 +247,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
     }
 
-    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, subject, content, opts)
+    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
     console.debug("Resultat posterMessage : %O", resultat)
 }
 

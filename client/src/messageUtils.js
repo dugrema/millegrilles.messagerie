@@ -2,10 +2,28 @@ import { getClesAttachments } from './cles'
 import { base64 } from "multiformats/bases/base64"
 import pako from 'pako'
 
-export async function posterMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
+const REGEX_SUBJECT = /^<p>([^<]+)<\/p><p><br><\/p>(.*)/i
+
+export async function posterMessage(workers, certifcatChiffragePem, from, to, content, opts) {
     
     const { connexion } = workers
+
+    // Extraire premiere ligne pour faire le sujet
+    let subject = ''
+    try {
+        const matchSubject = REGEX_SUBJECT.exec(content)
+        if(matchSubject && matchSubject.length === 3) {
+            subject = matchSubject[1]
+            content = matchSubject[2]
+        }
+        
+    } catch(err) {
+        console.error("Erreur preparation sujet : %O", err)
+    }
+    console.debug("Subject %O\nContenu %O", subject, content)
+
     const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
+
     console.debug("Enveloppe message : %O", enveloppeMessage)
     console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
