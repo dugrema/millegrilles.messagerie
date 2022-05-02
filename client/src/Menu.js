@@ -43,13 +43,13 @@ function Menu(props) {
 
             <Nav.Item>
                 <Nav.Link title="Nouveau" onClick={afficherNouveauMessage}>
-                    Nouveau
+                    <i className="fa fa-send-o"/>{' '}Nouveau
                 </Nav.Link>
             </Nav.Item>
 
             <Nav.Item>
                 <Nav.Link title="Contacts" onClick={afficherContacts}>
-                    Contacts
+                    <i className="fa fa-user-circle"/>{' '}Contacts
                 </Nav.Link>
             </Nav.Item>
 

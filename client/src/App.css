@@ -67,3 +67,20 @@
 label.form-label {
     padding-top: 1.5em;
 }
+
+.liste-header {
+    font-weight: bolder;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.liste .clickable:hover {
+    background-color: khaki;
+}
+
+
+.liste div.odd {
+    background-color: #f2f2f2;
+}

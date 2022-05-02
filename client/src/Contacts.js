@@ -1,12 +1,15 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { proxy } from 'comlink'
 
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
+import Table from 'react-bootstrap/Table'
 
 import EditerContact from './EditerContact'
+
+import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
 function Contacts(props) {
 
@@ -27,7 +30,10 @@ function Contacts(props) {
 
     useEffect(()=>{
         workers.connexion.getContacts()
-            .then( reponse => setContacts(reponse.contacts) )
+            .then( reponse => {
+                console.debug("Contacts recus : %O", reponse)
+                setContacts(reponse.contacts) 
+            })
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
     }, [])
 
@@ -118,44 +124,108 @@ function BreadcrumbContacts(props) {
 function AfficherListeContacts(props) {
     const { nouveauContact, retour, contacts, show, setUuidContactSelectionne } = props
 
+    const [selection, setSelection] = useState('')
+    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+
     const ouvrir = useCallback(event=>{
-        const uuid_contact = event.currentTarget.value
-        console.debug("Ouvrir : %O", uuid_contact)
-        setUuidContactSelectionne(uuid_contact)
-    }, [setUuidContactSelectionne])
+        event.preventDefault()
+        event.stopPropagation()
+
+        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        if(selection.length > 0) {
+            const uuid_contact = selection[0]
+            setUuidContactSelectionne(uuid_contact)
+        }
+    }, [selection, setUuidContactSelectionne])
+
+    const colonnes = useMemo(()=>preparerColonnes(), [])
+
+    const contactsMappes = useMemo(()=>{
+        if(contacts) {
+            return contacts.map(item=>{
+                const fileId = item.uuid_contact
+                const adresse = item.adresses?item.adresses[0]:''
+                return {...item, fileId, adresse}
+            })
+        }
+        return []
+    }, [contacts])
 
     if( !contacts || !show ) return ''
 
     return (
-        <>
+        <div>
             <Row>
                 <Col>
-                    <Button variant="secondary" onClick={nouveauContact}>Nouveau</Button>
-                    <Button variant="secondary" onClick={retour}>Retour</Button>
+                    <Button variant="secondary" onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
                 </Col>
             </Row>
 
-            <Row>
-                <Col>Nom</Col>
-                <Col>Adresse</Col>
-            </Row>
-            {contacts.map( item => <AfficherContactRow key={item.uuid_contact} value={item} ouvrir={ouvrir} /> )}
-        </>
+            <h3>Contacts</h3>
+            <ListeFichiers 
+                modeView='liste'
+                colonnes={colonnes}
+                rows={contactsMappes} 
+                // onClick={onClick} 
+                onDoubleClick={ouvrir}
+                // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                onSelection={onSelectionLignes}
+                // onClickEntete={enteteOnClickCb}
+                // suivantCb={(!cuuidCourant||isListeComplete)?'':suivantCb}
+            />
+        </div>     
     )
+
+    // return (
+    //     <>
+    //         <Row>
+    //             <Col>
+    //                 <Button variant="secondary" onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
+    //             </Col>
+    //         </Row>
+
+    //         <Row className="liste-header">
+    //             <Col xs={5} md={4}>Nom</Col>
+    //             <Col xs={7} md={5}>Adresse</Col>
+    //         </Row>
+
+    //         <div className="liste">
+    //             {contacts.map( (item, idx) => {
+    //                 const className = idx%2===0?'even':'odd'
+    //                 return <AfficherContactRow key={item.uuid_contact} className={className} value={item} ouvrir={ouvrir} />
+    //             })}
+    //         </div>
+    //     </>
+    // )
 }
 
-function AfficherContactRow(props) {
-    const { ouvrir } = props
-    const { nom, adresses, uuid_contact } = props.value
-    const adresse = [...adresses].shift()
+// function AfficherContactRow(props) {
+//     const { ouvrir } = props
+//     const className = props.className || ''
+//     const { nom, adresses, uuid_contact } = props.value
+//     const adresse = [...adresses].shift()
 
-    return (
-        <Row>
-            <Col>{nom}</Col>
-            <Col>{adresse}</Col>
-            <Col>
-                <Button onClick={ouvrir} value={uuid_contact}>Ouvrir</Button>
-            </Col>
-        </Row>
-    )
+//     return (
+//         <Row onClick={ouvrir} data-uuid={uuid_contact} className={className + " liste-row clickable"}>
+//             <Col xs={12} md={4}>{nom}</Col>
+//             <Col xs={12} md={5}>{adresse}</Col>
+//             <Col className='buttonbar-right'>
+//                 <Button onClick={ouvrir} value={uuid_contact} size="sm" variant="secondary">Ouvrir</Button>
+//             </Col>
+//         </Row>
+//     )
+// }
+
+function preparerColonnes() {
+
+    const params = {
+        ordreColonnes: ['nom', 'adresse', 'boutonDetail'],
+        paramsColonnes: {
+            'nom': {'label': 'Nom', showThumbnail: false, xs: 12, md: 4},
+            'adresse': {'label': 'Adresse', className: 'details', xs: 12, md: 5},
+            'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 4, md: 3},
+        },
+        tri: {colonne: 'nom', ordre: 1},
+    }
+    return params
 }
