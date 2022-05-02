@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
 import ListeMessages from './Reception'
 
@@ -23,33 +24,25 @@ function Accueil(props) {
         setUuidSelectionne(uuidMessage)
     }, [setUuidSelectionne])
 
-    // let contenu = ''
-    // if(uuidSelectionne) {
-    //     // Afficher message
-    //     const message = listeMessages.filter(item=>item.uuid_transaction===uuidSelectionne).shift()
-    //     // console.debug("Ouvrir message : %O", message)
-    //     contenu = <AfficherMessage 
-    //                 workers={workers} 
-    //                 message={message} 
-    //                 retour={retour} />
-    // } else {
-    //     // Afficher liste Reception
-    //     contenu = <ListeMessages 
-    //                 workers={workers} 
-    //                 messages={listeMessages} 
-    //                 ouvrirMessage={ouvrirMessage} />
-    // }
-
     return (
         <>
-            <h1>Messagerie</h1>
+            <BreadcrumbMessages />
+
             <ListeMessages 
-                    workers={workers} 
-                    messages={listeMessages} 
-                    ouvrirMessage={ouvrirMessage} />
+                workers={workers} 
+                messages={listeMessages} 
+                ouvrirMessage={ouvrirMessage} />
         </>
     )
 
 }
 
 export default Accueil
+
+function BreadcrumbMessages(props) {
+    return (
+        <Breadcrumb>
+            <Breadcrumb.Item active>Messages</Breadcrumb.Item>
+        </Breadcrumb>
+    )
+}

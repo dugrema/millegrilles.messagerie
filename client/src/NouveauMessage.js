@@ -4,6 +4,8 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
+import Breadcrumb from 'react-bootstrap/Breadcrumb'
+
 import ReactQuill from 'react-quill'
 import { useDropzone } from 'react-dropzone'
 
@@ -98,7 +100,7 @@ function NouveauMessage(props) {
 
     return (
         <>
-            <h2>Nouveau message</h2>
+            <BreadcrumbMessage retourMessages={fermer} />
 
             <Alert show={erreur?true:false} variant="danger" onClose={fermerErreur} dismissible>
                 <Alert.Heading>Erreur</Alert.Heading>
@@ -184,6 +186,18 @@ function NouveauMessage(props) {
 }
 
 export default NouveauMessage
+
+function BreadcrumbMessage(props) {
+
+    const { retourMessages } = props
+
+    return (
+        <Breadcrumb>
+            <Breadcrumb.Item onClick={retourMessages}>Messages</Breadcrumb.Item>
+            <Breadcrumb.Item active>Nouveau</Breadcrumb.Item>
+        </Breadcrumb>
+    )
+}
 
 function Editeur(props) {
     const { content, setContent } = props

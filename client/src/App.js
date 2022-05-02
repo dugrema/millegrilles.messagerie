@@ -5,7 +5,8 @@ import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 
-import { LayoutApplication, HeaderApplication, FooterApplication } from '@dugrema/millegrilles.reactjs'
+import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal } from '@dugrema/millegrilles.reactjs'
+
 import { ouvrirDB } from './idbCollections'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
 
@@ -13,7 +14,7 @@ import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 import './App.css'
 
 import Menu from './Menu'
-import TransfertModal from './TransfertModal'
+// import TransfertModal from './TransfertModal'
 import { Alert } from 'react-bootstrap'
 
 const Accueil = lazy(() => import('./Accueil'))

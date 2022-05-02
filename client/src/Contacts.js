@@ -4,6 +4,8 @@ import { proxy } from 'comlink'
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
+import Breadcrumb from 'react-bootstrap/Breadcrumb'
+
 import EditerContact from './EditerContact'
 
 function Contacts(props) {
@@ -16,6 +18,7 @@ function Contacts(props) {
 
     const nouveauContact = useCallback(()=>setUuidContactSelectionne(true), [setUuidContactSelectionne])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
+    const retourContacts = useCallback(()=>setUuidContactSelectionne(false), [setUuidContactSelectionne])
 
     let contactSelectionne = ''
     if(contacts && contacts.length > 0 && uuidContactSelectionne) {
@@ -28,15 +31,12 @@ function Contacts(props) {
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
     }, [])
 
+    // Contacts listener
     useEffect(()=>{
         const { connexion } = workers
         if(connexion && etatAuthentifie, usager) {
-            const userId = usager.extensions.userId
-
-            console.debug("Enregistrement evenements contacts pour : %s (usager: %O)", userId, usager)
-
             const cb = proxy(addEvenementContact)
-            const params = { userId }
+            const params = {}
             connexion.enregistrerCallbackEvenementContact(params, cb)
                 .catch(err=>console.error("Erreur enregistrement evenements contacts : %O", err))
             return () => connexion.retirerCallbackEvenementContact(params, cb)
@@ -44,13 +44,18 @@ function Contacts(props) {
         }
     }, [workers, etatAuthentifie, usager, addEvenementContact])
 
+    // Event handling
     useEffect(()=>{
         console.debug("Evenement contact : %O", evenementContact)
     }, [evenementContact])
 
     return (
         <>
-            <p>Contacts</p>
+            <BreadcrumbContacts 
+                uuidContactSelectionne={uuidContactSelectionne} 
+                contacts={contacts}
+                retourMessages={retour} 
+                retourContacts={retourContacts} />
 
             <AfficherListeContacts 
                 show={uuidContactSelectionne?false:true} 
@@ -71,6 +76,44 @@ function Contacts(props) {
 }
 
 export default Contacts
+
+function BreadcrumbContacts(props) {
+
+    const { contacts, uuidContactSelectionne, retourMessages, retourContacts } = props
+
+    const bc = [
+        <Breadcrumb.Item key="messages" onClick={retourMessages}>Messages</Breadcrumb.Item>
+    ]
+
+    if(!uuidContactSelectionne) {
+        return (
+            <Breadcrumb>
+                {bc}
+                <Breadcrumb.Item key="contacts" onClick={retourContacts} active>Contacts</Breadcrumb.Item>
+            </Breadcrumb>
+        )
+    }
+
+    bc.push(<Breadcrumb.Item key="contacts" onClick={retourContacts}>Contacts</Breadcrumb.Item>)
+
+    if(uuidContactSelectionne === true) {
+        return (
+            <Breadcrumb>
+                {bc}
+                <Breadcrumb.Item active>Nouveau</Breadcrumb.Item>
+            </Breadcrumb>
+        )
+    } else {
+        const contact = contacts.filter(item=>item.uuid_contact === uuidContactSelectionne).pop()
+        return (
+            <Breadcrumb>
+                {bc}
+                <Breadcrumb.Item active>{contact.nom}</Breadcrumb.Item>
+            </Breadcrumb>
+        )
+    }
+
+}
 
 function AfficherListeContacts(props) {
     const { nouveauContact, retour, contacts, show, setUuidContactSelectionne } = props

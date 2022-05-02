@@ -3,6 +3,8 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
+import Breadcrumb from 'react-bootstrap/Breadcrumb'
+
 import ReactQuill from 'react-quill'
 import { base64 } from 'multiformats/bases/base64'
 
@@ -77,7 +79,8 @@ function AfficherMessage(props) {
 
     return (
         <>
-            <p>Afficher message</p>
+            <BreadcrumbMessage retourMessages={retour} />
+
             <Button onClick={retour}>Retour</Button>
 
             <RenderMessage 
@@ -100,6 +103,18 @@ function AfficherMessage(props) {
 }
 
 export default AfficherMessage
+
+function BreadcrumbMessage(props) {
+
+    const { retourMessages } = props
+
+    return (
+        <Breadcrumb>
+            <Breadcrumb.Item onClick={retourMessages}>Messages</Breadcrumb.Item>
+            <Breadcrumb.Item active>Afficher</Breadcrumb.Item>
+        </Breadcrumb>
+    )
+}
 
 function RenderMessage(props) {
     // console.debug("RenderMessage proppys : %O", props)
@@ -135,8 +150,8 @@ function RenderMessage(props) {
 function Header(props) {
     return (
         <>
-        {props.children}
-        <hr/>
+            {props.children}
+            <hr/>
         </>
     )
 }
