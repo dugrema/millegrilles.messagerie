@@ -1,88 +1,146 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 
 import { pki } from '@dugrema/node-forge'
-import { FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
+import { FormatterDate, forgecommon, ListeFichiers } from '@dugrema/millegrilles.reactjs'
+
 import { dechiffrerMessage } from './cles'
 const { extraireExtensionsMillegrille } = forgecommon
 
 function ListeMessages(props) {
 
-    // console.debug("ListeMessages proppys : %O", props)
+    console.debug("ListeMessages proppys : %O", props)
 
-    const { messages, workers } = props
-    if(!messages) return ''
+    const { workers, etatAuthentifie, usager, messages, colonnes, isListeComplete, enteteOnClickCb,} = props
+
+    const [uuidMessageSelectionne, setUuidMessageSelectionne] = useState('')
+
+    if(!messages) return <p>Aucun message disponible.</p>
 
     return (
-        <>
-            <h2>Reception</h2>
+        <div>
+            <h3>Messages</h3>
+            
+            <AfficherListeMessages 
+                colonnes={colonnes}
+                messages={messages} 
+                setUuidMessageSelectionne={setUuidMessageSelectionne} 
+                // getSuivants={getSuivants}
+                isListeComplete={isListeComplete} 
+                enteteOnClickCb={enteteOnClickCb} 
+            />
 
-            <Row>
-                <Col>Date Reception</Col>
-                <Col>Auteur</Col>
-                <Col>Sujet</Col>
-                <Col>Actions</Col>
-            </Row>
-
-            {messages.map(item=>{
-                return <LigneMessage 
-                    key={item.uuid_transaction} 
-                    workers={workers} 
-                    message={item} 
-                    ouvrirMessage={props.ouvrirMessage} />
-            })}
-        </>
+        </div>
     )
+
+    // return (
+    //     <>
+    //         <h3>Messages</h3>
+
+    //         <Row>
+    //             <Col>Date Reception</Col>
+    //             <Col>Auteur</Col>
+    //             <Col>Sujet</Col>
+    //             <Col>Actions</Col>
+    //         </Row>
+
+    //         {messages.map(item=>{
+    //             return <LigneMessage 
+    //                 key={item.uuid_transaction} 
+    //                 workers={workers} 
+    //                 message={item} 
+    //                 ouvrirMessage={props.ouvrirMessage} />
+    //         })}
+    //     </>
+    // )
 
 }
 
 export default ListeMessages
 
-function LigneMessage(props) {
-    // console.debug("LigneMessage Proppys : %O", props)
-    const { message, workers } = props
+function AfficherListeMessages(props) {
+    const { 
+        messages, colonnes, setUuidMessageSelectionne, 
+        getSuivants, isListeComplete, enteteOnClickCb,
+    } = props
 
-    const { lu, date_reception, uuid_transaction, certificat_message } = message
+    const [selection, setSelection] = useState('')
+    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
 
-    const [messageDechiffre, setMessageDechiffre] = useState('')
-    const [auteur, setAuteur] = useState('')
+    const ouvrir = useCallback(event=>{
+        event.preventDefault()
+        event.stopPropagation()
 
-    useEffect(()=>{
-        const cert = pki.certificateFromPem(message.certificat_message)
-        const extensions = extraireExtensionsMillegrille(cert)
-        const cn = cert.subject.getField('CN').value
-        // console.debug("CN: %O, extensions: %O", cn, extensions)
-        setAuteur(cn)
+        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        if(selection.length > 0) {
+            const uuid_message = selection[0]
+            setUuidMessageSelectionne(uuid_message)
+        }
+    }, [selection, setUuidMessageSelectionne])
 
-        dechiffrerMessage(workers, message)
-            .then(messageDechiffre1=>{
-                // console.debug("Message dechiffre 1 %O", messageDechiffre1)
-                setMessageDechiffre(messageDechiffre1)
-            })
-            .catch(err=>console.error("Erreur dechiffrage message1 : %O", err))
-    }, [message, setMessageDechiffre, setAuteur])
-
-    let className = ''
-    if(!lu) className += ' nouveau'
-
-    let champAuteur = '@' + auteur
-    if(messageDechiffre && messageDechiffre.from) {
-        champAuteur = messageDechiffre.from
-    }
+    if( !messages ) return ''
 
     return (
-        <Row className={className}>
-            <Col><FormatterDate value={date_reception}/></Col>
-            <Col>{champAuteur}</Col>
-            <Col>{messageDechiffre.subject}</Col>
-            <Col>
-                <Button onClick={props.ouvrirMessage} value={uuid_transaction}>Ouvrir</Button>
-            </Col>
-        </Row>
+        <ListeFichiers 
+            modeView='liste'
+            colonnes={colonnes}
+            rows={messages} 
+            // onClick={onClick} 
+            onDoubleClick={ouvrir}
+            // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+            onSelection={onSelectionLignes}
+            onClickEntete={enteteOnClickCb}
+            suivantCb={isListeComplete?'':getSuivants}
+        />
     )
+
 }
+
+// function LigneMessage(props) {
+//     // console.debug("LigneMessage Proppys : %O", props)
+//     const { message, workers } = props
+
+//     const { lu, date_reception, uuid_transaction, certificat_message } = message
+
+//     const [messageDechiffre, setMessageDechiffre] = useState('')
+//     const [auteur, setAuteur] = useState('')
+
+//     useEffect(()=>{
+//         const cert = pki.certificateFromPem(message.certificat_message)
+//         const extensions = extraireExtensionsMillegrille(cert)
+//         const cn = cert.subject.getField('CN').value
+//         // console.debug("CN: %O, extensions: %O", cn, extensions)
+//         setAuteur(cn)
+
+//         dechiffrerMessage(workers, message)
+//             .then(messageDechiffre1=>{
+//                 // console.debug("Message dechiffre 1 %O", messageDechiffre1)
+//                 setMessageDechiffre(messageDechiffre1)
+//             })
+//             .catch(err=>console.error("Erreur dechiffrage message1 : %O", err))
+//     }, [message, setMessageDechiffre, setAuteur])
+
+//     let className = ''
+//     if(!lu) className += ' nouveau'
+
+//     let champAuteur = '@' + auteur
+//     if(messageDechiffre && messageDechiffre.from) {
+//         champAuteur = messageDechiffre.from
+//     }
+
+//     return (
+//         <Row className={className}>
+//             <Col><FormatterDate value={date_reception}/></Col>
+//             <Col>{champAuteur}</Col>
+//             <Col>{messageDechiffre.subject}</Col>
+//             <Col>
+//                 <Button onClick={props.ouvrirMessage} value={uuid_transaction}>Ouvrir</Button>
+//             </Col>
+//         </Row>
+//     )
+// }
 
 // async function chargerClesMessages(workers, listeMessages) {
 //     const { connexion, chiffrage } = workers
