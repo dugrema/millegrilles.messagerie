@@ -1,21 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
-import Button from 'react-bootstrap/Button'
-
-import { pki } from '@dugrema/node-forge'
+import { useState, useCallback } from 'react'
 import { FormatterDate, forgecommon, ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
-import { dechiffrerMessage } from './cles'
-const { extraireExtensionsMillegrille } = forgecommon
 
 function ListeMessages(props) {
 
-    console.debug("ListeMessages proppys : %O", props)
-
-    const { workers, etatAuthentifie, usager, messages, colonnes, isListeComplete, enteteOnClickCb,} = props
-
-    const [uuidMessageSelectionne, setUuidMessageSelectionne] = useState('')
+    const { workers, etatAuthentifie, usager, messages, colonnes, isListeComplete, enteteOnClickCb, setUuidMessage } = props
 
     if(!messages) return <p>Aucun message disponible.</p>
 
@@ -26,7 +15,7 @@ function ListeMessages(props) {
             <AfficherListeMessages 
                 colonnes={colonnes}
                 messages={messages} 
-                setUuidMessageSelectionne={setUuidMessageSelectionne} 
+                setUuidMessage={setUuidMessage} 
                 // getSuivants={getSuivants}
                 isListeComplete={isListeComplete} 
                 enteteOnClickCb={enteteOnClickCb} 
@@ -35,34 +24,13 @@ function ListeMessages(props) {
         </div>
     )
 
-    // return (
-    //     <>
-    //         <h3>Messages</h3>
-
-    //         <Row>
-    //             <Col>Date Reception</Col>
-    //             <Col>Auteur</Col>
-    //             <Col>Sujet</Col>
-    //             <Col>Actions</Col>
-    //         </Row>
-
-    //         {messages.map(item=>{
-    //             return <LigneMessage 
-    //                 key={item.uuid_transaction} 
-    //                 workers={workers} 
-    //                 message={item} 
-    //                 ouvrirMessage={props.ouvrirMessage} />
-    //         })}
-    //     </>
-    // )
-
 }
 
 export default ListeMessages
 
 function AfficherListeMessages(props) {
     const { 
-        messages, colonnes, setUuidMessageSelectionne, 
+        messages, colonnes, setUuidMessage, 
         getSuivants, isListeComplete, enteteOnClickCb,
     } = props
 
@@ -76,9 +44,9 @@ function AfficherListeMessages(props) {
         console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length > 0) {
             const uuid_message = selection[0]
-            setUuidMessageSelectionne(uuid_message)
+            setUuidMessage(uuid_message)
         }
-    }, [selection, setUuidMessageSelectionne])
+    }, [selection, setUuidMessage])
 
     if( !messages ) return ''
 

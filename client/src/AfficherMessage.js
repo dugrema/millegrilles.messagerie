@@ -21,13 +21,13 @@ import { detecterSupport } from './fonctionsFichiers'
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
-    const { workers, etatConnexion, downloadAction, uuidSelectionne, setUuidSelectionne, certificatMaitreDesCles } = props
+    const { workers, etatConnexion, downloadAction, uuidMessage, setUuidMessage, certificatMaitreDesCles } = props
     const [message, setMessage] = useState('')
     const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [attachmentACopier, setAttachmentACopier] = useState('')
 
-    const retour = useCallback(()=>{setUuidSelectionne('')}, [setUuidSelectionne])
+    const retour = useCallback(()=>{setUuidMessage('')}, [setUuidMessage])
     const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
     const choisirCollectionCb = useCallback(
         attachment => {
@@ -50,7 +50,7 @@ function AfficherMessage(props) {
 
     useEffect( () => { 
         if(!etatConnexion) return
-        workers.connexion.getMessages({uuid_messages: [uuidSelectionne]}).then(messages=>{
+        workers.connexion.getMessages({uuid_messages: [uuidMessage]}).then(messages=>{
             console.debug("Messages recus : %O", messages)
             setMessage(messages.messages.shift())
         })
@@ -59,7 +59,7 @@ function AfficherMessage(props) {
     // Charger et dechiffrer message
     useEffect(()=>{
         if(!etatConnexion) return
-        workers.connexion.getMessages({uuid_messages: [uuidSelectionne]})
+        workers.connexion.getMessages({uuid_messages: [uuidMessage]})
             .then(messages=>{
                 console.debug("Messages recus : %O", messages)
                 const message = messages.messages.shift()
@@ -68,7 +68,7 @@ function AfficherMessage(props) {
             })
             .then(messageDechiffre=>setMessageDechiffre(messageDechiffre))
             .catch(err=>console.error("Erreur chargement message : %O", err))
-    }, [workers, uuidSelectionne, setMessage, setMessageDechiffre])
+    }, [workers, uuidMessage, setMessage, setMessageDechiffre])
 
     useEffect(()=>{
         if(messageDechiffre && !message.lu) {

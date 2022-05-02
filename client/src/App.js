@@ -55,7 +55,7 @@ function App() {
   // Selecteurs de page
   const [afficherContacts, setAfficherContacts] = useState(false)
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
-  const [uuidSelectionne, setUuidSelectionne] = useState('')
+  const [uuidMessage, setUuidMessage] = useState('')
 
   const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
   const showTransfertModalFermer = useCallback(()=>{ setShowTransfertModal(false) }, [setShowTransfertModal])
@@ -115,10 +115,7 @@ function App() {
         .catch(err=>console.error("Erreur chargement idmg local : %O", err))
 
       workers.connexion.getClesChiffrage()
-        .then(cles=>{
-          console.debug("Cles chiffrage recues : %O", cles)
-          setCertificatMaitreDesCles(cles.certificat)
-        })
+        .then(cles=>setCertificatMaitreDesCles(cles.certificat))
         .catch(err=>console.error("Erreur chargement cles chiffrage : %O", err))
 
       workers.connexion.getDomainesMessagerie()
@@ -139,7 +136,6 @@ function App() {
         const { colonne, ordre } = colonnes.tri
         workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
             .then( reponse => {
-                console.debug("Messages recus : %O", reponse)
                 const liste = reponse.messages
                 setListeComplete(liste.length < PAGE_LIMIT)
                 formatterMessagesCb(liste) 
@@ -158,7 +154,7 @@ function App() {
           etatConnexion={etatConnexion} 
           etatTransfert={etatTransfert}
           setAfficherNouveauMessage={setAfficherNouveauMessage}
-          setUuidSelectionne={setUuidSelectionne}
+          setUuidMessage={setUuidMessage}
           setAfficherContacts={setAfficherContacts}
           showTransfertModal={showTransfertModalOuvrir}
         />
@@ -181,8 +177,8 @@ function App() {
             certificatMaitreDesCles={certificatMaitreDesCles}
             afficherNouveauMessage={afficherNouveauMessage}
             setAfficherNouveauMessage={setAfficherNouveauMessage}
-            uuidSelectionne={uuidSelectionne}
-            setUuidSelectionne={setUuidSelectionne}
+            uuidMessage={uuidMessage}
+            setUuidMessage={setUuidMessage}
             dnsMessagerie={dnsMessagerie}
             afficherContacts={afficherContacts}
             setAfficherContacts={setAfficherContacts}
@@ -251,7 +247,7 @@ function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
 function Contenu(props) {
   if(!props.workers) return <Attente />
 
-  const { afficherNouveauMessage, afficherContacts, uuidSelectionne } = props
+  const { afficherNouveauMessage, afficherContacts, uuidMessage } = props
 
   // Selection de la page a afficher
   let Page
@@ -259,7 +255,7 @@ function Contenu(props) {
     Page = Contacts
   } else if(afficherNouveauMessage) {
     Page = NouveauMessage
-  } else if(uuidSelectionne) {
+  } else if(uuidMessage) {
     Page = AfficherMessage
   } else {
     Page = Accueil
@@ -290,10 +286,7 @@ function preparerColonnes(workers) {
       tri: {colonne: 'date_reception', ordre: -1},
       // rowLoader: data => dechiffrerMessage(workers, data)
       rowLoader: async data => {
-          console.debug("Row loader : %O", data)
-          // return data
           const messageDechiffre = await dechiffrerMessage(workers, data)
-          console.debug("Message dechiffre : %O", messageDechiffre)
           return {...data, ...messageDechiffre}
       }
   }
