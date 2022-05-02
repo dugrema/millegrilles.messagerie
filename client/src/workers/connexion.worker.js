@@ -121,12 +121,20 @@ function getCollectionUpload() {
 }
 
 async function enregistrerCallbackEvenementContact(params, cb) { 
-  // const commande = await ConnexionClient.formatterMessage(params, 'Messagerie')
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
 
 async function retirerCallbackEvenementContact(params, cb) {
   return ConnexionClient.unsubscribe('retirerCallbackEvenementContact', cb, params) 
+}
+
+async function enregistrerCallbackEvenementMessages(params, cb) { 
+  // const commande = await ConnexionClient.formatterMessage(params, 'Messagerie')
+  return ConnexionClient.subscribe('enregistrerCallbackEvenementMessages', cb, params)
+}
+
+async function retirerCallbackEvenementMessages(params, cb) {
+  return ConnexionClient.unsubscribe('retirerCallbackEvenementMessages', cb, params) 
 }
 
 // Exposer methodes du Worker
@@ -147,5 +155,6 @@ expose({
 
     // Listeners
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
+    enregistrerCallbackEvenementMessages, retirerCallbackEvenementMessages,
 
 })

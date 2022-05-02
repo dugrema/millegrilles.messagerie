@@ -196,6 +196,22 @@ function retirerCallbackEvenementContact(socket, params, cb) {
     socket.unsubscribe(opts, cb)
 }
 
+const CONST_ROUTINGKEYS_EVENEMENT_MESSAGE = ['evenement.Messagerie.{USER_ID}.nouveauMessage']
+
+async function enregistrerCallbackEvenementMessages(socket, params, cb) {
+    const userId = socket.userId  // Ignorer params, utiliser userId de la session
+    const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_MESSAGE.map(item=>item.replace("{USER_ID}", userId))
+    const opts = { routingKeys, exchanges: ['2.prive'] }
+    socket.subscribe(opts, cb)
+}
+
+function retirerCallbackEvenementMessages(socket, params, cb) {
+    const userId = socket.userId
+    const routingKeys = CONST_ROUTINGKEYS_EVENEMENT_MESSAGE.map(item=>item.replace("{USER_ID}", userId))
+    const opts = { routingKeys, exchanges: ['2.prive'] }
+    socket.unsubscribe(opts, cb)
+}
+
 // Fonctions generiques
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -259,6 +275,7 @@ module.exports = {
 
     // Evenements
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
+    enregistrerCallbackEvenementMessages, retirerCallbackEvenementMessages,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 

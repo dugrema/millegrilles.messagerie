@@ -47,6 +47,8 @@ function configurerEvenements(socket) {
       // Evenements
       {eventName: 'enregistrerCallbackEvenementContact', callback: (params, cb) => {mqdao.enregistrerCallbackEvenementContact(socket, params, cb)}},
       {eventName: 'retirerCallbackEvenementContact', callback: (params, cb) => {mqdao.retirerCallbackEvenementContact(socket, params, cb)}},
+      {eventName: 'enregistrerCallbackEvenementMessages', callback: (params, cb) => {mqdao.enregistrerCallbackEvenementMessages(socket, params, cb)}},
+      {eventName: 'retirerCallbackEvenementMessages', callback: (params, cb) => {mqdao.retirerCallbackEvenementMessages(socket, params, cb)}},
     ],
     listenersProteges: [
       // PROTEGE

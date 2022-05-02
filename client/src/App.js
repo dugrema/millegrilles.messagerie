@@ -1,5 +1,6 @@
 import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
 import { base64 } from "multiformats/bases/base64"
+import { proxy } from 'comlink'
 
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
@@ -89,7 +90,18 @@ function App() {
         .then( reponse => {
             console.debug("Messages suivant recus : %O", reponse)
             const messages = reponse.messages
-            formatterMessagesCb([...listeMessages, ...messages]) 
+            const nouveauMessagesParUuid = messages.reduce((acc, item)=>{ acc[item.uuid_transaction] = item; return acc }, {})
+            const messagesMaj = listeMessages.map(item=>{
+              const uuid_transaction = item.uuid_transaction
+              const messageNouveau = nouveauMessagesParUuid[uuid_transaction]
+              if(messageNouveau) {
+                delete nouveauMessagesParUuid[uuid_transaction]
+                return messageNouveau
+              }
+              return item
+            })
+            Object.values(nouveauMessagesParUuid).forEach(item=>messagesMaj.push(item))  // Ajouter nouveaux messages
+            formatterMessagesCb(messagesMaj) 
             setListeComplete(messages.length < PAGE_LIMIT)
         })
         .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
@@ -155,6 +167,46 @@ function App() {
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
     }
   }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+
+  // Messages listener
+  useEffect(()=>{
+    const { connexion } = workers
+    if(connexion && etatAuthentifie, usager) {
+      const cb = proxy(addEvenementMessage)
+      const params = {}
+      connexion.enregistrerCallbackEvenementMessages(params, cb)
+        .catch(err=>console.error("Erreur enregistrement evenements messages : %O", err))
+      return () => connexion.retirerCallbackEvenementMessages(params, cb)
+        .catch(err=>console.debug("Erreur retrait evenements messages : %O", err))
+    }
+  }, [workers, etatAuthentifie, usager, addEvenementMessage])
+
+  // Event handling
+  useEffect(()=>{
+    if(evenementMessage) {
+      addEvenementMessage('')  // Clear event pour eviter cycle d'update
+
+      console.debug("Evenement message : %O", evenementMessage)
+
+      // Traiter message
+      const message = evenementMessage.message
+      const { uuid_transaction } = message
+      let trouve = false
+      const listeMaj = listeMessages.map(item=>{
+          if(item.uuid_transaction === uuid_transaction) {
+              trouve = true
+              return message  // Remplacer message
+          }
+          return item
+      })
+      if(!trouve) {
+        console.debug("Ajout nouveau message %O", message)
+        listeMaj.push(message)
+      }
+
+      formatterMessagesCb(listeMaj)
+    }
+  }, [evenementMessage, listeMessages, formatterMessagesCb, addEvenementMessage])
 
   return (
     <LayoutApplication>

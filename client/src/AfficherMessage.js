@@ -81,8 +81,6 @@ function AfficherMessage(props) {
         <>
             <BreadcrumbMessage retourMessages={retour} />
 
-            <Button onClick={retour}>Retour</Button>
-
             <RenderMessage 
                 workers={workers} 
                 etatConnexion={etatConnexion}
