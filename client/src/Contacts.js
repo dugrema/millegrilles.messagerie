@@ -286,7 +286,7 @@ function preparerColonnes() {
         paramsColonnes: {
             'nom': {'label': 'Nom', showThumbnail: false, xs: 12, md: 4},
             'adresse': {'label': 'Adresse', className: 'details', xs: 12, md: 5},
-            'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 4, md: 3},
+            'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 4, md: 3},
         },
         tri: {colonne: 'nom', ordre: 1},
     }
