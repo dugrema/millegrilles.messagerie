@@ -14,14 +14,17 @@ const PAGE_LIMIT = 20
 
 function Accueil(props) {
 
-    const { workers, etatConnexion, etatAuthentifie, usager, downloadAction, setUuidSelectionne } = props
+    const { 
+        workers, etatConnexion, etatAuthentifie, usager, downloadAction, setUuidSelectionne,
+        colonnes, setColonnes, listeMessages, isListeComplete,
+     } = props
 
-    const [listeMessages, setListeMessages] = useState([])
-    const [colonnes, setColonnes] = useState('')
-    const [isListeComplete, setListeComplete] = useState(false)
-    const [evenementMessage, addEvenementMessage] = useState('')
+    // const [listeMessages, setListeMessages] = useState([])
+    // const [colonnes, setColonnes] = useState('')
+    // const [isListeComplete, setListeComplete] = useState(false)
+    // const [evenementMessage, addEvenementMessage] = useState('')
 
-    const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
+    // const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
     const ouvrirMessage = useCallback(event=>{
         let uuidMessage = event
@@ -47,28 +50,26 @@ function Accueil(props) {
         setColonnes(colonnesCourant)
     }, [colonnes, setColonnes])    
 
-    useEffect(()=>{
-        if(workers) {
-            setColonnes(preparerColonnes(workers))
-        }
-    }, [workers, setColonnes])
+    // useEffect(()=>{
+    //     if(workers) setColonnes(preparerColonnes(workers))
+    // }, [workers, setColonnes])
 
-    // Charger liste initiale
-    useEffect(()=>{
-        if(!workers || !etatConnexion || !etatAuthentifie) return
+    // // Charger liste initiale
+    // useEffect(()=>{
+    //     if(!workers || !etatConnexion || !etatAuthentifie) return
 
-        if(colonnes) {
-            const { colonne, ordre } = colonnes.tri
-            workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
-                .then( reponse => {
-                    console.debug("Messages recus : %O", reponse)
-                    const liste = reponse.messages
-                    setListeComplete(liste.length < PAGE_LIMIT)
-                    formatterMessagesCb(liste) 
-                })
-                .catch(err=>console.error("Erreur chargement contacts : %O", err))
-        }
-    }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+    //     if(colonnes) {
+    //         const { colonne, ordre } = colonnes.tri
+    //         workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
+    //             .then( reponse => {
+    //                 console.debug("Messages recus : %O", reponse)
+    //                 const liste = reponse.messages
+    //                 setListeComplete(liste.length < PAGE_LIMIT)
+    //                 formatterMessagesCb(liste) 
+    //             })
+    //             .catch(err=>console.error("Erreur chargement contacts : %O", err))
+    //     }
+    // }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
 
     return (
         <>
@@ -96,73 +97,73 @@ function BreadcrumbMessages(props) {
     )
 }
 
-function preparerColonnes(workers) {
+// function preparerColonnes(workers) {
 
-    const params = {
-        ordreColonnes: ['date_reception', 'from', 'subject', 'boutonDetail'],
-        paramsColonnes: {
-            'date_reception': {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
-            'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
-            'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
-            'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
-        },
-        tri: {colonne: 'date_reception', ordre: -1},
-        // rowLoader: data => dechiffrerMessage(workers, data)
-        rowLoader: async data => {
-            console.debug("Row loader : %O", data)
-            // return data
-            const messageDechiffre = await dechiffrerMessage(workers, data)
-            console.debug("Message dechiffre : %O", messageDechiffre)
-            return {...data, ...messageDechiffre}
-        }
-    }
+//     const params = {
+//         ordreColonnes: ['date_reception', 'from', 'subject', 'boutonDetail'],
+//         paramsColonnes: {
+//             'date_reception': {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
+//             'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
+//             'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
+//             'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
+//         },
+//         tri: {colonne: 'date_reception', ordre: -1},
+//         // rowLoader: data => dechiffrerMessage(workers, data)
+//         rowLoader: async data => {
+//             console.debug("Row loader : %O", data)
+//             // return data
+//             const messageDechiffre = await dechiffrerMessage(workers, data)
+//             console.debug("Message dechiffre : %O", messageDechiffre)
+//             return {...data, ...messageDechiffre}
+//         }
+//     }
 
-    return params
-}
+//     return params
+// }
 
-function formatterMessages(messages, colonnes, setMessagesFormattes) {
-    // console.debug("formatterContacts colonnes: %O", colonnes)
-    const {colonne, ordre} = colonnes.tri
-    // let contactsTries = [...contacts]
+// function formatterMessages(messages, colonnes, setMessagesFormattes) {
+//     // console.debug("formatterContacts colonnes: %O", colonnes)
+//     const {colonne, ordre} = colonnes.tri
+//     // let contactsTries = [...contacts]
 
-    let messagesTries = messages.map(item=>{
-        const certificat = item.certificat_message
-        let from = ''
-        if(certificat) {
-            const cert = pki.certificateFromPem(certificat)
-            const extensions = extraireExtensionsMillegrille(cert)
-            from = cert.subject.getField('CN').value
-        }
+//     let messagesTries = messages.map(item=>{
+//         const certificat = item.certificat_message
+//         let from = ''
+//         if(certificat) {
+//             const cert = pki.certificateFromPem(certificat)
+//             const extensions = extraireExtensionsMillegrille(cert)
+//             from = cert.subject.getField('CN').value
+//         }
 
-        const fileId = item.uuid_transaction
-        // const adresse = item.adresses?item.adresses[0]:''
-        return {...item, fileId, from}
-    })
+//         const fileId = item.uuid_transaction
+//         // const adresse = item.adresses?item.adresses[0]:''
+//         return {...item, fileId, from}
+//     })
 
-    // console.debug("Contacts a trier : %O", contactsTries)
+//     // console.debug("Contacts a trier : %O", contactsTries)
 
-    switch(colonne) {
-        case 'from': messagesTries.sort(trierFrom); break
-        case 'subject': messagesTries.sort(trierSubject); break
-        default: messagesTries.sort(trierDate)
-    }
+//     switch(colonne) {
+//         case 'from': messagesTries.sort(trierFrom); break
+//         case 'subject': messagesTries.sort(trierSubject); break
+//         default: messagesTries.sort(trierDate)
+//     }
 
-    if(ordre < 0) messagesTries = messagesTries.reverse()
+//     if(ordre < 0) messagesTries = messagesTries.reverse()
 
-    setMessagesFormattes(messagesTries)
-}
+//     setMessagesFormattes(messagesTries)
+// }
 
-function trierDate(a, b) {
-    return trierNombre('date_reception', a, b)
-}
+// function trierDate(a, b) {
+//     return trierNombre('date_reception', a, b)
+// }
 
-function trierSubject(a, b) {
-    return trierString('subject', a, b, {chaine: trierDate})
-}
+// function trierSubject(a, b) {
+//     return trierString('subject', a, b, {chaine: trierDate})
+// }
 
-function trierFrom(a, b) {
-    return trierString('from', a, b, {chaine: trierDate})
-}
+// function trierFrom(a, b) {
+//     return trierString('from', a, b, {chaine: trierDate})
+// }
 
 // const { lu, date_reception, uuid_transaction, certificat_message } = message
 

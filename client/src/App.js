@@ -4,23 +4,31 @@ import { base64 } from "multiformats/bases/base64"
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
+import Alert from 'react-bootstrap/Alert'
 
-import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal } from '@dugrema/millegrilles.reactjs'
+import { pki } from '@dugrema/node-forge'
+import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
+import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, forgecommon, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import { ouvrirDB } from './idbCollections'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
+import { dechiffrerMessage } from './cles'
 
 import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
+
 import './App.css'
 
 import Menu from './Menu'
 // import TransfertModal from './TransfertModal'
-import { Alert } from 'react-bootstrap'
+
+const { extraireExtensionsMillegrille } = forgecommon
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
 const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
+
+const PAGE_LIMIT = 20
 
 function App() {
   
@@ -34,6 +42,12 @@ function App() {
   const [etatTransfert, setEtatTransfert] = useState('')
   const [showTransfertModal, setShowTransfertModal] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
+
+  // Liste messages
+  const [listeMessages, setListeMessages] = useState([])
+  const [colonnes, setColonnes] = useState('')
+  const [isListeComplete, setListeComplete] = useState(false)
+  const [evenementMessage, addEvenementMessage] = useState('')
 
   const { connexion, transfertFichiers } = workers
   const etatAuthentifie = usager && formatteurPret
@@ -66,6 +80,8 @@ function App() {
         .catch(err=>{console.error("Erreur debut download : %O", err)})
 
   }, [connexion, transfertFichiers, usager])
+
+  const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
   // Chargement des proprietes et workers
   useEffect(()=>{
@@ -111,6 +127,27 @@ function App() {
 
   }, [etatAuthentifie, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
   
+  useEffect(()=>{
+    if(workers) setColonnes(preparerColonnes(workers))
+  }, [workers, setColonnes])
+
+  // Charger liste initiale
+  useEffect(()=>{
+    if(!workers || !etatConnexion || !etatAuthentifie) return
+
+    if(colonnes) {
+        const { colonne, ordre } = colonnes.tri
+        workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
+            .then( reponse => {
+                console.debug("Messages recus : %O", reponse)
+                const liste = reponse.messages
+                setListeComplete(liste.length < PAGE_LIMIT)
+                formatterMessagesCb(liste) 
+            })
+            .catch(err=>console.error("Erreur chargement contacts : %O", err))
+    }
+  }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+
   return (
     <LayoutApplication>
       
@@ -150,6 +187,10 @@ function App() {
             afficherContacts={afficherContacts}
             setAfficherContacts={setAfficherContacts}
             showConfirmation={showConfirmation}
+            colonnes={colonnes}
+            setColonnes={setColonnes}
+            listeMessages={listeMessages}
+            isListeComplete={isListeComplete}
           />
 
         </Suspense>
@@ -234,4 +275,72 @@ function Footer(props) {
       <Row><Col>Collections de MilleGrilles</Col></Row>
     </div>
   )
+}
+
+function preparerColonnes(workers) {
+
+  const params = {
+      ordreColonnes: ['date_reception', 'from', 'subject', 'boutonDetail'],
+      paramsColonnes: {
+          'date_reception': {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
+          'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
+          'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
+          'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
+      },
+      tri: {colonne: 'date_reception', ordre: -1},
+      // rowLoader: data => dechiffrerMessage(workers, data)
+      rowLoader: async data => {
+          console.debug("Row loader : %O", data)
+          // return data
+          const messageDechiffre = await dechiffrerMessage(workers, data)
+          console.debug("Message dechiffre : %O", messageDechiffre)
+          return {...data, ...messageDechiffre}
+      }
+  }
+
+  return params
+}
+
+function formatterMessages(messages, colonnes, setMessagesFormattes) {
+  // console.debug("formatterContacts colonnes: %O", colonnes)
+  const {colonne, ordre} = colonnes.tri
+  // let contactsTries = [...contacts]
+
+  let messagesTries = messages.map(item=>{
+      const certificat = item.certificat_message
+      let from = ''
+      if(certificat) {
+          const cert = pki.certificateFromPem(certificat)
+          const extensions = extraireExtensionsMillegrille(cert)
+          from = cert.subject.getField('CN').value
+      }
+
+      const fileId = item.uuid_transaction
+      // const adresse = item.adresses?item.adresses[0]:''
+      return {...item, fileId, from}
+  })
+
+  // console.debug("Contacts a trier : %O", contactsTries)
+
+  switch(colonne) {
+      case 'from': messagesTries.sort(trierFrom); break
+      case 'subject': messagesTries.sort(trierSubject); break
+      default: messagesTries.sort(trierDate)
+  }
+
+  if(ordre < 0) messagesTries = messagesTries.reverse()
+
+  setMessagesFormattes(messagesTries)
+}
+
+function trierDate(a, b) {
+  return trierNombre('date_reception', a, b)
+}
+
+function trierSubject(a, b) {
+  return trierString('subject', a, b, {chaine: trierDate})
+}
+
+function trierFrom(a, b) {
+  return trierString('from', a, b, {chaine: trierDate})
 }
