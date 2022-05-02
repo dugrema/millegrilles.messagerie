@@ -83,6 +83,18 @@ function App() {
 
   const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
+  const getMessagesSuivants = useCallback(()=>{
+    const { colonne, ordre } = colonnes.tri
+    workers.connexion.getMessages({colonne, ordre, skip: listeMessages.length, limit: PAGE_LIMIT})
+        .then( reponse => {
+            console.debug("Messages suivant recus : %O", reponse)
+            const messages = reponse.messages
+            formatterMessagesCb([...listeMessages, ...messages]) 
+            setListeComplete(messages.length < PAGE_LIMIT)
+        })
+        .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
+  }, [colonnes, listeMessages, formatterMessagesCb, setListeComplete])
+
   // Chargement des proprietes et workers
   useEffect(()=>{
     Promise.all([
@@ -187,6 +199,7 @@ function App() {
             setColonnes={setColonnes}
             listeMessages={listeMessages}
             isListeComplete={isListeComplete}
+            getMessagesSuivants={getMessagesSuivants}
           />
 
         </Suspense>
@@ -286,8 +299,12 @@ function preparerColonnes(workers) {
       tri: {colonne: 'date_reception', ordre: -1},
       // rowLoader: data => dechiffrerMessage(workers, data)
       rowLoader: async data => {
-          const messageDechiffre = await dechiffrerMessage(workers, data)
-          return {...data, ...messageDechiffre}
+          if(data.dechiffre !== true) {
+            const messageDechiffre = await dechiffrerMessage(workers, data)
+            return {...data, ...messageDechiffre, dechiffre: true}
+          } else {
+            return data
+          }
       }
   }
 

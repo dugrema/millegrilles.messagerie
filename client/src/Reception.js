@@ -4,7 +4,11 @@ import { FormatterDate, forgecommon, ListeFichiers } from '@dugrema/millegrilles
 
 function ListeMessages(props) {
 
-    const { workers, etatAuthentifie, usager, messages, colonnes, isListeComplete, enteteOnClickCb, setUuidMessage } = props
+    const { 
+        workers, etatAuthentifie, usager, 
+        messages, colonnes, enteteOnClickCb, setUuidMessage,
+        isListeComplete, getMessagesSuivants,
+    } = props
 
     if(!messages) return <p>Aucun message disponible.</p>
 
@@ -16,7 +20,7 @@ function ListeMessages(props) {
                 colonnes={colonnes}
                 messages={messages} 
                 setUuidMessage={setUuidMessage} 
-                // getSuivants={getSuivants}
+                getMessagesSuivants={getMessagesSuivants}
                 isListeComplete={isListeComplete} 
                 enteteOnClickCb={enteteOnClickCb} 
             />
@@ -31,7 +35,7 @@ export default ListeMessages
 function AfficherListeMessages(props) {
     const { 
         messages, colonnes, setUuidMessage, 
-        getSuivants, isListeComplete, enteteOnClickCb,
+        isListeComplete, getMessagesSuivants, enteteOnClickCb,
     } = props
 
     const [selection, setSelection] = useState('')
@@ -60,7 +64,7 @@ function AfficherListeMessages(props) {
             // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
             onSelection={onSelectionLignes}
             onClickEntete={enteteOnClickCb}
-            suivantCb={isListeComplete?'':getSuivants}
+            suivantCb={isListeComplete?'':getMessagesSuivants}
         />
     )
 
