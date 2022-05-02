@@ -9,19 +9,53 @@ import Table from 'react-bootstrap/Table'
 
 import EditerContact from './EditerContact'
 
+import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
+
+const PAGE_LIMIT = 20
 
 function Contacts(props) {
 
     const { workers, etatAuthentifie, usager, setAfficherContacts } = props
 
+    const [colonnes, setColonnes] = useState(preparerColonnes())
     const [contacts, setContacts] = useState('')
     const [uuidContactSelectionne, setUuidContactSelectionne] = useState('')
     const [evenementContact, addEvenementContact] = useState('')
+    const [isListeComplete, setListeComplete] = useState(false)
 
     const nouveauContact = useCallback(()=>setUuidContactSelectionne(true), [setUuidContactSelectionne])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
     const retourContacts = useCallback(()=>setUuidContactSelectionne(false), [setUuidContactSelectionne])
+    const formatterContactsCb = useCallback(contacts=>formatterContacts(contacts, colonnes, setContacts), [colonnes, setContacts])
+    
+    const getContactsSuivants = useCallback(()=>{
+        const { colonne, ordre } = colonnes.tri
+        workers.connexion.getContacts({colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
+            .then( reponse => {
+                console.debug("Contacts suivant recus : %O", reponse)
+                formatterContactsCb([...contacts, ...reponse.contacts]) 
+                setListeComplete(reponse.contacts.length === 0)
+            })
+            .catch(err=>console.error("Erreur chargement contacts : %O", err))
+    }, [colonnes, contacts], formatterContactsCb, setListeComplete)
+
+    const enteteOnClickCb = useCallback(colonne=>{
+        // console.debug("Click entete nom colonne : %s", colonne)
+        const triCourant = {...colonnes.tri}
+        const colonnesCourant = {...colonnes}
+        const colonneCourante = triCourant.colonne
+        let ordre = triCourant.ordre || 1
+        if(colonne === colonneCourante) {
+            // Toggle direction
+            ordre = ordre * -1
+        } else {
+            ordre = 1
+        }
+        colonnesCourant.tri = {colonne, ordre}
+        // console.debug("Sort key maj : %O", colonnesCourant)
+        setColonnes(colonnesCourant)
+    }, [colonnes, setColonnes])
 
     let contactSelectionne = ''
     if(contacts && contacts.length > 0 && uuidContactSelectionne) {
@@ -29,13 +63,17 @@ function Contacts(props) {
     }
 
     useEffect(()=>{
-        workers.connexion.getContacts()
-            .then( reponse => {
-                console.debug("Contacts recus : %O", reponse)
-                setContacts(reponse.contacts) 
-            })
-            .catch(err=>console.error("Erreur chargement contacts : %O", err))
-    }, [])
+        if(colonnes) {
+            const { colonne, ordre } = colonnes.tri
+            workers.connexion.getContacts({colonne, ordre, limit: PAGE_LIMIT})
+                .then( reponse => {
+                    // console.debug("Contacts recus : %O", reponse)
+                    setListeComplete(reponse.contacts.length < PAGE_LIMIT)
+                    formatterContactsCb(reponse.contacts) 
+                })
+                .catch(err=>console.error("Erreur chargement contacts : %O", err))
+        }
+    }, [colonnes, formatterContactsCb, setListeComplete])
 
     // Contacts listener
     useEffect(()=>{
@@ -52,8 +90,27 @@ function Contacts(props) {
 
     // Event handling
     useEffect(()=>{
-        console.debug("Evenement contact : %O", evenementContact)
-    }, [evenementContact])
+        if(evenementContact) {
+            addEvenementContact('')  // Clear event pour eviter cycle d'update
+
+            console.debug("Evenement contact : %O", evenementContact)
+
+            // Traiter message
+            const message = evenementContact.message
+            const { uuid_contact } = message
+            let trouve = false
+            const contactsMaj = contacts.map(item=>{
+                if(item.uuid_contact === uuid_contact) {
+                    trouve = true
+                    return message  // Remplacer contact
+                }
+                return item
+            })
+            if(!trouve) contactsMaj.push(message)
+
+            formatterContactsCb(contactsMaj)
+        }
+    }, [evenementContact, contacts, formatterContactsCb, addEvenementContact])
 
     return (
         <>
@@ -65,10 +122,14 @@ function Contacts(props) {
 
             <AfficherListeContacts 
                 show={uuidContactSelectionne?false:true} 
+                colonnes={colonnes}
                 contacts={contacts} 
                 nouveauContact={nouveauContact}
                 retour={retour} 
-                setUuidContactSelectionne={setUuidContactSelectionne} />
+                setUuidContactSelectionne={setUuidContactSelectionne} 
+                getContactsSuivants={getContactsSuivants}
+                isListeComplete={isListeComplete} 
+                enteteOnClickCb={enteteOnClickCb} />
 
             <EditerContact 
                 show={uuidContactSelectionne?true:false} 
@@ -122,7 +183,11 @@ function BreadcrumbContacts(props) {
 }
 
 function AfficherListeContacts(props) {
-    const { nouveauContact, retour, contacts, show, setUuidContactSelectionne } = props
+    const { 
+        nouveauContact, retour, contacts, colonnes, show, 
+        setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
+        enteteOnClickCb,
+    } = props
 
     const [selection, setSelection] = useState('')
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
@@ -138,18 +203,16 @@ function AfficherListeContacts(props) {
         }
     }, [selection, setUuidContactSelectionne])
 
-    const colonnes = useMemo(()=>preparerColonnes(), [])
-
-    const contactsMappes = useMemo(()=>{
-        if(contacts) {
-            return contacts.map(item=>{
-                const fileId = item.uuid_contact
-                const adresse = item.adresses?item.adresses[0]:''
-                return {...item, fileId, adresse}
-            })
-        }
-        return []
-    }, [contacts])
+    // const contactsMappes = useMemo(()=>{
+    //     if(contacts) {
+    //         return contacts.map(item=>{
+    //             const fileId = item.uuid_contact
+    //             const adresse = item.adresses?item.adresses[0]:''
+    //             return {...item, fileId, adresse}
+    //         })
+    //     }
+    //     return []
+    // }, [contacts])
 
     if( !contacts || !show ) return ''
 
@@ -165,13 +228,13 @@ function AfficherListeContacts(props) {
             <ListeFichiers 
                 modeView='liste'
                 colonnes={colonnes}
-                rows={contactsMappes} 
+                rows={contacts} 
                 // onClick={onClick} 
                 onDoubleClick={ouvrir}
                 // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
                 onSelection={onSelectionLignes}
-                // onClickEntete={enteteOnClickCb}
-                // suivantCb={(!cuuidCourant||isListeComplete)?'':suivantCb}
+                onClickEntete={enteteOnClickCb}
+                suivantCb={isListeComplete?'':getContactsSuivants}
             />
         </div>     
     )
@@ -229,3 +292,63 @@ function preparerColonnes() {
     }
     return params
 }
+
+function formatterContacts(contacts, colonnes, setContacts) {
+    // console.debug("formatterContacts colonnes: %O", colonnes)
+    const {colonne, ordre} = colonnes.tri
+    // let contactsTries = [...contacts]
+
+    let contactsTries = contacts.map(item=>{
+        const fileId = item.uuid_contact
+        const adresse = item.adresses?item.adresses[0]:''
+        return {...item, fileId, adresse}
+    })
+
+    // console.debug("Contacts a trier : %O", contactsTries)
+
+    switch(colonne) {
+        case 'adresse': contactsTries.sort(trierAdresses); break
+        default: contactsTries.sort(trierNoms)
+    }
+
+    if(ordre < 0) contactsTries = contactsTries.reverse()
+
+    setContacts(contactsTries)
+}
+
+function trierNoms(a, b) {
+    return trierString('nom', a, b)
+}
+
+function trierAdresses(a, b) {
+    const chaine = trierNoms
+    return trierString('adresse', a, b, {chaine})
+}
+
+// function trierString(nomChamp, a, b, opts) {
+//     opts = opts || {}
+
+//     const nomA = a?a[nomChamp]:'',
+//           nomB = b?b[nomChamp]:''
+//     if(nomA === nomB) {
+//         if(opts.chaine) return opts.chaine(a, b)
+//         return 0
+//     }
+//     if(!nomA) return 1
+//     if(!nomB) return -1
+//     return nomA.localeCompare(nomB)
+// }
+
+// function trierNombre(nomChamp, a, b, opts) {
+//     opts = opts || {}
+
+//     const tailleA = a?a[nomChamp]:'',
+//           tailleB = b?b[nomChamp]:''
+//     if(tailleA === tailleB) {
+//         if(opts.chaine) return opts.chaine()
+//         return 0    
+//     }
+//     if(!tailleA) return 1
+//     if(!tailleB) return -1
+//     return tailleA - tailleB
+// }
