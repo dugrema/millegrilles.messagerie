@@ -196,7 +196,10 @@ function retirerCallbackEvenementContact(socket, params, cb) {
     socket.unsubscribe(opts, cb)
 }
 
-const CONST_ROUTINGKEYS_EVENEMENT_MESSAGE = ['evenement.Messagerie.{USER_ID}.nouveauMessage']
+const CONST_ROUTINGKEYS_EVENEMENT_MESSAGE = [
+    'evenement.Messagerie.{USER_ID}.nouveauMessage',
+    'evenement.Messagerie.{USER_ID}.messageLu',
+]
 
 async function enregistrerCallbackEvenementMessages(socket, params, cb) {
     const userId = socket.userId  // Ignorer params, utiliser userId de la session

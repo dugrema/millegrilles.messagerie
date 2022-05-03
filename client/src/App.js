@@ -185,26 +185,8 @@ function App() {
   useEffect(()=>{
     if(evenementMessage) {
       addEvenementMessage('')  // Clear event pour eviter cycle d'update
-
-      console.debug("Evenement message : %O", evenementMessage)
-
-      // Traiter message
-      const message = evenementMessage.message
-      const { uuid_transaction } = message
-      let trouve = false
-      const listeMaj = listeMessages.map(item=>{
-          if(item.uuid_transaction === uuid_transaction) {
-              trouve = true
-              return message  // Remplacer message
-          }
-          return item
-      })
-      if(!trouve) {
-        console.debug("Ajout nouveau message %O", message)
-        listeMaj.push(message)
-      }
-
-      formatterMessagesCb(listeMaj)
+      traiterEvenementMessage(listeMessages, evenementMessage, formatterMessagesCb)
+        .catch(err=>console.error("Erreur traitement evenement message : %O", err))
     }
   }, [evenementMessage, listeMessages, formatterMessagesCb, addEvenementMessage])
 
@@ -357,6 +339,10 @@ function preparerColonnes(workers) {
           } else {
             return data
           }
+      },
+      rowClassname: data => {
+        if(data.lu !== true) return 'nouveau'
+        return ''
       }
   }
 
@@ -405,4 +391,42 @@ function trierSubject(a, b) {
 
 function trierFrom(a, b) {
   return trierString('from', a, b, {chaine: trierDate})
+}
+
+async function traiterEvenementMessage(listeMessages, evenementMessage, formatterMessagesCb) {
+  console.debug("Evenement message : %O", evenementMessage)
+  const action = evenementMessage.routingKey.split('.').pop()
+  const message = evenementMessage.message
+
+  // Mettre a jour les items de la liste de messages
+  let trouve = false
+  let listeMaj = [...listeMessages]
+  if(action === 'nouveauMessage') {
+    
+    const { uuid_transaction } = message
+    listeMaj = listeMaj.map(item=>{
+      if(item.uuid_transaction === uuid_transaction) {
+        trouve = true
+        return message  // Remplacer message
+      }
+      return item
+    })
+    if(!trouve) {
+      console.debug("Ajout nouveau message %O", message)
+      listeMaj.push(message)
+    }
+
+  } else if(action === 'messageLu') {
+    const lus = message.lus
+    // Verifier le flag pour chaque message dans notre liste (struct message "lus: {uuid_transaction: bool}")
+    listeMaj = listeMaj.map(item=>{
+      const uuid_transaction = item.uuid_transaction
+      if(lus[uuid_transaction] !== undefined) {
+        return {...item, lu: lus[uuid_transaction]}
+      }
+      return item
+    })
+  }
+
+  formatterMessagesCb(listeMaj)
 }
