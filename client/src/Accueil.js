@@ -8,6 +8,7 @@ function Accueil(props) {
     const { 
         workers, setUuidMessage,
         colonnes, setColonnes, listeMessages, getMessagesSuivants, isListeComplete,
+        supprimerMessagesCb,
      } = props
 
     // const [uuidSelectionne, setUuidSelectionne] = useState('')
@@ -47,7 +48,8 @@ function Accueil(props) {
                 isListeComplete={isListeComplete}
                 getMessagesSuivants={getMessagesSuivants}
                 enteteOnClickCb={enteteOnClickCb}
-                setUuidMessage={setUuidMessage}  />
+                setUuidMessage={setUuidMessage}  
+                supprimerMessagesCb={supprimerMessagesCb} />
         </>
     )
 

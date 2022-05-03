@@ -116,6 +116,19 @@ function App() {
     setAfficherNouveauMessage(true)
   }, [setMessageRepondre, setAfficherNouveauMessage])
 
+  const erreurCb = useCallback((err, message)=>{
+    console.error("Erreur generique %s : %O", err, message)
+  })
+
+  const supprimerMessagesCb = useCallback(uuidTransactions => {
+    console.debug("Supprimer message %s", uuidTransactions)
+    workers.connexion.supprimerMessages(uuidTransactions)
+        .then(reponse=>{
+            console.debug("Messages supprimes : %O", reponse)
+        })
+        .catch(erreurCb)
+  }, [workers])
+
   // Chargement des proprietes et workers
   useEffect(()=>{
     Promise.all([
@@ -246,6 +259,7 @@ function App() {
             messageRepondre={messageRepondre}
             repondreMessageCb={repondreMessageCb}
             setMessageRepondre={setMessageRepondre}
+            supprimerMessagesCb={supprimerMessagesCb}
           />
 
         </Suspense>

@@ -200,7 +200,10 @@ export function onContextMenu(event, value, setContextuel) {
     const {clientX, clientY} = event
     // console.debug("ContextMenu %O (%d, %d)", value, clientX, clientY)
 
-    const params = {show: true, x: clientX, y: clientY}
+    const posx = clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+    const posy = clientY + document.body.scrollTop + document.documentElement.scrollTop;
+
+    const params = {show: true, x: posx, y: posy}
 
     setContextuel(params)
 }
