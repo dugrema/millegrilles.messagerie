@@ -406,7 +406,7 @@ function trierFrom(a, b) {
 }
 
 async function traiterEvenementMessage(listeMessages, evenementMessage, formatterMessagesCb) {
-  console.debug("Evenement message : %O", evenementMessage)
+  // console.debug("Evenement message : %O", evenementMessage)
   const action = evenementMessage.routingKey.split('.').pop()
   const message = evenementMessage.message
 
@@ -424,7 +424,7 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
       return item
     })
     if(!trouve) {
-      console.debug("Ajout nouveau message %O", message)
+      // console.debug("Ajout nouveau message %O", message)
       listeMaj.push(message)
     }
 

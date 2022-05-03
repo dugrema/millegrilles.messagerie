@@ -42,13 +42,14 @@ function NouveauMessage(props) {
     const [erreur, setErreur] = useState('')
 
     const envoyerCb = useCallback(()=>{
-        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, {cc, bcc, reply_to: replyTo, attachments})
+        const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
+        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, opts)
             .then(()=>{showConfirmation("Message envoye"); fermer();})
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
                 setErreur("Erreur envoi message\n%s", ''+err)
             })
-    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content, attachments])
+    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content, uuidThread, attachments])
 
     const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
@@ -116,7 +117,7 @@ function NouveauMessage(props) {
 
         chargerProfilUsager(workers, {usager, dnsMessagerie})
             .then( profil => {
-                console.debug("Profil recu : %O", profil)
+                // console.debug("Profil recu : %O", profil)
                 setProfil(profil)
                 const replyTo = profil.adresses?profil.adresses[0]:''
                 setReplyTo(replyTo)
@@ -420,7 +421,7 @@ function preparerColonnes() {
 }
 
 function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
-    console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
+    // console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
     const to = messageRepondre.replyTo || messageRepondre.from
     setTo(to)
 

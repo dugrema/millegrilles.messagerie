@@ -45,7 +45,7 @@ function AfficherListeMessages(props) {
         event.preventDefault()
         event.stopPropagation()
 
-        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        // console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length > 0) {
             const uuid_message = selection[0]
             setUuidMessage(uuid_message)

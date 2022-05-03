@@ -50,14 +50,14 @@ function AfficherMessage(props) {
     }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
 
     const repondreCb = useCallback(()=>{
-        console.debug("Repondre a message %O", message)
+        // console.debug("Repondre a message %O", message)
         repondreMessageCb({...message, ...messageDechiffre})
     }, [workers, message, messageDechiffre, repondreMessageCb])
 
     useEffect( () => { 
         if(!etatConnexion) return
         workers.connexion.getMessages({uuid_messages: [uuidMessage]}).then(messages=>{
-            console.debug("Messages recus : %O", messages)
+            // console.debug("Messages recus : %O", messages)
             setMessage(messages.messages.shift())
         })
     }, [workers, etatConnexion, setMessage])
@@ -67,7 +67,7 @@ function AfficherMessage(props) {
         if(!etatConnexion) return
         workers.connexion.getMessages({uuid_messages: [uuidMessage]})
             .then(messages=>{
-                console.debug("Messages recus : %O", messages)
+                // console.debug("Messages recus : %O", messages)
                 const message = messages.messages.shift()
                 setMessage(message)
                 return dechiffrerMessage(workers, message)
@@ -77,8 +77,9 @@ function AfficherMessage(props) {
     }, [workers, uuidMessage, setMessage, setMessageDechiffre])
 
     useEffect(()=>{
+        // console.debug("Message dechiffre : %O", messageDechiffre)
         if(messageDechiffre && !message.lu) {
-            console.debug("Marquer message %s comme lu", message.uuid_transaction)
+            // console.debug("Marquer message %s comme lu", message.uuid_transaction)
             marquerMessageLu(workers, message.uuid_transaction)
         }
     }, [workers, message, messageDechiffre])
@@ -123,7 +124,7 @@ function BreadcrumbMessage(props) {
 }
 
 function RenderMessage(props) {
-    console.debug("RenderMessage : %O", props)
+    // console.debug("RenderMessage : %O", props)
     const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const entete = message['en-tete'] || {},
@@ -133,14 +134,14 @@ function RenderMessage(props) {
     const dateEstampille = new Date(estampille)
 
     const erreurCb = useCallback((err, message)=>{
-        console.debug("Erreur : %O, message : %s", err, message)
+        console.error("Erreur : %O, message : %s", err, message)
     }, [])
 
     const supprimerCb = useCallback(()=>{
         // console.debug("Supprimer message %s", uuid_transaction)
         workers.connexion.supprimerMessages(uuid_transaction)
             .then(reponse=>{
-                console.debug("Message supprime : %O", reponse)
+                // console.debug("Message supprime : %O", reponse)
                 setUuidMessage('')  // Retour
             })
             .catch(erreurCb)
