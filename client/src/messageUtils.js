@@ -20,7 +20,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
     } catch(err) {
         console.error("Erreur preparation sujet : %O", err)
     }
-    console.debug("Subject %O\nContenu %O", subject, content)
+    console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
     const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
 
@@ -102,13 +102,13 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     // console.debug("Signer message : %O", message)
     const messageSigne = await connexion.formatterMessage(message, 'message')
     delete messageSigne['_certificat']  // Retirer certificat
-    // console.debug("Message signe : %O", messageSigne)
+    console.debug("Message signe : %O", messageSigne)
     
     // Compresser le message en gzip
     let messageBytes = JSON.stringify(messageSigne)
-    // console.debug("Message signe taille %d", messageBytes.length)
+    console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
     messageBytes = pako.deflate(new TextEncoder().encode(messageBytes))
-    // console.debug("Message signe gzippe : %O", messageBytes)
+    console.debug("Message signe gzippe : %O", messageBytes)
 
     // Chiffrer le message 
     const messageChiffre = await chiffrage.chiffrerDocument(

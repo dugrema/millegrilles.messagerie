@@ -42,7 +42,7 @@ function AfficherMessage(props) {
         const attachment = attachmentACopier
         setAttachmentACopier('')  // Reset attachment
 
-        console.debug("Copier attachment pour message : %O", messageDechiffre)
+        // console.debug("Copier attachment pour message : %O", messageDechiffre)
         const cles = messageDechiffre.attachments.cles
 
         copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
@@ -72,7 +72,10 @@ function AfficherMessage(props) {
                 setMessage(message)
                 return dechiffrerMessage(workers, message)
             })
-            .then(messageDechiffre=>setMessageDechiffre(messageDechiffre))
+            .then(messageDechiffre=>{
+                // console.debug("Message dechiffre : %O", messageDechiffre)
+                setMessageDechiffre(messageDechiffre)
+            })
             .catch(err=>console.error("Erreur chargement message : %O", err))
     }, [workers, uuidMessage, setMessage, setMessageDechiffre])
 
@@ -276,7 +279,7 @@ function AfficherMessageQuill(props) {
 async function marquerMessageLu(workers, uuid_transaction) {
     try {
         const reponse = await workers.connexion.marquerLu(uuid_transaction, true)
-        console.debug("Reponse marquer message %s lu : %O", uuid_transaction, reponse)
+        // console.debug("Reponse marquer message %s lu : %O", uuid_transaction, reponse)
     } catch(err) {
         console.error("Erreur marquer message %s lu : %O", uuid_transaction, err)
     }
@@ -301,14 +304,14 @@ function AfficherAttachments(props) {
         setSelection(selection)
     }, [setSelection])
     const showPreviewCb = useCallback( async fuuid => {
-        console.debug("Show preview cb : %O", fuuid)
+        // console.debug("Show preview cb : %O", fuuid)
         await setFuuidSelectionne(fuuid)
         setShowPreview(true)
     }, [setShowPreview, setFuuidSelectionne])
     const showPreviewSelection = useCallback( async () => {
         if(selection && selection.length > 0) {
             let fuuid = [...selection].pop()
-            console.debug("Show preview cb : %O", fuuid)
+            // console.debug("Show preview cb : %O", fuuid)
             await setFuuidSelectionne(fuuid)
             setShowPreview(true)
         }
@@ -325,17 +328,18 @@ function AfficherAttachments(props) {
         const { cles, fichiers } = attachments
 
         const dictAttachments = {}
-        fichiers.forEach( attachment => {
+        fichiers.forEach( attachmentObj => {
+            const attachment = {...attachmentObj}
             const fuuid = attachment.fuuid
             const version_courante = {
                 mimetype: attachment.mimetype || 'application/bytes',
             }
             if(attachment.images) {
-                 version_courante.images = attachment.images
+                 version_courante.images = {...attachment.images}
                  delete attachment.images
             }
             if(attachment.video) {
-                version_courante.video = attachment.video
+                version_courante.video = {...attachment.video}
                 delete attachment.video
             }
             dictAttachments[fuuid] = {
@@ -345,11 +349,11 @@ function AfficherAttachments(props) {
             }
         })
  
-        console.debug("Dict attachments combines : %O", dictAttachments)
+        // console.debug("Dict attachments combines : %O", dictAttachments)
 
         const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
         const listeMappee = liste.map(item=>mapper(item, workers, {cles}))
-        console.debug("Liste mappee : %O", listeMappee)
+        // console.debug("Liste mappee : %O", listeMappee)
 
         setAttachmentsList(listeMappee)
 
@@ -449,7 +453,7 @@ function MenuContextuel(props) {
 
     if(!contextuel.show) return ''
 
-    console.debug("!!! Selection : %s, FICHIERS : %O, mappes : %O", selection, attachments, attachmentsList)
+    // console.debug("!!! Selection : %s, FICHIERS : %O, mappes : %O", selection, attachments, attachmentsList)
 
     if( selection && selection.length > 1 ) {
         console.warn("!!! Multiselect TODO !!!")
@@ -485,7 +489,7 @@ function MenuContextuel(props) {
 // }
 
 async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles) {
-    console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
+    // console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
     const {connexion, chiffrage} = workers
     const {fuuid, version_courante} = attachment
 
@@ -493,12 +497,12 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
         acc[fuuid] = cles[fuuid].cleSecrete
         return acc
     }, {})
-    console.debug("Cles secretes : %O", dictClesSecretes)
+    // console.debug("Cles secretes : %O", dictClesSecretes)
 
     // Chiffrer la cle secrete pour le certificat de maitre des cles
     // Va servir de preuve d'acces au fichier
     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
-    console.debug("Cles chiffrees : %O", clesChiffrees)
+    // console.debug("Cles chiffrees : %O", clesChiffrees)
     // const clesRechiffrees = clesChiffrees.reduce((acc, cle, idx)=>{
     //     const fuuid = listeClesSecrete[idx].fuuid
     //     acc[fuuid] = cle
@@ -508,7 +512,7 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
     const preuveAcces = { cles: clesChiffrees.cles, partition: clesChiffrees.partition }
     const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
     delete preuveAccesSignee['_certificat']
-    console.debug("Preuve acces : %O", preuveAccesSignee)
+    // console.debug("Preuve acces : %O", preuveAccesSignee)
 
     // Transaction associerFuuids pour GrosFichiers
     const fichier = {
@@ -527,7 +531,7 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
     delete transactionCopierVersTiersSignee['_certificat']
 
     const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
-    console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
+    // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
     const reponse = await connexion.copierFichierTiers(commandeCopierVersTiers)
-    console.debug("Reponse commande copier vers tiers : %O", reponse)
+    // console.debug("Reponse commande copier vers tiers : %O", reponse)
 }

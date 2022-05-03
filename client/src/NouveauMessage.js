@@ -30,7 +30,7 @@ function NouveauMessage(props) {
     const [to, setTo] = useState('')
     const [cc, setCc] = useState('')
     const [bcc, setBcc] = useState('')
-    const [subject, setSubject] = useState('')
+    // const [subject, setSubject] = useState('')
     const [content, setContent] = useState('')
     const [profil, setProfil] = useState('')
     const [replyTo, setReplyTo] = useState('')
@@ -43,20 +43,19 @@ function NouveauMessage(props) {
 
     const envoyerCb = useCallback(()=>{
         const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
-        envoyer(workers, certificatMaitreDesCles, from, to, subject, content, opts)
+        envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
             .then(()=>{showConfirmation("Message envoye"); fermer();})
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
                 setErreur("Erreur envoi message\n%s", ''+err)
             })
-    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, subject, content, uuidThread, attachments])
+    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, content, uuidThread, attachments])
 
     const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
     const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
     const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
-    const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
-    // const contentChange = useCallback(event=>setContent(event.currentTarget.value), [setContent])
+    // const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
@@ -89,24 +88,6 @@ function NouveauMessage(props) {
     useEffect(()=>{
         if(messageRepondre) {
             preparerReponse(messageRepondre, setTo, setContent, setUuidThread)
-            // console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
-            // const to = messageRepondre.replyTo || messageRepondre.from
-            // setTo(to)
-
-            // const dateMessageOriginalInt = messageRepondre['en-tete'].estampille || messageRepondre.date_reception
-            // const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
-            // const messageOriginal = []
-            // messageOriginal.push('<br><br><p>-----<p>')
-            // messageOriginal.push('<p>On ' + dateMessageOriginal + ', ' + to + ' wrote:</p>')
-            // if(messageRepondre.subject) {
-            //     messageOriginal.push('<p>' + messageRepondre.subject + '</p>')
-            // }
-            // messageOriginal.push(messageRepondre.content)
-            // setContent(messageOriginal.join(''))
-
-            // const uuidThread = messageRepondre.uuid_thread || messageRepondre.uuid_transaction
-            // setUuidThread(uuidThread)
-
             setMessageRepondre('')  // Reset message repondre
         }
     }, [messageRepondre, setTo, setContent, setUuidThread, setMessageRepondre])
@@ -238,7 +219,7 @@ function Editeur(props) {
     )
 }
 
-async function envoyer(workers, certificatChiffragePem, from, to, subject, content, opts) {
+async function envoyer(workers, certificatChiffragePem, from, to, content, opts) {
     opts = opts || {}
 
     if(opts.attachments) {
@@ -267,20 +248,19 @@ async function envoyer(workers, certificatChiffragePem, from, to, subject, conte
             if(version_courante.images) {
                 const images = version_courante.images
                 // mapping.images = {...images}
-                Object.values(images)
-                    .map(image=>{
-                        if(image.data_chiffre || image.data) {
-                            fuuidsCleSeulement.push(image.hachage)
-                        } else if(image.hachage) {
-                            // console.debug("Attacher image : %O", image)
-                            fuuids.push(image.hachage)
-                        }
-                    })
+                Object.values(images).forEach(image=>{
+                    if(image.data_chiffre || image.data) {
+                        fuuidsCleSeulement.push(image.hachage)
+                    } else if(image.hachage) {
+                        // console.debug("Attacher image : %O", image)
+                        fuuids.push(image.hachage)
+                    }
+                })
             }
             if(version_courante.video) {
                 const videos = version_courante.video
                 // mapping.video = {...videos}
-                Object.values(videos).map(video=>{
+                Object.values(videos).forEach(video=>{
                     // console.debug("Attache video : %O", video)
                     if(video.fuuid_video) {
                         fuuids.push(video.fuuid_video)

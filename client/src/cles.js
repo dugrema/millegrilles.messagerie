@@ -18,8 +18,9 @@ export async function dechiffrerMessage(workers, message) {
     messageDechiffre = pako.inflate(messageDechiffre).buffer
     // console.debug("Message gunzip : %O", messageDechiffre)
     messageDechiffre = new TextDecoder().decode(messageDechiffre)
-    // console.debug("dechiffrerMessage Message dechiffrage raw : %O", messageDechiffre)
+    // console.debug("dechiffrerMessage Message dechiffrage raw :\n%s", messageDechiffre)
     const messageDict = JSON.parse(messageDechiffre)
+    // console.debug("dechiffrage message dict : %O", messageDict)
 
     return messageDict
 }
@@ -104,7 +105,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
 
     const reponseCles = await workers.connexion.getClesFichiers(Object.keys(clesInconnues), usager)
     const clesRecues = reponseCles.cles
-    console.debug("Reponse cles : %O", reponseCles)
+    // console.debug("Reponse cles : %O", reponseCles)
     for(let cle_hachage_bytes in clesRecues) {
         const cle = clesRecues[cle_hachage_bytes]
         // Dechiffrer cle

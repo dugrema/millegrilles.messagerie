@@ -2,6 +2,7 @@ import axios from 'axios'
 import multibase from 'multibase'
 import { usagerDao } from '@dugrema/millegrilles.reactjs'
 import { trouverLabelImage, trouverLabelVideo } from '@dugrema/millegrilles.reactjs/src/labelsRessources'
+import { base64 } from 'multiformats/bases/base64'
 
 var _workers = null
 
@@ -12,7 +13,7 @@ export function setWorkers(workers) {
 export async function getFichierChiffre(fuuid, opts) {
     // console.debug("!!! getFichierChiffre %s !!! opts %O", fuuid, opts)
     opts = opts || {}
-    const { dataChiffre, mimetype, controller, progress } = opts
+    const { dataChiffre, mimetype, controller, progress, cles } = opts
     const { connexion, chiffrage } = _workers
 
     // Recuperer la cle de fichier
@@ -20,11 +21,20 @@ export async function getFichierChiffre(fuuid, opts) {
         let cleFichier = await usagerDao.getCleDechiffree(fuuid)
         if(cleFichier) return cleFichier
 
-        const reponse = await connexion.getClesFichiers([fuuid])
-
-        cleFichier = reponse.cles[fuuid]
-        const cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
-        cleFichier.cleSecrete = cleSecrete
+        let cleSecrete = null
+        if( cles[fuuid] ) {
+            cleFichier = {...cles[fuuid]}
+            // console.debug("Mapper cle fuuid %s : %O", fuuid, cleFichier)
+            // Decoder cleSecrete de base64 a buffer
+            cleSecrete = base64.decode(cleFichier.cleSecrete)
+            cleFichier.cleSecrete = cleSecrete
+            // console.debug("Cle secrete mappee : %O", cleFichier)
+        } else {
+            const reponse = await connexion.getClesFichiers([fuuid])
+            cleFichier = reponse.cles[fuuid]
+            cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
+            cleFichier.cleSecrete = cleSecrete
+        }
 
         // Sauvegarder la cle pour reutilisation
         usagerDao.saveCleDechiffree(fuuid, cleSecrete, cleFichier)

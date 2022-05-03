@@ -24,10 +24,12 @@ supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.wa
 
 export { Icones }
 
-export function mapper(row, workers) {
+export function mapper(row, workers, opts) {
+    opts = opts || {}
     const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
+    const cles = opts.cles || {}
 
-    // console.debug("!!! MAPPER %O", row)
+    // console.debug("!!! MAPPER %O, opts: %O", row, opts)
 
     let date_version = '', 
         mimetype_fichier = '',
@@ -59,19 +61,19 @@ export function mapper(row, workers) {
                 const thumbnail = images.thumb || images.thumbnail,
                     small = images.small || images.poster
                 if(thumbnail && thumbnail.data_chiffre) {
-                    miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre})
+                    miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre, cles})
                 }
-                if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail})
+                if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail, cles})
 
-                imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp})
+                imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp, cles})
             }
 
             if(video) {
-                videoLoader = videoResourceLoader(getFichierChiffre, video, {supporteWebm})
+                videoLoader = videoResourceLoader(getFichierChiffre, video, {supporteWebm, cles})
             }
         
             // Loader du fichier source (principal), supporte thumbnail pour chargement
-            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype)
+            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {cles})
         }
 
         if(mimetype === 'application/pdf') {
