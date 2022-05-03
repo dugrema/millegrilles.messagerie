@@ -4,24 +4,25 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
-
 import ReactQuill from 'react-quill'
-import { base64 } from 'multiformats/bases/base64'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, forgecommon } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
-import ModalSelectionnerCollection from './ModalSelectionnerCollection'
-import PreviewFichiers from './FilePlayer'
-
 import { dechiffrerMessage } from './cles'
 import { mapper } from './mapperFichier'
 import { detecterSupport } from './fonctionsFichiers'
 
+import ModalSelectionnerCollection from './ModalSelectionnerCollection'
+import PreviewFichiers from './FilePlayer'
+
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
-    const { workers, etatConnexion, downloadAction, uuidMessage, setUuidMessage, certificatMaitreDesCles } = props
+    const { 
+        workers, etatConnexion, downloadAction, 
+        uuidMessage, setUuidMessage, certificatMaitreDesCles, repondreMessageCb 
+    } = props
     const [message, setMessage] = useState('')
     const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
@@ -47,6 +48,11 @@ function AfficherMessage(props) {
         copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
     }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
+
+    const repondreCb = useCallback(()=>{
+        console.debug("Repondre a message %O", message)
+        repondreMessageCb({...message, ...messageDechiffre})
+    }, [workers, message, messageDechiffre, repondreMessageCb])
 
     useEffect( () => { 
         if(!etatConnexion) return
@@ -88,7 +94,8 @@ function AfficherMessage(props) {
                 message={messageDechiffre} 
                 infoMessage={message} 
                 setUuidMessage={setUuidMessage}
-                choisirCollectionCb={choisirCollectionCb} />
+                choisirCollectionCb={choisirCollectionCb} 
+                repondreCb={repondreCb} />
 
             <ModalSelectionnerCollection 
                 show={showChoisirCollection} 
@@ -116,9 +123,14 @@ function BreadcrumbMessage(props) {
 }
 
 function RenderMessage(props) {
-    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage } = props
+    console.debug("RenderMessage : %O", props)
+    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
+    const entete = message['en-tete'] || {},
+          estampille = entete.estampille
     const { uuid_transaction, date_reception, lu } = infoMessage
+
+    const dateEstampille = new Date(estampille)
 
     const erreurCb = useCallback((err, message)=>{
         console.debug("Erreur : %O, message : %s", err, message)
@@ -134,10 +146,6 @@ function RenderMessage(props) {
             .catch(erreurCb)
     }, [workers, uuid_transaction, erreurCb])
 
-    const repondreCb = useCallback(()=>{
-        console.debug("Repondre a message %O : %O", infoMessage, message)
-    }, [workers, infoMessage, message])
-
     if(!message) return ''
 
     return (
@@ -146,7 +154,7 @@ function RenderMessage(props) {
                 <Row>
                     <Col xs={12} md={8}>
                         <AfficherAdresses from={from} reply_to={reply_to} to={to} cc={cc} />
-                        <AfficherDateSujet date_reception={date_reception} subject={subject} />
+                        <AfficherDateSujet date_reception={date_reception} date_estampille={dateEstampille} subject={subject} />
                     </Col>
                     <Col>
                         <div className="buttonbar-right">
@@ -181,13 +189,15 @@ function Header(props) {
 
 function AfficherDateSujet(props) {
 
-    const { date_reception, subject } = props
+    const { date_reception, date_estampille, subject } = props
 
     return (
         <>
             <Row>
-                <Col xs={12} md={2}>Recu:</Col>
-                <Col><FormatterDate value={date_reception}/></Col>
+                <Col xs={3} md={2} lg={2}>Date :</Col>
+                <Col xs={9} md={10} lg={4}><FormatterDate value={date_estampille}/></Col>
+                <Col xs={3} md={2} lg={2}>Recu :</Col>
+                <Col xs={9} md={10} lg={4}><FormatterDate value={date_reception}/></Col>
             </Row>
             <Row className="sujet">
                 <Col><strong>{subject}</strong></Col>

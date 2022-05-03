@@ -41,7 +41,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
 
     const {connexion, chiffrage} = workers
     const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts
-    const champsOptionnels = ['cc', 'bcc', 'reply_to', 'attachments', 'attachments_inline']
+    const champsOptionnels = ['cc', 'bcc', 'reply_to', 'uuid_thread', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())
     const ccFiltre = []

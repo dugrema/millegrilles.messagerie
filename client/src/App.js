@@ -44,6 +44,9 @@ function App() {
   const [showTransfertModal, setShowTransfertModal] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
 
+  // Transfert d'information entre pages
+  const [messageRepondre, setMessageRepondre] = useState('')
+
   // Liste messages
   const [listeMessages, setListeMessages] = useState([])
   const [colonnes, setColonnes] = useState('')
@@ -106,6 +109,12 @@ function App() {
         })
         .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
   }, [colonnes, listeMessages, formatterMessagesCb, setListeComplete])
+
+  const repondreMessageCb = useCallback(message => {
+    setMessageRepondre(message)
+    setUuidMessage('')
+    setAfficherNouveauMessage(true)
+  }, [setMessageRepondre, setAfficherNouveauMessage])
 
   // Chargement des proprietes et workers
   useEffect(()=>{
@@ -234,6 +243,9 @@ function App() {
             listeMessages={listeMessages}
             isListeComplete={isListeComplete}
             getMessagesSuivants={getMessagesSuivants}
+            messageRepondre={messageRepondre}
+            repondreMessageCb={repondreMessageCb}
+            setMessageRepondre={setMessageRepondre}
           />
 
         </Suspense>

@@ -24,7 +24,7 @@ function NouveauMessage(props) {
 
     const { 
         workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie, 
-        showConfirmation
+        showConfirmation, messageRepondre, setMessageRepondre,
     } = props
 
     const [to, setTo] = useState('')
@@ -35,6 +35,7 @@ function NouveauMessage(props) {
     const [profil, setProfil] = useState('')
     const [replyTo, setReplyTo] = useState('')
     const [from, setFrom] = useState('')
+    const [uuidThread, setUuidThread] = useState('')
     const [showContacts, setShowContacts] = useState(false)
     const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
     const [attachments, setAttachments] = useState('')
@@ -83,6 +84,31 @@ function NouveauMessage(props) {
     const onDrop = useCallback(acceptedFiles=>preparerUploaderFichiers(workers, acceptedFiles), [workers])
     const dzHook = useDropzone({onDrop})
     const {getRootProps, getInputProps} = dzHook
+
+    useEffect(()=>{
+        if(messageRepondre) {
+            preparerReponse(messageRepondre, setTo, setContent, setUuidThread)
+            // console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
+            // const to = messageRepondre.replyTo || messageRepondre.from
+            // setTo(to)
+
+            // const dateMessageOriginalInt = messageRepondre['en-tete'].estampille || messageRepondre.date_reception
+            // const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
+            // const messageOriginal = []
+            // messageOriginal.push('<br><br><p>-----<p>')
+            // messageOriginal.push('<p>On ' + dateMessageOriginal + ', ' + to + ' wrote:</p>')
+            // if(messageRepondre.subject) {
+            //     messageOriginal.push('<p>' + messageRepondre.subject + '</p>')
+            // }
+            // messageOriginal.push(messageRepondre.content)
+            // setContent(messageOriginal.join(''))
+
+            // const uuidThread = messageRepondre.uuid_thread || messageRepondre.uuid_transaction
+            // setUuidThread(uuidThread)
+
+            setMessageRepondre('')  // Reset message repondre
+        }
+    }, [messageRepondre, setTo, setContent, setUuidThread, setMessageRepondre])
 
     useEffect(()=>{
         const from = `@${usager.nomUsager}/${dnsMessagerie}`
@@ -391,4 +417,24 @@ function preparerColonnes() {
         // tri: {colonne: 'nom', ordre: 1},
     }
     return params
+}
+
+function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
+    console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
+    const to = messageRepondre.replyTo || messageRepondre.from
+    setTo(to)
+
+    const dateMessageOriginalInt = messageRepondre['en-tete'].estampille || messageRepondre.date_reception
+    const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
+    const messageOriginal = []
+    messageOriginal.push('<br><br><p>-----</p>')
+    messageOriginal.push('<p>On ' + dateMessageOriginal + ', ' + to + ' wrote:</p>')
+    if(messageRepondre.subject) {
+        messageOriginal.push('<p>' + messageRepondre.subject + '</p>')
+    }
+    messageOriginal.push(messageRepondre.content)
+    setContent(messageOriginal.join(''))
+
+    const uuidThread = messageRepondre.uuid_thread || messageRepondre.uuid_transaction
+    setUuidThread(uuidThread)
 }
