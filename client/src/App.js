@@ -426,6 +426,10 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
       }
       return item
     })
+
+  } else if(action === 'messagesSupprimes') {
+    const uuid_transactions = message.uuid_transactions
+    listeMaj = listeMaj.filter(item => !uuid_transactions.includes(item.uuid_transaction))
   }
 
   formatterMessagesCb(listeMaj)

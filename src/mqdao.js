@@ -178,6 +178,10 @@ function favorisCreerPath(socket, params) {
     return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
 }
 
+function supprimerMessages(socket, params) {
+    return transmettreCommande(socket, params, 'supprimerMessages')
+}
+
 // Listeners
 
 const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = ['evenement.Messagerie.{USER_ID}.majContact']
@@ -199,6 +203,7 @@ function retirerCallbackEvenementContact(socket, params, cb) {
 const CONST_ROUTINGKEYS_EVENEMENT_MESSAGE = [
     'evenement.Messagerie.{USER_ID}.nouveauMessage',
     'evenement.Messagerie.{USER_ID}.messageLu',
+    'evenement.Messagerie.{USER_ID}.messagesSupprimes',
 ]
 
 async function enregistrerCallbackEvenementMessages(socket, params, cb) {
@@ -267,7 +272,7 @@ module.exports = {
     challenge, getClesChiffrage,
     getProfil, getMessages, getPermissionMessages, getClesFichiers, getContacts,
     posterMessage, majContact, marquerLu, 
-    attachmentsRequis,
+    attachmentsRequis, supprimerMessages,
     
     getDomainesMessagerie,
     initialiserProfil,

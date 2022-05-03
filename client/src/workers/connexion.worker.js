@@ -120,6 +120,15 @@ function getCollectionUpload() {
   return ConnexionClient.emitBlocking('getCollectionUpload', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'favorisCreerPath', ajouterCertificat: true})
 }
 
+function supprimerMessages(uuidTransactions) {
+  if(!Array.isArray(uuidTransactions)) {
+    uuidTransactions = [uuidTransactions]
+  }
+  const commande = { uuid_transactions: uuidTransactions }
+  return ConnexionClient.emitBlocking('supprimerMessages', commande, {domaine: 'Messagerie', action: 'supprimerMessages', ajouterCertificat: true})
+}
+
+
 async function enregistrerCallbackEvenementContact(params, cb) { 
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
@@ -147,6 +156,7 @@ expose({
     posterMessage,
     getDomainesMessagerie, getContacts, majContact, marquerLu,
     copierFichierTiers, getCollectionUpload,
+    supprimerMessages,
 
     initialiserProfil,
 

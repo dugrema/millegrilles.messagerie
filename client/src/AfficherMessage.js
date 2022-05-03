@@ -87,6 +87,7 @@ function AfficherMessage(props) {
                 downloadAction={downloadAction}
                 message={messageDechiffre} 
                 infoMessage={message} 
+                setUuidMessage={setUuidMessage}
                 choisirCollectionCb={choisirCollectionCb} />
 
             <ModalSelectionnerCollection 
@@ -115,11 +116,29 @@ function BreadcrumbMessage(props) {
 }
 
 function RenderMessage(props) {
-    // console.debug("RenderMessage proppys : %O", props)
+    console.debug("RenderMessage proppys : %O", props)
 
-    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb } = props
+    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
-    const { date_reception, lu } = infoMessage
+    const { uuid_transaction, date_reception, lu } = infoMessage
+
+    const erreurCb = useCallback((err, message)=>{
+        console.debug("Erreur : %O, message : %s", err, message)
+    }, [])
+
+    const supprimerCb = useCallback(()=>{
+        console.debug("Supprimer message %s", uuid_transaction)
+        workers.connexion.supprimerMessages(uuid_transaction)
+            .then(reponse=>{
+                console.debug("Message supprime : %O", reponse)
+                setUuidMessage('')  // Retour
+            })
+            .catch(erreurCb)
+    }, [workers, uuid_transaction, erreurCb])
+
+    const repondreCb = useCallback(()=>{
+        console.debug("Repondre a message %O : %O", infoMessage, message)
+    }, [workers, infoMessage, message])
 
     if(!message) return ''
 
@@ -128,8 +147,18 @@ function RenderMessage(props) {
     return (
         <>
             <Header>
-                <AfficherAdresses from={from} reply_to={reply_to} to={to} cc={cc} />
-                <AfficherDateSujet date_reception={date_reception} subject={subject} />
+                <Row>
+                    <Col xs={12} md={8}>
+                        <AfficherAdresses from={from} reply_to={reply_to} to={to} cc={cc} />
+                        <AfficherDateSujet date_reception={date_reception} subject={subject} />
+                    </Col>
+                    <Col>
+                        <div className="buttonbar-right">
+                            <Button onClick={repondreCb}><i className="fa fa-reply"/>{' '}Repondre</Button>
+                            <Button variant="secondary" onClick={supprimerCb}><i className="fa fa-trash"/>{' '}Supprimer</Button>
+                        </div>
+                    </Col>
+                </Row>
             </Header>
 
             <AfficherMessageQuill content={content} />
