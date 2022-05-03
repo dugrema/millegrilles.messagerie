@@ -29,7 +29,7 @@ const AfficherMessage = lazy(() => import('./AfficherMessage'))
 const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
-const PAGE_LIMIT = 20
+const PAGE_LIMIT = 40
 
 function App() {
   

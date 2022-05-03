@@ -12,14 +12,15 @@ function Menu(props) {
     // console.debug("!!! Menu Proppys : %O", props)
 
     const { 
-      setAfficherNouveauMessage, setAfficherContacts, setUuidSelectionne,
+      setAfficherNouveauMessage, setAfficherContacts, setUuidMessage,
       showTransfertModal,
     } = props
 
     const afficherReception = useCallback(()=>{
       setAfficherNouveauMessage(false)
-      setUuidSelectionne('')
-    }, [setAfficherNouveauMessage])
+      setUuidMessage('')
+      setAfficherContacts(false)
+    }, [setAfficherNouveauMessage, setUuidMessage, setAfficherContacts])
 
     const afficherNouveauMessage = useCallback(()=>{
       setAfficherNouveauMessage(true)
