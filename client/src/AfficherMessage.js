@@ -116,8 +116,6 @@ function BreadcrumbMessage(props) {
 }
 
 function RenderMessage(props) {
-    console.debug("RenderMessage proppys : %O", props)
-
     const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage } = props
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const { uuid_transaction, date_reception, lu } = infoMessage
@@ -127,7 +125,7 @@ function RenderMessage(props) {
     }, [])
 
     const supprimerCb = useCallback(()=>{
-        console.debug("Supprimer message %s", uuid_transaction)
+        // console.debug("Supprimer message %s", uuid_transaction)
         workers.connexion.supprimerMessages(uuid_transaction)
             .then(reponse=>{
                 console.debug("Message supprime : %O", reponse)
@@ -141,8 +139,6 @@ function RenderMessage(props) {
     }, [workers, infoMessage, message])
 
     if(!message) return ''
-
-    console.debug("Message : %O", message)
 
     return (
         <>

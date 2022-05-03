@@ -13,7 +13,7 @@ import { mapper, onContextMenu } from './mapperFichier'
 
 function ModalSelectionnerCollection(props) {
 
-    console.debug("ModalSelectionnerCollection proppys : %O", props)
+    // console.debug("ModalSelectionnerCollection proppys : %O", props)
 
     const { workers, show, fermer, etatConnexion, selectionner } = props
 
@@ -26,7 +26,7 @@ function ModalSelectionnerCollection(props) {
     const [selection, setSelection] = useState('')
     const selectionnerCb = useCallback(()=>{ 
         // Extraire info detaillee des fichiers
-        console.debug("Liste a filtrer : %O", liste)
+        // console.debug("Liste a filtrer : %O", liste)
         selectionner(cuuidCourant)
         fermer()
     }, [selection, liste, fermer])
