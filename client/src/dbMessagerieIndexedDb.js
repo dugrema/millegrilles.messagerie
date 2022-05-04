@@ -99,6 +99,7 @@ export async function getMessages(userId, opts) {
     const colonne = opts.colonne || 'date_reception'
     const ordre = opts.ordre || -1
     const direction = ordre<0?'prev':'next'
+    const inclure_supprime = opts.inclure_supprime || false
 
     const db = await ouvrirDB({upgrade: true})
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index(colonne)
@@ -109,9 +110,11 @@ export async function getMessages(userId, opts) {
     while(curseur) {
         const value = curseur.value
         if(value.user_id === userId) {  // Uniquement traiter usager
-            if(position++ >= skip) messages.push(curseur.value)
-            if(messages.length === limit) break
+            if(value.supprime !== true || inclure_supprime === true) {
+                if(position++ >= skip) messages.push(curseur.value)
+            }
         }
+        if(messages.length === limit) break
         curseur = await curseur.continue()
     }
 

@@ -223,10 +223,10 @@ function App() {
   useEffect(()=>{
     if(evenementMessage) {
       addEvenementMessage('')  // Clear event pour eviter cycle d'update
-      traiterEvenementMessage(listeMessages, evenementMessage, formatterMessagesCb)
+      traiterEvenementMessage(workers, listeMessages, usager, evenementMessage, formatterMessagesCb)
         .catch(err=>console.error("Erreur traitement evenement message : %O", err))
     }
-  }, [evenementMessage, listeMessages, formatterMessagesCb, addEvenementMessage])
+  }, [workers, evenementMessage, listeMessages, usager, formatterMessagesCb, addEvenementMessage])
 
   return (
     <LayoutApplication>
@@ -431,27 +431,39 @@ function trierFrom(a, b) {
   return trierString('from', a, b, {chaine: trierDate})
 }
 
-async function traiterEvenementMessage(listeMessages, evenementMessage, formatterMessagesCb) {
-  // console.debug("Evenement message : %O", evenementMessage)
+async function traiterEvenementMessage(workers, listeMessages, usager, evenementMessage, formatterMessagesCb) {
+  console.debug("Evenement message : %O", evenementMessage)
   const action = evenementMessage.routingKey.split('.').pop()
   const message = evenementMessage.message
+  const userId = usager.extensions.userId
 
   // Mettre a jour les items de la liste de messages
   let trouve = false
   let listeMaj = [...listeMessages]
   if(action === 'nouveauMessage') {
     
+    // Conserver le message dans la DB
+    const messageCharge = {user_id: userId, ...message, '_etatChargement': 'charge'}
+    await MessageDao.updateMessage(messageCharge, {replace: true})
+    // Dechiffrer le message immediatement
+    const messageDechiffre = await dechiffrerMessage(workers, message)
+    const resultat = {...messageCharge, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+    // Retirer le contenu chiffre
+    delete resultat.message_chiffre
+    delete resultat.certificat_message
+    await MessageDao.updateMessage(resultat, {replace: true})
+
     const { uuid_transaction } = message
     listeMaj = listeMaj.map(item=>{
       if(item.uuid_transaction === uuid_transaction) {
         trouve = true
-        return message  // Remplacer message
+        return resultat  // Remplacer message
       }
       return item
     })
     if(!trouve) {
       // console.debug("Ajout nouveau message %O", message)
-      listeMaj.push(message)
+      listeMaj.push(resultat)
     }
 
   } else if(action === 'messageLu') {
@@ -460,6 +472,7 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
     listeMaj = listeMaj.map(item=>{
       const uuid_transaction = item.uuid_transaction
       if(lus[uuid_transaction] !== undefined) {
+        MessageDao.updateMessage({uuid_transaction, lu: lus[uuid_transaction]}).catch(err=>console.error("Erreur maj message lu: %O", err))
         return {...item, lu: lus[uuid_transaction]}
       }
       return item
@@ -467,6 +480,10 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
 
   } else if(action === 'messagesSupprimes') {
     const uuid_transactions = message.uuid_transactions
+    uuid_transactions.forEach(item=>{
+      MessageDao.updateMessage({uuid_transaction: item, supprime: true})
+        .catch(err=>console.error("Erreur marquer message supprime: %O", err))
+    })
     listeMaj = listeMaj.filter(item => !uuid_transactions.includes(item.uuid_transaction))
   }
 
