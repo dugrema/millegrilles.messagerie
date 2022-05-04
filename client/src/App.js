@@ -87,27 +87,26 @@ function App() {
   const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
   const getMessagesSuivants = useCallback(()=>{
-    // const { colonne, ordre } = colonnes.tri
-    // workers.connexion.getMessages({colonne, ordre, skip: listeMessages.length, limit: PAGE_LIMIT})
-    //     .then( reponse => {
-    //         console.debug("Messages suivant recus : %O", reponse)
-    //         const messages = reponse.messages
-    //         const nouveauMessagesParUuid = messages.reduce((acc, item)=>{ acc[item.uuid_transaction] = item; return acc }, {})
-    //         const messagesMaj = listeMessages.map(item=>{
-    //           const uuid_transaction = item.uuid_transaction
-    //           const messageNouveau = nouveauMessagesParUuid[uuid_transaction]
-    //           if(messageNouveau) {
-    //             delete nouveauMessagesParUuid[uuid_transaction]
-    //             return messageNouveau
-    //           }
-    //           return item
-    //         })
-    //         Object.values(nouveauMessagesParUuid).forEach(item=>messagesMaj.push(item))  // Ajouter nouveaux messages
-    //         // formatterMessagesCb(messagesMaj) 
-    //         // setListeComplete(messages.length < PAGE_LIMIT)
-    //     })
-    //     .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
-  }, [colonnes, listeMessages, formatterMessagesCb, setListeComplete])
+    if(!colonnes || !usager) return
+    const { colonne, ordre } = colonnes.tri
+    const userId = usager.extensions.userId
+    MessageDao.getMessages(userId, {colonne, ordre, skip: listeMessages.length, limit: PAGE_LIMIT}).then(liste=>{
+      const nouveauMessagesParUuid = liste.reduce((acc, item)=>{ acc[item.uuid_transaction] = item; return acc }, {})
+      const messagesMaj = listeMessages.map(item=>{
+        const uuid_transaction = item.uuid_transaction
+        const messageNouveau = nouveauMessagesParUuid[uuid_transaction]
+        if(messageNouveau) {
+          delete nouveauMessagesParUuid[uuid_transaction]
+          return messageNouveau
+        }
+        return item
+      })
+      Object.values(nouveauMessagesParUuid).forEach(item=>messagesMaj.push(item))  // Ajouter nouveaux messages
+      formatterMessagesCb(messagesMaj) 
+      setListeComplete(liste.length < PAGE_LIMIT)
+    })
+    .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
+  }, [colonnes, listeMessages, usager, formatterMessagesCb, setListeComplete])
 
   const repondreMessageCb = useCallback(message => {
     setMessageRepondre(message)
@@ -134,7 +133,7 @@ function App() {
       importerWorkers(setWorkers),
       MessageDao.init(),
     ])
-      .then(()=>{ console.debug("Chargement de l'application complete") })
+      .then(()=>{ console.info("Chargement de l'application complete") })
       .catch(err=>{console.error("Erreur chargement application : %O", err)})
   }, [setWorkers])
 
@@ -143,7 +142,7 @@ function App() {
     if(workers) {
       if(workers.connexion) {
         connecter(workers, setUsager, setEtatConnexion, setFormatteurPret)
-          .then(infoConnexion=>{console.debug("Info connexion : %O", infoConnexion)})
+          .then(infoConnexion=>{console.info("Info connexion : %O", infoConnexion)})
           .catch(err=>{console.debug("Erreur de connexion : %O", err)})
       }
     }
@@ -154,7 +153,6 @@ function App() {
 
       workers.chiffrage.getIdmgLocal()
         .then(idmg=>{
-          console.debug("IDMG local chiffrage : %O", idmg)
           setIdmg(idmg)
         })
         .catch(err=>console.error("Erreur chargement idmg local : %O", err))
@@ -173,44 +171,45 @@ function App() {
     if(workers) setColonnes(preparerColonnes(workers))
   }, [workers, setColonnes])
 
+  const rafraichirListe = useCallback(async listeCourante => {
+    const { colonne, ordre } = colonnes.tri
+    const userId = usager.extensions.userId
+    const skip = listeCourante?listeCourante.length:0
+    MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT}).then(liste=>{
+      formatterMessagesCb(liste) 
+    })
+    .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
+  }, [colonnes, usager, formatterMessagesCb])
+
   // Charger liste initiale
   useEffect(()=>{
-    MessageDao.getMessages()
-      .then(liste=>{
-        console.debug("Messages initiaux charges : %O", liste)
-        formatterMessagesCb(liste) 
-      })
-      .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
-  }, [colonnes, formatterMessagesCb, setListeComplete])
+    if(!colonnes || !usager) return
+    setListeComplete(false)  // Reset flag liste
+    rafraichirListe().catch(erreurCb)
 
-  // useEffect(()=>{
-  //   if(!workers || !etatConnexion || !etatAuthentifie) return
-
-  //   if(colonnes) {
-  //       const { colonne, ordre } = colonnes.tri
-  //       workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
-  //           .then( reponse => {
-  //               const liste = reponse.messages
-  //               setListeComplete(liste.length < PAGE_LIMIT)
-  //               formatterMessagesCb(liste) 
-  //           })
-  //           .catch(err=>console.error("Erreur chargement contacts : %O", err))
-  //   }
-  // }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+    // const { colonne, ordre } = colonnes.tri
+    // const userId = usager.extensions.userId
+    // MessageDao.getMessages(userId, {colonne, ordre, limit: PAGE_LIMIT}).then(liste=>{
+    //   console.debug("Messages initiaux charges : %O", liste)
+    //   formatterMessagesCb(liste) 
+    // })
+    // .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
+  }, [colonnes, usager, rafraichirListe, setListeComplete])
 
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
-    if(workers && etatConnexion && etatAuthentifie) {
+    if(workers && usager && etatConnexion && etatAuthentifie) {
       workers.connexion.getReferenceMessages({})
-        .then(reponse=>conserverReferenceMessages(workers, reponse.messages))
+        .then(reponse=>conserverReferenceMessages(workers, usager, reponse.messages))
+        .then(rafraichirListe)
         .catch(erreurCb)
     }
-  }, [workers, etatConnexion, etatAuthentifie, erreurCb])
+  }, [workers, etatConnexion, etatAuthentifie, usager, erreurCb, rafraichirListe])
 
   // Messages listener
   useEffect(()=>{
     const { connexion } = workers
-    if(connexion && etatAuthentifie, usager) {
+    if(connexion && etatAuthentifie && usager) {
       const cb = proxy(addEvenementMessage)
       const params = {}
       connexion.enregistrerCallbackEvenementMessages(params, cb)
@@ -314,7 +313,7 @@ async function connecter(workers, ...setters) {
 }
 
 function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
-  console.debug("Info domaines messagerie : %O", infoDns)
+  console.info("Info domaines messagerie : %O", infoDns)
   const listeMessagerie = infoDns.filter(item=>item.application==='messagerie_web')
   if(listeMessagerie.length === 0) {
     throw new Error("Serveur de messagerie n'est pas installe ou demarre")
@@ -322,7 +321,7 @@ function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
     const item = listeMessagerie.shift()
     const url = new URL(item.url)
     const hostDns = url.host
-    console.debug("Host dns messagerie local par defaut : %s", hostDns)
+    console.info("Host dns messagerie local par defaut : %s", hostDns)
     setDnsMessagerie(hostDns)
   } else {
     // Todo
@@ -474,27 +473,37 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
   formatterMessagesCb(listeMaj)
 }
 
-async function conserverReferenceMessages(workers, listeReferences) {
-  console.debug("conserverReferenceMessages Messages : %O", listeReferences)
-  await MessageDao.mergeReferenceMessages(listeReferences)
-  await chargerMessagesNouveaux(workers)
-  await dechiffrerMessages(workers)
+async function conserverReferenceMessages(workers, usager, listeReferences) {
+  const userId = usager.extensions.userId
+  await MessageDao.mergeReferenceMessages(userId, listeReferences)
+  await chargerMessagesNouveaux(workers, usager)
+  
+  // Recovery (devrait deja etre complete dans chargerMessagesNouveaux)
+  await dechiffrerMessages(workers, usager)
 }
 
-async function chargerMessagesNouveaux(workers) {
+async function chargerMessagesNouveaux(workers, usager) {
   const { connexion } = workers
+  const userId = usager.extensions.userId
 
-  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement('nouveau')
-  console.debug("uuid_transactions non charges : %O", uuid_transactions)
+  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'nouveau')
 
+  const promises = []
   const conserverMessages = async batch => {
     const uuid_messages = [...batch]
-    console.debug("Traiter batch nouveaux messages : %O", uuid_messages)
     const reponse = await connexion.getMessages({uuid_messages})
     if(reponse.messages && reponse.messages.length > 0) {
       for await (const message of reponse.messages) {
-        const messageCharge = {...message, '_etatChargement': 'charge'}
+        const messageCharge = {user_id: userId, ...message, '_etatChargement': 'charge'}
         await MessageDao.updateMessage(messageCharge)
+
+        // Dechiffrer le message immediatement
+        const messageDechiffre = await dechiffrerMessage(workers, message)
+        const resultat = {...messageCharge, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+        // Retirer le contenu chiffre
+        delete resultat.message_chiffre
+        delete resultat.certificat_message
+        await MessageDao.updateMessage(resultat, {replace: true})
       }
     }
   }
@@ -504,21 +513,23 @@ async function chargerMessagesNouveaux(workers) {
     batch_uuid_transactions.push(uuid_transactions.shift())
 
     if(batch_uuid_transactions.length === 5) {
-      conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+      const p = conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+      promises.push(p)
       batch_uuid_transactions = []  // Reset liste
     }
   }
 
   if(batch_uuid_transactions.length > 0) {
-    conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+    const p = conserverMessages(batch_uuid_transactions)
+    promises.push(p)
   }
 
+  await Promise.all(promises)
 }
 
-async function dechiffrerMessages(workers) {
-
-  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement('charge')
-  console.debug("uuid_transactions non dechiffres : %O", uuid_transactions)
+async function dechiffrerMessages(workers, usager) {
+  const userId = usager.extensions.userId
+  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'charge')
 
   const conserverMessages = async batch => {
     const uuid_messages = [...batch]

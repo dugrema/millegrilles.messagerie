@@ -62,12 +62,6 @@ export async function mergeReferenceMessages(...args) {
     return _dao.mergeReferenceMessages(...args)
 }
 
-export async function traiterMessages(...args) {
-    if(_ready === false) throw new Error("messageDao pas initialise")
-    await _ready
-    return _dao.traiterMessages(...args)
-}
-
 export async function getUuidMessagesParEtatChargement(...args) {
     if(_ready === false) throw new Error("messageDao pas initialise")
     await _ready

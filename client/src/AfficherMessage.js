@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
@@ -20,11 +20,12 @@ function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
     const { 
-        workers, etatConnexion, downloadAction, 
-        uuidMessage, setUuidMessage, certificatMaitreDesCles, repondreMessageCb 
+        workers, etatConnexion, etatAuthentifie, downloadAction,
+        uuidMessage, setUuidMessage, listeMessages,
+        certificatMaitreDesCles, repondreMessageCb 
     } = props
-    const [message, setMessage] = useState('')
-    const [messageDechiffre, setMessageDechiffre] = useState('')
+    const message = useMemo(()=>listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop(), [uuidMessage, listeMessages])
+    // const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [attachmentACopier, setAttachmentACopier] = useState('')
 
@@ -43,49 +44,56 @@ function AfficherMessage(props) {
         setAttachmentACopier('')  // Reset attachment
 
         // console.debug("Copier attachment pour message : %O", messageDechiffre)
-        const cles = messageDechiffre.attachments.cles
+        // const cles = messageDechiffre.attachments.cles
+        const cles = message.attachments.cles
 
         copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
+    // }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
+    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, message])
 
     const repondreCb = useCallback(()=>{
         // console.debug("Repondre a message %O", message)
-        repondreMessageCb({...message, ...messageDechiffre})
-    }, [workers, message, messageDechiffre, repondreMessageCb])
+        // repondreMessageCb({...message, ...messageDechiffre})
+    //}, [workers, message, messageDechiffre, repondreMessageCb])
+        repondreMessageCb({...message})
+    }, [workers, message, repondreMessageCb])
 
-    useEffect( () => { 
-        if(!etatConnexion) return
-        workers.connexion.getMessages({uuid_messages: [uuidMessage]}).then(messages=>{
-            // console.debug("Messages recus : %O", messages)
-            setMessage(messages.messages.shift())
-        })
-    }, [workers, etatConnexion, setMessage])
+    // useEffect( () => { 
+    //     // if(!etatConnexion) return
+    //     // workers.connexion.getMessages({uuid_messages: [uuidMessage]}).then(messages=>{
+    //     //     // console.debug("Messages recus : %O", messages)
+    //     //     setMessage(messages.messages.shift())
+    //     // })
+
+    // }, [workers, etatConnexion, setMessage])
 
     // Charger et dechiffrer message
-    useEffect(()=>{
-        if(!etatConnexion) return
-        workers.connexion.getMessages({uuid_messages: [uuidMessage]})
-            .then(messages=>{
-                // console.debug("Messages recus : %O", messages)
-                const message = messages.messages.shift()
-                setMessage(message)
-                return dechiffrerMessage(workers, message)
-            })
-            .then(messageDechiffre=>{
-                // console.debug("Message dechiffre : %O", messageDechiffre)
-                setMessageDechiffre(messageDechiffre)
-            })
-            .catch(err=>console.error("Erreur chargement message : %O", err))
-    }, [workers, uuidMessage, setMessage, setMessageDechiffre])
+    // useEffect(()=>{
+    //     if(!etatConnexion) return
+    //     if(message['_etatChargement' === 'dechiffre']) setMessageDechiffre(message)
+    //     // workers.connexion.getMessages({uuid_messages: [uuidMessage]})
+    //     //     .then(messages=>{
+    //     //         // console.debug("Messages recus : %O", messages)
+    //     //         const message = messages.messages.shift()
+    //     //         setMessage(message)
+    //     //         return dechiffrerMessage(workers, message)
+    //     //     })
+    //     //     .then(messageDechiffre=>{
+    //     //         // console.debug("Message dechiffre : %O", messageDechiffre)
+    //     //         setMessageDechiffre(messageDechiffre)
+    //     //     })
+    //     //     .catch(err=>console.error("Erreur chargement message : %O", err))
+    // }, [workers, message, setMessageDechiffre])
 
     useEffect(()=>{
         // console.debug("Message dechiffre : %O", messageDechiffre)
-        if(messageDechiffre && !message.lu) {
+        // if(messageDechiffre && !message.lu) {
+        if(etatConnexion && etatAuthentifie && !message.lu) {
             // console.debug("Marquer message %s comme lu", message.uuid_transaction)
             marquerMessageLu(workers, message.uuid_transaction)
         }
-    }, [workers, message, messageDechiffre])
+    }, [workers, etatConnexion, etatAuthentifie, message])  // , messageDechiffre])
 
     return (
         <>
@@ -95,7 +103,8 @@ function AfficherMessage(props) {
                 workers={workers} 
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
-                message={messageDechiffre} 
+                // message={messageDechiffre} 
+                message={message} 
                 infoMessage={message} 
                 setUuidMessage={setUuidMessage}
                 choisirCollectionCb={choisirCollectionCb} 
