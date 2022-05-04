@@ -255,7 +255,7 @@ function App() {
             setColonnes={setColonnes}
             listeMessages={listeMessages}
             isListeComplete={isListeComplete}
-            getMessagesSuivants={getMessagesSuivants}
+            getMessagesSuivants={(etatConnexion&&etatAuthentifie)?getMessagesSuivants:null}
             messageRepondre={messageRepondre}
             repondreMessageCb={repondreMessageCb}
             setMessageRepondre={setMessageRepondre}
