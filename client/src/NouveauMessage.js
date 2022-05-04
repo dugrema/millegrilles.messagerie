@@ -28,11 +28,11 @@ function NouveauMessage(props) {
     } = props
 
     const [to, setTo] = useState('')
-    const [cc, setCc] = useState('')
-    const [bcc, setBcc] = useState('')
+    // const [cc, setCc] = useState('')
+    // const [bcc, setBcc] = useState('')
     // const [subject, setSubject] = useState('')
     const [content, setContent] = useState('')
-    const [profil, setProfil] = useState('')
+    // const [profil, setProfil] = useState('')
     const [replyTo, setReplyTo] = useState('')
     const [from, setFrom] = useState('')
     const [uuidThread, setUuidThread] = useState('')
@@ -41,20 +41,22 @@ function NouveauMessage(props) {
     const [attachments, setAttachments] = useState('')
     const [erreur, setErreur] = useState('')
 
+    const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
+
     const envoyerCb = useCallback(()=>{
-        const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
+        // const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
+        const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments}
         envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
             .then(()=>{showConfirmation("Message envoye"); fermer();})
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
                 setErreur("Erreur envoi message\n%s", ''+err)
             })
-    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, cc, bcc, replyTo, content, uuidThread, attachments])
+    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, replyTo, content, uuidThread, attachments, fermer])
 
-    const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
-    const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
-    const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
+    // const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
+    // const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
     // const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
@@ -99,12 +101,13 @@ function NouveauMessage(props) {
         chargerProfilUsager(workers, {usager, dnsMessagerie})
             .then( profil => {
                 // console.debug("Profil recu : %O", profil)
-                setProfil(profil)
+                // setProfil(profil)
                 const replyTo = profil.adresses?profil.adresses[0]:''
                 setReplyTo(replyTo)
             })
             .catch(err=>console.error("Erreur chargement profil : %O", err))
-    }, [workers, usager, dnsMessagerie, setProfil, setReplyTo])
+    //}, [workers, usager, dnsMessagerie, setProfil, setReplyTo])
+    }, [workers, usager, dnsMessagerie, setReplyTo])
 
     return (
         <>

@@ -7,9 +7,9 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, getCleDechiffree, saveCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import { mapper, onContextMenu } from './mapperFichier'
+import { mapper } from './mapperFichier'
 
 function ModalSelectionnerCollection(props) {
 
@@ -23,13 +23,13 @@ function ModalSelectionnerCollection(props) {
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
     const [cuuidCourant, setCuuidCourant] = useState('')
-    const [selection, setSelection] = useState('')
+    // const [selection, setSelection] = useState('')
     const selectionnerCb = useCallback(()=>{ 
         // Extraire info detaillee des fichiers
         // console.debug("Liste a filtrer : %O", liste)
         selectionner(cuuidCourant)
         fermer()
-    }, [selection, liste, fermer])
+    }, [cuuidCourant, selectionner, fermer])
 
     const onDoubleClick = useCallback((event, value)=>{
         window.getSelection().removeAllRanges()
@@ -45,7 +45,11 @@ function ModalSelectionnerCollection(props) {
         }
     }, [liste, setCuuidCourant, breadcrumb, setBreadcrumb])
 
-    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+    const onSelectionLignes = useCallback(selection=>{
+        console.debug("!!! FIX, selection %O", selection)
+        // setSelection(selection)
+    // }, [setSelection])
+    }, [])
 
     const setBreadcrumbIdx = useCallback( idx => {
         // Tronquer la breadcrumb pour revenir a un folder precedent
@@ -67,7 +71,7 @@ function ModalSelectionnerCollection(props) {
                 })
                 .catch(err=>console.error("Erreur chargement favoris grosfichiers : %O", err))
         }
-    }, [favoris, setFavoris, show])
+    }, [workers, favoris, setFavoris, show])
 
     // Preparer format des colonnes
     useEffect(()=>{ setColonnes(preparerColonnes()) }, [setColonnes])

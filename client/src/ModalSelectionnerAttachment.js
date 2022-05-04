@@ -7,9 +7,9 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, getCleDechiffree, saveCleDechiffree } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import { mapper, onContextMenu } from './mapperFichier'
+import { mapper } from './mapperFichier'
 
 function ModalSelectionnerAttachement(props) {
 
@@ -32,7 +32,7 @@ function ModalSelectionnerAttachement(props) {
 
         selectionner(detailSelection)
         fermer()
-    }, [selection, liste, fermer])
+    }, [selection, selectionner, liste, fermer])
 
     const onDoubleClick = useCallback((event, value)=>{
         window.getSelection().removeAllRanges()
@@ -70,7 +70,7 @@ function ModalSelectionnerAttachement(props) {
                 })
                 .catch(err=>console.error("Erreur chargement favoris grosfichiers : %O", err))
         }
-    }, [favoris, setFavoris, show])
+    }, [workers, favoris, setFavoris, show])
 
     // Preparer format des colonnes
     useEffect(()=>{ setColonnes(preparerColonnes()) }, [setColonnes])

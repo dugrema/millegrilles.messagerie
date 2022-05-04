@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
@@ -16,7 +16,7 @@ function EditerContact(props) {
     const [adresses, setAdresses] = useState([])
     const [blocked, setBlocked] = useState(false)
     const [trusted, setTrusted] = useState(false)
-    const data = {uuid_contact, nom, adresses, blocked, trusted}
+    const data = useMemo(()=>{return {uuid_contact, nom, adresses, blocked, trusted}}, [uuid_contact, nom, adresses, blocked, trusted])
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
     const adresseEditChange = useCallback(event=>setAdresseEdit(event.currentTarget.value), [setAdresseEdit])

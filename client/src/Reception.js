@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
-import { FormatterDate, forgecommon, ListeFichiers } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
 
 function ListeMessages(props) {
 
     const { 
-        workers, etatConnexion, etatAuthentifie, usager, 
+        workers, etatConnexion, etatAuthentifie, 
         messages, colonnes, enteteOnClickCb, setUuidMessage,
         isListeComplete, getMessagesSuivants,
         supprimerMessagesCb,
@@ -49,7 +49,7 @@ function AfficherListeMessages(props) {
 
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
-    const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel))
+    const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
 
     const ouvrir = useCallback(event=>{
         event.preventDefault()
@@ -99,7 +99,8 @@ function AfficherListeMessages(props) {
 
 function MenuContextuelFavoris(props) {
 
-    const { contextuel, fichiers, selection } = props
+    // const { contextuel, fichiers, selection } = props
+    const { contextuel } = props
 
     if(!contextuel.show) return ''
 

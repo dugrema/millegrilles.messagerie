@@ -9,7 +9,6 @@ import ReactQuill from 'react-quill'
 import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
-import { dechiffrerMessage } from './cles'
 import { mapper } from './mapperFichier'
 import { detecterSupport } from './fonctionsFichiers'
 
@@ -57,7 +56,7 @@ function AfficherMessage(props) {
         // repondreMessageCb({...message, ...messageDechiffre})
     //}, [workers, message, messageDechiffre, repondreMessageCb])
         repondreMessageCb({...message})
-    }, [workers, message, repondreMessageCb])
+    }, [message, repondreMessageCb])
 
     // useEffect( () => { 
     //     // if(!etatConnexion) return
@@ -141,7 +140,7 @@ function RenderMessage(props) {
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const entete = message['en-tete'] || {},
           estampille = entete.estampille
-    const { uuid_transaction, date_reception, lu } = infoMessage
+    const { uuid_transaction, date_reception } = infoMessage
 
     const dateEstampille = new Date(estampille)
 
@@ -157,7 +156,7 @@ function RenderMessage(props) {
                 setUuidMessage('')  // Retour
             })
             .catch(erreurCb)
-    }, [workers, uuid_transaction, erreurCb])
+    }, [workers, uuid_transaction, setUuidMessage, erreurCb])
 
     if(!message) return ''
 
@@ -287,7 +286,7 @@ function AfficherMessageQuill(props) {
 
 async function marquerMessageLu(workers, uuid_transaction) {
     try {
-        const reponse = await workers.connexion.marquerLu(uuid_transaction, true)
+        await workers.connexion.marquerLu(uuid_transaction, true)
         // console.debug("Reponse marquer message %s lu : %O", uuid_transaction, reponse)
     } catch(err) {
         console.error("Erreur marquer message %s lu : %O", uuid_transaction, err)
@@ -541,6 +540,6 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
 
     const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
     // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
-    const reponse = await connexion.copierFichierTiers(commandeCopierVersTiers)
+    await connexion.copierFichierTiers(commandeCopierVersTiers)
     // console.debug("Reponse commande copier vers tiers : %O", reponse)
 }

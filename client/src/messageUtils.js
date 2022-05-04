@@ -20,16 +20,16 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
     } catch(err) {
         console.error("Erreur preparation sujet : %O", err)
     }
-    console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
+    // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
     const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
 
-    console.debug("Enveloppe message : %O", enveloppeMessage)
-    console.debug("Commande maitre des cles : %O", commandeMaitrecles)
+    // console.debug("Enveloppe message : %O", enveloppeMessage)
+    // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
     // poster
     const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles)
-    console.debug("Reponse poster : %O", reponse)
+//    console.debug("Reponse poster : %O", reponse)
 
     return reponse
 }
@@ -37,18 +37,18 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-    console.debug("Signer message, params opts : %O", opts)
+    // console.debug("Signer message, params opts : %O", opts)
 
     const {connexion, chiffrage} = workers
     const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'uuid_thread', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())
-    const ccFiltre = []
+    let ccFiltre = []
     if(cc) {
         ccFiltre = cc.split(';').map(item=>item.trim())
     }
-    const bccFiltre = []
+    let bccFiltre = []
     if(bcc) {
         bccFiltre = bcc.split(';').map(item=>item.trim())
     }
@@ -65,9 +65,9 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
         if(fuuidsCleSeulement) {
             fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
         }
-        console.debug("Get cles attachments fuuids : %O", fuuidsCles)
+        // console.debug("Get cles attachments fuuids : %O", fuuidsCles)
         const cles = await getClesAttachments(workers, fuuidsCles)
-        console.debug("Reponse cles : %O", cles)
+        // console.debug("Reponse cles : %O", cles)
 
         // Encoder les cles secretes en base64
         for(let hachage_bytes in cles) {
@@ -102,13 +102,13 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     // console.debug("Signer message : %O", message)
     const messageSigne = await connexion.formatterMessage(message, 'message')
     delete messageSigne['_certificat']  // Retirer certificat
-    console.debug("Message signe : %O", messageSigne)
+    // console.debug("Message signe : %O", messageSigne)
     
     // Compresser le message en gzip
     let messageBytes = JSON.stringify(messageSigne)
-    console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
+    // console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
     messageBytes = pako.deflate(new TextEncoder().encode(messageBytes))
-    console.debug("Message signe gzippe : %O", messageBytes)
+    // console.debug("Message signe gzippe : %O", messageBytes)
 
     // Chiffrer le message 
     const messageChiffre = await chiffrage.chiffrerDocument(

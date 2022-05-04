@@ -27,7 +27,7 @@ function ModalContacts(props) {
                 .then( reponse => setContacts(reponse.contacts) )
                 .catch(err=>console.error("Erreur chargement contacts : %O", err))
         }
-    }, [show, contacts, setContacts])
+    }, [workers, show, contacts, setContacts])
 
     return (
         <Modal show={show} size="lg">

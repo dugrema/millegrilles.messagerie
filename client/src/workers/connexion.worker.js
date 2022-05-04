@@ -4,9 +4,9 @@ import {formatterDateString} from '@dugrema/millegrilles.reactjs/src/formatterUt
 
 const CONST_DOMAINE_GROSFICHIERS = 'GrosFichiers',
       CONST_DOMAINE_MAITREDESCLES = 'MaitreDesCles',
-      CONST_DOMAINE_FICHIERS = 'fichiers',
-      CONST_DOMAINE_MESSAGERIE = 'Messagerie',
-      CONST_DOMAINE_TOPOLOGIE = 'CoreTopologie'
+      // CONST_DOMAINE_FICHIERS = 'fichiers',
+      CONST_DOMAINE_MESSAGERIE = 'Messagerie'
+      // CONST_DOMAINE_TOPOLOGIE = 'CoreTopologie'
 
 function getProfil(requete) {
   requete = requete || {}

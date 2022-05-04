@@ -9,7 +9,7 @@ import Alert from 'react-bootstrap/Alert'
 
 import { pki } from '@dugrema/node-forge'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
-import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, forgecommon, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import * as MessageDao from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
@@ -20,8 +20,6 @@ import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 import './App.css'
 
 import Menu from './Menu'
-
-const { extraireExtensionsMillegrille } = forgecommon
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
@@ -52,7 +50,7 @@ function App() {
   const [isListeComplete, setListeComplete] = useState(false)
   const [evenementMessage, addEvenementMessage] = useState('')
 
-  const { connexion, transfertFichiers } = workers
+  const { transfertFichiers } = workers
   const etatAuthentifie = usager && formatteurPret
 
   // Selecteurs de page
@@ -82,7 +80,7 @@ function App() {
     transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, password: cleSecrete, iv, tag, format})
         .catch(err=>{console.error("Erreur debut download : %O", err)})
 
-  }, [connexion, transfertFichiers, usager])
+  }, [transfertFichiers])
 
   const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
@@ -125,7 +123,7 @@ function App() {
             console.debug("Messages supprimes : %O", reponse)
         })
         .catch(erreurCb)
-  }, [workers])
+  }, [workers, erreurCb])
 
   // Chargement des proprietes et workers
   useEffect(()=>{
@@ -165,7 +163,7 @@ function App() {
         .then( info => chargerDnsMessagerie(info, setDnsMessagerie) )
         .catch(err=>console.error("Erreur chargement DNS messagerie : %O", err))
 
-  }, [etatAuthentifie, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
+  }, [workers, etatAuthentifie, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
   
   useEffect(()=>{
     if(workers) setColonnes(preparerColonnes(workers))
@@ -186,15 +184,7 @@ function App() {
     if(!colonnes || !usager) return
     setListeComplete(false)  // Reset flag liste
     rafraichirListe().catch(erreurCb)
-
-    // const { colonne, ordre } = colonnes.tri
-    // const userId = usager.extensions.userId
-    // MessageDao.getMessages(userId, {colonne, ordre, limit: PAGE_LIMIT}).then(liste=>{
-    //   console.debug("Messages initiaux charges : %O", liste)
-    //   formatterMessagesCb(liste) 
-    // })
-    // .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
-  }, [colonnes, usager, rafraichirListe, setListeComplete])
+  }, [colonnes, usager, rafraichirListe, setListeComplete, erreurCb])
 
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
@@ -397,7 +387,7 @@ function formatterMessages(messages, colonnes, setMessagesFormattes) {
       let from = ''
       if(certificat) {
           const cert = pki.certificateFromPem(certificat)
-          const extensions = extraireExtensionsMillegrille(cert)
+          //const extensions = extraireExtensionsMillegrille(cert)
           from = cert.subject.getField('CN').value
       }
 

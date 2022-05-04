@@ -2,12 +2,12 @@ import { openDB } from 'idb'
 
 const DB_NAME = 'messagerie',
       STORE_DOWNLOADS = 'downloads',
-      STORE_UPLOADS = 'uploads',
+    //   STORE_UPLOADS = 'uploads',
       STORE_MESSAGES = 'messages',
       STORE_CONTACTS = 'contacts',
-      STORE_DRAFTS = 'drafts',
-      VERSION_COURANTE = 1,
-      MAX_AGE_DEFAUT = 6 * 60 * 60  // 6h en secondes
+    //   STORE_DRAFTS = 'drafts',
+      VERSION_COURANTE = 1
+    //   MAX_AGE_DEFAUT = 6 * 60 * 60  // 6h en secondes
 
 export function ouvrirDB(opts) {
     opts = opts || {}
@@ -31,8 +31,10 @@ export function ouvrirDB(opts) {
 }
 
 function createObjectStores(db, oldVersion) {
-    console.debug("dbUsagers upgrade, DB object (version %s): %O", oldVersion, db)
+    // console.debug("dbUsagers upgrade, DB object (version %s): %O", oldVersion, db)
     let messageStore
+
+    /*eslint no-fallthrough: "off"*/
     switch(oldVersion) {
         case 0:
             db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'hachage_bytes'})
@@ -67,7 +69,7 @@ export async function mergeReferenceMessages(userId, messages) {
         const uuid_transaction = message.uuid_transaction
         const messageExistant = await store.get(uuid_transaction)
         if(!messageExistant) {
-            console.debug("Conserver nouveau message : %O", message)
+            // console.debug("Conserver nouveau message : %O", message)
             await store.put({user_id: userId, ...message, '_etatChargement': 'nouveau'})
         }
     }

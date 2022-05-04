@@ -1,11 +1,10 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { proxy } from 'comlink'
 
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
-import Table from 'react-bootstrap/Table'
 
 import EditerContact from './EditerContact'
 
@@ -38,7 +37,7 @@ function Contacts(props) {
                 setListeComplete(reponse.contacts.length === 0)
             })
             .catch(err=>console.error("Erreur chargement contacts : %O", err))
-    }, [colonnes, contacts], formatterContactsCb, setListeComplete)
+    }, [workers, colonnes, contacts, formatterContactsCb, setListeComplete])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -73,12 +72,12 @@ function Contacts(props) {
                 })
                 .catch(err=>console.error("Erreur chargement contacts : %O", err))
         }
-    }, [colonnes, formatterContactsCb, setListeComplete])
+    }, [workers, colonnes, formatterContactsCb, setListeComplete])
 
     // Contacts listener
     useEffect(()=>{
         const { connexion } = workers
-        if(connexion && etatAuthentifie, usager) {
+        if(connexion && etatAuthentifie && usager) {
             const cb = proxy(addEvenementContact)
             const params = {}
             connexion.enregistrerCallbackEvenementContact(params, cb)
@@ -184,7 +183,7 @@ function BreadcrumbContacts(props) {
 
 function AfficherListeContacts(props) {
     const { 
-        nouveauContact, retour, contacts, colonnes, show, 
+        nouveauContact, contacts, colonnes, show, 
         setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
         enteteOnClickCb,
     } = props
