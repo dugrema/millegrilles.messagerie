@@ -11,7 +11,7 @@ import { pki } from '@dugrema/node-forge'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, forgecommon, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import { init as initDb } from './messageDao'
+import * as MessageDao from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
 
@@ -20,7 +20,6 @@ import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 import './App.css'
 
 import Menu from './Menu'
-// import TransfertModal from './TransfertModal'
 
 const { extraireExtensionsMillegrille } = forgecommon
 
@@ -88,26 +87,26 @@ function App() {
   const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
   const getMessagesSuivants = useCallback(()=>{
-    const { colonne, ordre } = colonnes.tri
-    workers.connexion.getMessages({colonne, ordre, skip: listeMessages.length, limit: PAGE_LIMIT})
-        .then( reponse => {
-            console.debug("Messages suivant recus : %O", reponse)
-            const messages = reponse.messages
-            const nouveauMessagesParUuid = messages.reduce((acc, item)=>{ acc[item.uuid_transaction] = item; return acc }, {})
-            const messagesMaj = listeMessages.map(item=>{
-              const uuid_transaction = item.uuid_transaction
-              const messageNouveau = nouveauMessagesParUuid[uuid_transaction]
-              if(messageNouveau) {
-                delete nouveauMessagesParUuid[uuid_transaction]
-                return messageNouveau
-              }
-              return item
-            })
-            Object.values(nouveauMessagesParUuid).forEach(item=>messagesMaj.push(item))  // Ajouter nouveaux messages
-            formatterMessagesCb(messagesMaj) 
-            setListeComplete(messages.length < PAGE_LIMIT)
-        })
-        .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
+    // const { colonne, ordre } = colonnes.tri
+    // workers.connexion.getMessages({colonne, ordre, skip: listeMessages.length, limit: PAGE_LIMIT})
+    //     .then( reponse => {
+    //         console.debug("Messages suivant recus : %O", reponse)
+    //         const messages = reponse.messages
+    //         const nouveauMessagesParUuid = messages.reduce((acc, item)=>{ acc[item.uuid_transaction] = item; return acc }, {})
+    //         const messagesMaj = listeMessages.map(item=>{
+    //           const uuid_transaction = item.uuid_transaction
+    //           const messageNouveau = nouveauMessagesParUuid[uuid_transaction]
+    //           if(messageNouveau) {
+    //             delete nouveauMessagesParUuid[uuid_transaction]
+    //             return messageNouveau
+    //           }
+    //           return item
+    //         })
+    //         Object.values(nouveauMessagesParUuid).forEach(item=>messagesMaj.push(item))  // Ajouter nouveaux messages
+    //         // formatterMessagesCb(messagesMaj) 
+    //         // setListeComplete(messages.length < PAGE_LIMIT)
+    //     })
+    //     .catch(err=>console.error("Erreur chargement messages suivant : %O", err))
   }, [colonnes, listeMessages, formatterMessagesCb, setListeComplete])
 
   const repondreMessageCb = useCallback(message => {
@@ -118,7 +117,7 @@ function App() {
 
   const erreurCb = useCallback((err, message)=>{
     console.error("Erreur generique %s : %O", err, message)
-  })
+  }, [])
 
   const supprimerMessagesCb = useCallback(uuidTransactions => {
     console.debug("Supprimer message %s", uuidTransactions)
@@ -133,7 +132,7 @@ function App() {
   useEffect(()=>{
     Promise.all([
       importerWorkers(setWorkers),
-      initDb(),
+      MessageDao.init(),
     ])
       .then(()=>{ console.debug("Chargement de l'application complete") })
       .catch(err=>{console.error("Erreur chargement application : %O", err)})
@@ -176,26 +175,34 @@ function App() {
 
   // Charger liste initiale
   useEffect(()=>{
-    if(!workers || !etatConnexion || !etatAuthentifie) return
+    MessageDao.getMessages()
+      .then(liste=>{
+        console.debug("Messages initiaux charges : %O", liste)
+        formatterMessagesCb(liste) 
+      })
+      .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
+  }, [colonnes, formatterMessagesCb, setListeComplete])
 
-    if(colonnes) {
-        const { colonne, ordre } = colonnes.tri
-        workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
-            .then( reponse => {
-                const liste = reponse.messages
-                setListeComplete(liste.length < PAGE_LIMIT)
-                formatterMessagesCb(liste) 
-            })
-            .catch(err=>console.error("Erreur chargement contacts : %O", err))
-    }
-  }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+  // useEffect(()=>{
+  //   if(!workers || !etatConnexion || !etatAuthentifie) return
 
+  //   if(colonnes) {
+  //       const { colonne, ordre } = colonnes.tri
+  //       workers.connexion.getMessages({colonne, ordre, limit: PAGE_LIMIT})
+  //           .then( reponse => {
+  //               const liste = reponse.messages
+  //               setListeComplete(liste.length < PAGE_LIMIT)
+  //               formatterMessagesCb(liste) 
+  //           })
+  //           .catch(err=>console.error("Erreur chargement contacts : %O", err))
+  //   }
+  // }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
+
+  // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
     if(workers && etatConnexion && etatAuthentifie) {
       workers.connexion.getReferenceMessages({})
-        .then(reponse=>{
-          console.debug("Reponse reference messages : %O", reponse)
-        })
+        .then(reponse=>conserverReferenceMessages(workers, reponse.messages))
         .catch(erreurCb)
     }
   }, [workers, etatConnexion, etatAuthentifie, erreurCb])
@@ -365,9 +372,9 @@ function preparerColonnes(workers) {
       tri: {colonne: 'date_reception', ordre: -1},
       // rowLoader: data => dechiffrerMessage(workers, data)
       rowLoader: async data => {
-          if(data.dechiffre !== true) {
+          if(data['_etatChargement'] !== 'dechiffre') {
             const messageDechiffre = await dechiffrerMessage(workers, data)
-            return {...data, ...messageDechiffre, dechiffre: true}
+            return {...data, ...messageDechiffre, '_etatChargement': 'dechiffre'}
           } else {
             return data
           }
@@ -383,7 +390,7 @@ function preparerColonnes(workers) {
 
 function formatterMessages(messages, colonnes, setMessagesFormattes) {
   // console.debug("formatterContacts colonnes: %O", colonnes)
-  const {colonne, ordre} = colonnes.tri
+  const {colonne, ordre} = colonnes.tri || {}
   // let contactsTries = [...contacts]
 
   let messagesTries = messages.map(item=>{
@@ -397,7 +404,7 @@ function formatterMessages(messages, colonnes, setMessagesFormattes) {
 
       const fileId = item.uuid_transaction
       // const adresse = item.adresses?item.adresses[0]:''
-      return {...item, fileId, from}
+      return {from, ...item, fileId}
   })
 
   // console.debug("Contacts a trier : %O", contactsTries)
@@ -465,4 +472,82 @@ async function traiterEvenementMessage(listeMessages, evenementMessage, formatte
   }
 
   formatterMessagesCb(listeMaj)
+}
+
+async function conserverReferenceMessages(workers, listeReferences) {
+  console.debug("conserverReferenceMessages Messages : %O", listeReferences)
+  await MessageDao.mergeReferenceMessages(listeReferences)
+  await chargerMessagesNouveaux(workers)
+  await dechiffrerMessages(workers)
+}
+
+async function chargerMessagesNouveaux(workers) {
+  const { connexion } = workers
+
+  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement('nouveau')
+  console.debug("uuid_transactions non charges : %O", uuid_transactions)
+
+  const conserverMessages = async batch => {
+    const uuid_messages = [...batch]
+    console.debug("Traiter batch nouveaux messages : %O", uuid_messages)
+    const reponse = await connexion.getMessages({uuid_messages})
+    if(reponse.messages && reponse.messages.length > 0) {
+      for await (const message of reponse.messages) {
+        const messageCharge = {...message, '_etatChargement': 'charge'}
+        await MessageDao.updateMessage(messageCharge)
+      }
+    }
+  }
+
+  let batch_uuid_transactions = []
+  while(uuid_transactions.length > 0) {
+    batch_uuid_transactions.push(uuid_transactions.shift())
+
+    if(batch_uuid_transactions.length === 5) {
+      conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+      batch_uuid_transactions = []  // Reset liste
+    }
+  }
+
+  if(batch_uuid_transactions.length > 0) {
+    conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+  }
+
+}
+
+async function dechiffrerMessages(workers) {
+
+  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement('charge')
+  console.debug("uuid_transactions non dechiffres : %O", uuid_transactions)
+
+  const conserverMessages = async batch => {
+    const uuid_messages = [...batch]
+    console.debug("Traiter batch messages non dechiffres : %O", uuid_messages)
+
+    for await (const uuid_message of uuid_messages) {
+      const message = await MessageDao.getMessage(uuid_message)
+      const messageDechiffre = await dechiffrerMessage(workers, message)
+      const resultat = {...message, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+      // Retirer le contenu chiffre
+      delete resultat.message_chiffre
+      delete resultat.certificat_message
+      await MessageDao.updateMessage(resultat, {replace: true})
+    }
+
+  }
+
+  let batch_uuid_transactions = []
+  while(uuid_transactions.length > 0) {
+    batch_uuid_transactions.push(uuid_transactions.shift())
+
+    if(batch_uuid_transactions.length === 5) {
+      conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+      batch_uuid_transactions = []  // Reset liste
+    }
+  }
+
+  if(batch_uuid_transactions.length > 0) {
+    conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
+  }
+
 }

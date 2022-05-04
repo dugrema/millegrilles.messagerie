@@ -21,7 +21,7 @@ export function init() {
     const promise = new Promise(async (resolve, reject) => {
         // Detecter si idb est disponible, fallback sur localstorage
         try {
-            await dbMessagerieIndexedDb.ouvrirDB()  // Test, lance une exception si echec
+            await dbMessagerieIndexedDb.ouvrirDB({upgrade: true})  // Test, lance une exception si echec
             _dao = dbMessagerieIndexedDb
             _ready = true
         } catch(err) {
@@ -55,3 +55,39 @@ export function ready() {
 //     await _ready
 //     return _dao.getListeUsagers(...args)
 // }
+
+export async function mergeReferenceMessages(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.mergeReferenceMessages(...args)
+}
+
+export async function traiterMessages(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.traiterMessages(...args)
+}
+
+export async function getUuidMessagesParEtatChargement(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getUuidMessagesParEtatChargement(...args)
+}
+
+export async function updateMessage(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.updateMessage(...args)
+}
+
+export async function getMessage(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getMessage(...args)
+}
+
+export async function getMessages(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getMessages(...args)
+}
