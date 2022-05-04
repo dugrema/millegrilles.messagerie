@@ -17,6 +17,10 @@ function getMessages(requete) {
   return ConnexionClient.emitBlocking('getMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getMessages', ajouterCertificat: true})
 }
 
+function getReferenceMessages(requete) {
+  return ConnexionClient.emitBlocking('getReferenceMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getReferenceMessages', ajouterCertificat: true})
+}
+
 function getPermissionMessages(uuid_transaction_messages) {
   const requete = {uuid_transaction_messages}
   return ConnexionClient.emitBlocking('getPermissionMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getPermissionMessages', ajouterCertificat: true})
@@ -152,7 +156,7 @@ expose({
     getClesChiffrage, 
 
     // Requetes et commandes privees
-    getProfil, getMessages, getPermissionMessages,
+    getProfil, getMessages, getReferenceMessages, getPermissionMessages,
     posterMessage,
     getDomainesMessagerie, getContacts, majContact, marquerLu,
     copierFichierTiers, getCollectionUpload,

@@ -72,6 +72,10 @@ function getMessages(socket, params) {
     return transmettreRequete(socket, params, 'getMessages')
 }
 
+function getReferenceMessages(socket, params) {
+    return transmettreRequete(socket, params, 'getReferenceMessages')
+}
+
 function getPermissionMessages(socket, params) {
     return transmettreRequete(socket, params, 'getPermissionMessages')
 }
@@ -270,7 +274,7 @@ function verifierMessage(message, domaine, action) {
 
 module.exports = {
     challenge, getClesChiffrage,
-    getProfil, getMessages, getPermissionMessages, getClesFichiers, getContacts,
+    getProfil, getMessages, getReferenceMessages, getPermissionMessages, getClesFichiers, getContacts,
     posterMessage, majContact, marquerLu, 
     attachmentsRequis, supprimerMessages,
     

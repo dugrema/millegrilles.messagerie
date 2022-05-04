@@ -11,7 +11,7 @@ import { pki } from '@dugrema/node-forge'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, forgecommon, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import { ouvrirDB } from './idbCollections'
+import { init as initDb } from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
 
@@ -190,6 +190,16 @@ function App() {
     }
   }, [workers, etatConnexion, etatAuthentifie, colonnes, formatterMessagesCb, setListeComplete])
 
+  useEffect(()=>{
+    if(workers && etatConnexion && etatAuthentifie) {
+      workers.connexion.getReferenceMessages({})
+        .then(reponse=>{
+          console.debug("Reponse reference messages : %O", reponse)
+        })
+        .catch(erreurCb)
+    }
+  }, [workers, etatConnexion, etatAuthentifie, erreurCb])
+
   // Messages listener
   useEffect(()=>{
     const { connexion } = workers
@@ -294,10 +304,6 @@ async function importerWorkers(setWorkers) {
 async function connecter(workers, ...setters) {
   const { connecter: connecterWorker } = await import('./workers/connecter')
   return connecterWorker(workers, ...setters)
-}
-
-function initDb() {
-  return ouvrirDB({upgrade: true})
 }
 
 function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
