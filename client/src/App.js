@@ -9,7 +9,9 @@ import Alert from 'react-bootstrap/Alert'
 
 import { pki } from '@dugrema/node-forge'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
-import { LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { 
+  LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate, AlertTimeout 
+} from '@dugrema/millegrilles.reactjs'
 
 import * as MessageDao from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
@@ -26,7 +28,8 @@ const AfficherMessage = lazy(() => import('./AfficherMessage'))
 const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
-const PAGE_LIMIT = 40
+const PAGE_LIMIT = 40,
+      SYNC_BATCH_SIZE = 500
 
 function App() {
   
@@ -40,6 +43,7 @@ function App() {
   const [etatTransfert, setEtatTransfert] = useState('')
   const [showTransfertModal, setShowTransfertModal] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
+  const [erreur, setErreur] = useState('')
 
   // Transfert d'information entre pages
   const [messageRepondre, setMessageRepondre] = useState('')
@@ -57,6 +61,11 @@ function App() {
   const [afficherContacts, setAfficherContacts] = useState(false)
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   const [uuidMessage, setUuidMessage] = useState('')
+
+  const erreurCb = useCallback((err, message)=>{
+    console.error("Erreur generique %s : %O", err, message)
+    setErreur({err, message})
+  }, [setErreur])
 
   const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
   const showTransfertModalFermer = useCallback(()=>{ setShowTransfertModal(false) }, [setShowTransfertModal])
@@ -78,9 +87,9 @@ function App() {
 
     // Creer dict de cles avec info secrete pour dechiffrer le fichier
     transfertFichiers.down_ajouterDownload(fuuid, {mimetype, filename, taille, password: cleSecrete, iv, tag, format})
-        .catch(err=>{console.error("Erreur debut download : %O", err)})
+        .catch(erreurCb)
 
-  }, [transfertFichiers])
+  }, [transfertFichiers, erreurCb])
 
   const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
 
@@ -103,18 +112,14 @@ function App() {
       formatterMessagesCb(messagesMaj) 
       setListeComplete(liste.length < PAGE_LIMIT)
     })
-    .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
-  }, [colonnes, listeMessages, usager, formatterMessagesCb, setListeComplete])
+    .catch(err=>erreurCb(err, "Erreur chargement messages initiaux : %O", err))
+  }, [colonnes, listeMessages, usager, formatterMessagesCb, setListeComplete, erreurCb])
 
   const repondreMessageCb = useCallback(message => {
     setMessageRepondre(message)
     setUuidMessage('')
     setAfficherNouveauMessage(true)
   }, [setMessageRepondre, setAfficherNouveauMessage])
-
-  const erreurCb = useCallback((err, message)=>{
-    console.error("Erreur generique %s : %O", err, message)
-  }, [])
 
   const supprimerMessagesCb = useCallback(uuidTransactions => {
     console.debug("Supprimer message %s", uuidTransactions)
@@ -132,8 +137,8 @@ function App() {
       MessageDao.init(),
     ])
       .then(()=>{ console.info("Chargement de l'application complete") })
-      .catch(err=>{console.error("Erreur chargement application : %O", err)})
-  }, [setWorkers])
+      .catch(err=>{erreurCb(err, "Erreur chargement application")})
+  }, [setWorkers, erreurCb])
 
   useEffect(()=>{
     setWorkersTraitementFichiers(workers)
@@ -176,7 +181,7 @@ function App() {
     MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT}).then(liste=>{
       formatterMessagesCb(liste) 
     })
-    .catch(err=>console.error("Erreur chargement messages initiaux : %O", err))
+    .catch(err=>erreurCb(err, "Erreur chargement messages initiaux"))
   }, [colonnes, usager, formatterMessagesCb])
 
   // Charger liste initiale
@@ -189,7 +194,7 @@ function App() {
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
     if(workers && usager && etatConnexion && etatAuthentifie) {
-      workers.connexion.getReferenceMessages({})
+      workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE})
         .then(reponse=>conserverReferenceMessages(workers, usager, reponse.messages))
         .then(rafraichirListe)
         .catch(erreurCb)
@@ -205,18 +210,18 @@ function App() {
       connexion.enregistrerCallbackEvenementMessages(params, cb)
         .catch(err=>console.error("Erreur enregistrement evenements messages : %O", err))
       return () => connexion.retirerCallbackEvenementMessages(params, cb)
-        .catch(err=>console.debug("Erreur retrait evenements messages : %O", err))
+        .catch(err=>erreurCb(err, "Erreur retrait evenements messages"))
     }
-  }, [workers, etatAuthentifie, usager, addEvenementMessage])
+  }, [workers, etatAuthentifie, usager, addEvenementMessage, erreurCb])
 
   // Event handling
   useEffect(()=>{
     if(evenementMessage) {
       addEvenementMessage('')  // Clear event pour eviter cycle d'update
       traiterEvenementMessage(workers, listeMessages, usager, evenementMessage, formatterMessagesCb)
-        .catch(err=>console.error("Erreur traitement evenement message : %O", err))
+        .catch(err=>erreurCb(err, "Erreur traitement evenement message"))
     }
-  }, [workers, evenementMessage, listeMessages, usager, formatterMessagesCb, addEvenementMessage])
+  }, [workers, evenementMessage, listeMessages, usager, formatterMessagesCb, addEvenementMessage, erreurCb])
 
   return (
     <LayoutApplication>
@@ -236,6 +241,8 @@ function App() {
 
       <Container>
         <Suspense fallback={<Attente />}>
+
+          <AlertTimeout variant="danger" titre="Erreur" value={erreur} setValue={setErreur} />
 
           <Alert show={confirmation?true:false} variant="success" onClose={()=>setConfirmation('')} dismissible>
             <Alert.Heading>Confirmation</Alert.Heading>
@@ -266,6 +273,7 @@ function App() {
             repondreMessageCb={repondreMessageCb}
             setMessageRepondre={setMessageRepondre}
             supprimerMessagesCb={supprimerMessagesCb}
+            erreurCb={erreurCb}
           />
 
         </Suspense>
@@ -280,6 +288,7 @@ function App() {
         fermer={showTransfertModalFermer} 
         workers={workers}
         setEtatTransfert={setEtatTransfert}
+        erreurCb={erreurCb}
       />
 
     </LayoutApplication>
