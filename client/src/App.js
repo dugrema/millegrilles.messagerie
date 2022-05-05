@@ -182,7 +182,7 @@ function App() {
       formatterMessagesCb(liste) 
     })
     .catch(err=>erreurCb(err, "Erreur chargement messages initiaux"))
-  }, [colonnes, usager, formatterMessagesCb])
+  }, [colonnes, usager, formatterMessagesCb, erreurCb])
 
   // Charger liste initiale
   useEffect(()=>{
