@@ -5,6 +5,10 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import InputGroup from 'react-bootstrap/InputGroup'
 
+const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_\.\-]*[a-zA-Z-0-9]?)\/((?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,}))$/
+
+console.debug("VALIDATEUR_ADRESSE : %O", VALIDATEUR_ADRESSE)
+
 function EditerContact(props) {
 
     const { workers, show, setUuidContactSelectionne, contact, supprimerContacts } = props
@@ -17,6 +21,8 @@ function EditerContact(props) {
     const [adresses, setAdresses] = useState([])
     const [blocked, setBlocked] = useState(false)
     const [trusted, setTrusted] = useState(false)
+    const [validated, setValidated] = useState(false)
+
     const data = useMemo(()=>{
         return {uuid_contact, nom, adresses, blocked, trusted}
     }, [uuid_contact, nom, adresses, blocked, trusted])
@@ -30,6 +36,15 @@ function EditerContact(props) {
     }, [adresses, setAdresseEdit, setAdresseEditIdx])
     const adresseSave = useCallback(event=>{
         console.debug("Save adresse (idx: %O)", adresseEditIdx)
+
+        // Verifier validite adresse
+        const resultat = VALIDATEUR_ADRESSE.exec(adresseEdit)
+        if(!resultat) {
+            setValidated(true)
+            return
+        }
+        setValidated(false)
+
         const adressesLocal = [...adresses]
         if(adresseEditIdx==='') adressesLocal.push(adresseEdit)
         else adressesLocal[adresseEditIdx] = adresseEdit
@@ -38,7 +53,7 @@ function EditerContact(props) {
         setAdresses(adressesLocal)
         setAdresseEditIdx('')
         setAdresseEdit('')
-    }, [adresses, setAdresses, adresseEditIdx, setAdresseEditIdx, adresseEdit, setAdresseEdit])
+    }, [adresses, setAdresses, adresseEditIdx, setAdresseEditIdx, adresseEdit, setAdresseEdit, setValidated])
     const adresseSupprimer = useCallback(event=>{
         const idxSupprimer = Number.parseInt(event.currentTarget.value)
         const adressesMaj = [...adresses].filter((item,idx)=>idx!==idxSupprimer)
@@ -58,10 +73,23 @@ function EditerContact(props) {
         setTrusted(valeur)
     }, [setTrusted])
 
-    const retour = useCallback(()=>setUuidContactSelectionne(''), [setUuidContactSelectionne])
-    const sauvegarderCb = useCallback(()=>{
-        const opts = {adresseEdit, adresseEditIdx}
-        sauvegarder(workers, data, retour, opts)
+    const retour = useCallback(()=>{
+        setUuidContactSelectionne('')
+    }, [setUuidContactSelectionne, setValidated])
+    
+    const sauvegarderCb = useCallback(event=>{
+        event.preventDefault()
+        event.stopPropagation()
+
+        setValidated(true)
+
+        const form = event.currentTarget;
+        if (form.checkValidity() === true) {
+            const opts = {adresseEdit, adresseEditIdx}
+            sauvegarder(workers, data, retour, opts)
+        }
+
+        setValidated(true)
     }, [workers, data, retour, adresseEdit, adresseEditIdx])
 
     const supprimerContactCb = useCallback(() => {
@@ -70,6 +98,7 @@ function EditerContact(props) {
     }, [uuid_contact, supprimerContacts, retour])
 
     useEffect(()=>{
+        setValidated(false)
         if(contact) {
             setNom(contact.nom || '')
             setAdresseEdit('')
@@ -86,22 +115,27 @@ function EditerContact(props) {
             setBlocked(false)
             setTrusted(false)
         }
-    }, [contact])
+    }, [contact, setValidated])
 
     if(!show) return ''
 
     return (
-        <>
+        <Form noValidate validated={validated} onSubmit={sauvegarderCb}>
             <h3>Editer contact</h3>
 
-            <Form.Label htmlFor="nomContact">Nom</Form.Label>
-            <Form.Control
-                type="text"
-                id="nomContact"
-                name="nom"
-                value={nom}
-                onChange={nomChange}
-            />
+            <Form.Group controlId="nomContact">
+                <Form.Label>Nom</Form.Label>
+                <Form.Control
+                    type="text"
+                    name="nom"
+                    value={nom}
+                    onChange={nomChange}
+                    required
+                />
+                <Form.Control.Feedback type="invalid">
+                    Nom usager requis.
+                </Form.Control.Feedback>
+            </Form.Group>
 
             <Form.Label htmlFor="adresseEdit">Adresses</Form.Label>
             {adresses.map((item, idx)=>{
@@ -118,24 +152,29 @@ function EditerContact(props) {
                 )
             })}
             <br/>
-            <Form.Text className="text-muted">
-                Utiliser pour ajouter une adresse messagerie MilleGrilles. Format: @usager/domaine.com
-            </Form.Text>
-            <InputGroup className="mb-3">
-                <Form.Control
-                    type="text"
-                    id="adresseEdit"
-                    name="adresseEdit"
-                    value={adresseEdit}
-                    onChange={adresseEditChange}
-                />
-                <Button onClick={adresseSave} disabled={!adresseEdit} variant="secondary">
-                    {adresseEditIdx!==''?
-                        'Modifier'
-                        :
-                        'Ajouter'}
-                </Button>
-            </InputGroup>
+            <Form.Group controlId="adresseEdit">
+                <Form.Text className="text-muted">
+                    Utiliser pour ajouter une adresse messagerie MilleGrilles. Format: @usager/domaine.com
+                </Form.Text>
+                <InputGroup className="mb-3" hasValidation>
+                    <Form.Control
+                        type="text"
+                        name="adresseEdit"
+                        value={adresseEdit}
+                        onChange={adresseEditChange}
+                        pattern={VALIDATEUR_ADRESSE.source}
+                    />
+                    <Button onClick={adresseSave} disabled={!adresseEdit} variant="secondary">
+                        {adresseEditIdx!==''?
+                            'Modifier'
+                            :
+                            'Ajouter'}
+                    </Button>
+                    <Form.Control.Feedback type="invalid">
+                        Adresse invalide.
+                    </Form.Control.Feedback>
+                </InputGroup>
+            </Form.Group>
 
             <br/>
 
@@ -168,7 +207,7 @@ function EditerContact(props) {
 
             <Row className="buttonbar">
                 <Col>
-                    <Button onClick={sauvegarderCb}>Sauvegarder</Button>
+                    <Button type="submit">Sauvegarder</Button>
                     <Button variant="secondary" onClick={retour}>Annuler</Button>
                 </Col>
             </Row>
@@ -184,7 +223,7 @@ function EditerContact(props) {
                     <Button onClick={supprimerContactCb} variant="danger">Supprimer</Button>
                 </Col>
             </Row>
-        </>
+        </Form>
     )
 }
 
@@ -196,7 +235,7 @@ async function sauvegarder(workers, data, retour, opts) {
     try {
         const { adresseEdit, adresseEditIdx } = opts
         const { adresses } = data
-        if(adresseEdit && adresseEditIdx===undefined) {
+        if(adresseEdit && adresseEditIdx==='') {
             // // Pousser l'adresse editee dans la liste des adresses
             // if(adresseEditIdx!==undefined) {
             //     adresses[adresseEditIdx] = adresseEdit
