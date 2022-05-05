@@ -3,10 +3,11 @@ import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
+import InputGroup from 'react-bootstrap/InputGroup'
 
 function EditerContact(props) {
 
-    const { workers, show, setUuidContactSelectionne, contact } = props
+    const { workers, show, setUuidContactSelectionne, contact, supprimerContacts } = props
     const uuid_contact = contact?contact.uuid_contact:''
 
     // Champs data
@@ -16,7 +17,9 @@ function EditerContact(props) {
     const [adresses, setAdresses] = useState([])
     const [blocked, setBlocked] = useState(false)
     const [trusted, setTrusted] = useState(false)
-    const data = useMemo(()=>{return {uuid_contact, nom, adresses, blocked, trusted}}, [uuid_contact, nom, adresses, blocked, trusted])
+    const data = useMemo(()=>{
+        return {uuid_contact, nom, adresses, blocked, trusted}
+    }, [uuid_contact, nom, adresses, blocked, trusted])
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
     const adresseEditChange = useCallback(event=>setAdresseEdit(event.currentTarget.value), [setAdresseEdit])
@@ -56,7 +59,15 @@ function EditerContact(props) {
     }, [setTrusted])
 
     const retour = useCallback(()=>setUuidContactSelectionne(''), [setUuidContactSelectionne])
-    const sauvegarderCb = useCallback(()=>sauvegarder(workers, data, retour), [workers, data, retour])
+    const sauvegarderCb = useCallback(()=>{
+        const opts = {adresseEdit, adresseEditIdx}
+        sauvegarder(workers, data, retour, opts)
+    }, [workers, data, retour, adresseEdit, adresseEditIdx])
+
+    const supprimerContactCb = useCallback(() => {
+        supprimerContacts([uuid_contact])
+        retour()
+    }, [uuid_contact, supprimerContacts, retour])
 
     useEffect(()=>{
         if(contact) {
@@ -81,7 +92,7 @@ function EditerContact(props) {
 
     return (
         <>
-            <p>Editer contact</p>
+            <h3>Editer contact</h3>
 
             <Form.Label htmlFor="nomContact">Nom</Form.Label>
             <Form.Control
@@ -93,35 +104,59 @@ function EditerContact(props) {
             />
 
             <Form.Label htmlFor="adresseEdit">Adresses</Form.Label>
-            <Form.Control
-                type="text"
-                id="adresseEdit"
-                name="adresseEdit"
-                value={adresseEdit}
-                onChange={adresseEditChange}
-            />
-            <Button onClick={adresseSave} disabled={!adresseEdit}>{adresseEditIdx!==''?'Modifier':'Ajouter'}</Button>
             {adresses.map((item, idx)=>{
                 return (
                     <Row key={idx}>
-                        <Col>
-                            {item}
+                        <Col xs={4} md={3} lg={2}>
+                            <Button onClick={adresseEditCb} value={idx} size="sm" variant="secondary" disabled={adresseEditIdx!==''?true:false}>Edit</Button>
+                            <Button onClick={adresseSupprimer} value={idx} size="sm" variant="secondary">Supprimer</Button>
                         </Col>
                         <Col>
-                            <Button onClick={adresseEditCb} value={idx}>Edit</Button>
-                            <Button onClick={adresseSupprimer} value={idx}>Supprimer</Button>
+                            {item}
                         </Col>
                     </Row>
                 )
             })}
+            <br/>
+            <Form.Text className="text-muted">
+                Utiliser pour ajouter une adresse messagerie MilleGrilles. Format: @usager/domaine.com
+            </Form.Text>
+            <InputGroup className="mb-3">
+                <Form.Control
+                    type="text"
+                    id="adresseEdit"
+                    name="adresseEdit"
+                    value={adresseEdit}
+                    onChange={adresseEditChange}
+                />
+                <Button onClick={adresseSave} disabled={!adresseEdit} variant="secondary">
+                    {adresseEditIdx!==''?
+                        'Modifier'
+                        :
+                        'Ajouter'}
+                </Button>
+            </InputGroup>
+
+            <br/>
 
             <Row>
-                <Col>Bloquer ce contact</Col>
+                <Col>
+                    <Form.Check 
+                        type="switch"
+                        id="trusted-switch"
+                        label="Marquer comme contact de confiance"
+                        disabled={blocked}
+                        checked={trusted}
+                        onChange={trustedChange}
+                    />
+                </Col>
+            </Row>
+            <Row>
                 <Col>
                     <Form.Check 
                         type="switch"
                         id="blocked-switch"
-                        label="Blocked"
+                        label="Bloquer ce contact"
                         variant="danger"
                         checked={blocked}
                         onChange={blockedChange}
@@ -129,36 +164,47 @@ function EditerContact(props) {
                 </Col>
             </Row>
 
-            <Row>
-                <Col>Marquer comme contact trusted</Col>
-                <Col>
-                    <Form.Check 
-                        type="switch"
-                        id="trusted-switch"
-                        label="Trusted"
-                        disabled={blocked}
-                        checked={trusted}
-                        onChange={trustedChange}
-                    />
-                </Col>
-            </Row>
+            <br/>
 
-            <Row>
+            <Row className="buttonbar">
                 <Col>
                     <Button onClick={sauvegarderCb}>Sauvegarder</Button>
                     <Button variant="secondary" onClick={retour}>Annuler</Button>
                 </Col>
             </Row>
             
+            <br />
+
+            <hr />
+
+            <p>Actions sur le contact.</p>
+
+            <Row>
+                <Col>
+                    <Button onClick={supprimerContactCb} variant="danger">Supprimer</Button>
+                </Col>
+            </Row>
         </>
     )
 }
 
 export default EditerContact
 
-async function sauvegarder(workers, data, retour) {
-    console.debug("Sauvegarder %O", data)
+async function sauvegarder(workers, data, retour, opts) {
+    opts = opts || {}
+    console.debug("Sauvegarder %O, opts : %O", data, opts)
     try {
+        const { adresseEdit, adresseEditIdx } = opts
+        const { adresses } = data
+        if(adresseEdit && adresseEditIdx===undefined) {
+            // // Pousser l'adresse editee dans la liste des adresses
+            // if(adresseEditIdx!==undefined) {
+            //     adresses[adresseEditIdx] = adresseEdit
+            // } else {
+                adresses.push(adresseEdit)
+            // }
+        }
+
         const reponse = await workers.connexion.majContact(data)
         console.debug("Reponse sauvegarder contact : %O", reponse)
         retour()

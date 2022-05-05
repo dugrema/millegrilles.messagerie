@@ -364,7 +364,8 @@ function formatterContacts(contacts, colonnes, userId, setContacts, setCompteCon
     let contactsTries = contacts.map(item=>{
         const fileId = item.uuid_contact
         const adresse = item.adresses?item.adresses[0]:''
-        return {...item, fileId, adresse}
+        const nom = item.nom || 'Vide'
+        return {...item, fileId, nom, adresse}
     })
 
     // console.debug("Contacts a trier : %O", contactsTries)
