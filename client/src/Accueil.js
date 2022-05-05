@@ -8,17 +8,8 @@ function Accueil(props) {
     const { 
         workers, setUuidMessage,
         colonnes, setColonnes, listeMessages, compteMessages, getMessagesSuivants, isListeComplete,
-        supprimerMessagesCb,
+        supprimerMessagesCb, setAfficherNouveauMessage,
      } = props
-
-    // const [uuidSelectionne, setUuidSelectionne] = useState('')
-
-    // const ouvrirMessageCb = useCallback(event=>{
-    //     // let uuidMessage = event
-    //     // if(event.currentTarget) uuidMessage = event.currentTarget.value
-    //     console.debug("Ouvrir message : %O", uuidSelectionne)
-    //     setUuidMessage(uuidSelectionne)
-    // }, [uuidSelectionne, setUuidMessage])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -50,7 +41,8 @@ function Accueil(props) {
                 getMessagesSuivants={getMessagesSuivants}
                 enteteOnClickCb={enteteOnClickCb}
                 setUuidMessage={setUuidMessage}  
-                supprimerMessagesCb={supprimerMessagesCb} />
+                supprimerMessagesCb={supprimerMessagesCb} 
+                setAfficherNouveauMessage={setAfficherNouveauMessage} />
         </>
     )
 

@@ -283,7 +283,7 @@ function AfficherListeContacts(props) {
     const supprimerContactCb = useCallback(event=>{
         console.debug("Supprimer %O (event %O)", selection, event)
         supprimerContacts(selection)
-    }, [selection])
+    }, [selection, supprimerContacts])
 
     const ouvrir = useCallback(event=>{
         event.preventDefault()
@@ -300,15 +300,14 @@ function AfficherListeContacts(props) {
 
     return (
         <div>
-            <Row>
-                <Col>
-                    <Button variant="secondary" onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
-                </Col>
-            </Row>
-
             <h3>Contacts</h3>
 
-            <AfficherCompteContacts value={compteContacts} />
+            <Row>
+                <Col xs={12} md={8} className="buttonbar-left">
+                    <Button onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
+                </Col>
+                <Col xs={12} md={4} className='buttonbar-right'><AfficherCompteContacts value={compteContacts} /></Col>
+            </Row>
 
             <ListeFichiers 
                 modeView='liste'

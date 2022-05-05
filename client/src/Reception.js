@@ -1,4 +1,9 @@
 import { useState, useCallback } from 'react'
+
+import Row from 'react-bootstrap/Row'
+import Col from 'react-bootstrap/Col'
+import Button from 'react-bootstrap/Button'
+
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
 
@@ -8,17 +13,24 @@ function ListeMessages(props) {
         workers, etatConnexion, etatAuthentifie, 
         messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage,
         isListeComplete, getMessagesSuivants,
-        supprimerMessagesCb,
+        supprimerMessagesCb, setAfficherNouveauMessage,
     } = props
 
-    if(!messages) return <p>Aucun message disponible.</p>
+    const afficherNouveauMessageCb = useCallback(() => setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
 
+    if(!messages) return <p>Aucun message disponible.</p>
+    
     return (
         <div>
             <h3>Messages</h3>
 
-            <AfficherNombreMessages value={compteMessages} />
-            
+            <Row>
+                <Col xs={12} md={8} className="buttonbar-left">
+                    <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
+                </Col>
+                <Col xs={12} md={4} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+            </Row>
+
             <AfficherListeMessages 
                 workers={workers}
                 colonnes={colonnes}
