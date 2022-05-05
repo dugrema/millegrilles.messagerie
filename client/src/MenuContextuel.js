@@ -108,10 +108,10 @@ export function MenuContextuelAfficherMessages(props) {
 }
 
 export function MenuContextuelListeContacts(props) {
-    const { contextuel, fermerContextuel, supprimerContactCb } = props
+    const { contextuel, fermerContextuel, supprimerContacts } = props
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
-            <Row><Button variant="link" onClick={supprimerContactCb}><i className="fa fa-trash"/> Supprimer</Button></Row>
+            <Row><Button variant="link" onClick={supprimerContacts}><i className="fa fa-trash"/> Supprimer</Button></Row>
         </MenuContextuel>
     )
 }

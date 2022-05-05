@@ -136,6 +136,13 @@ function supprimerMessages(uuidTransactions) {
   return ConnexionClient.emitBlocking('supprimerMessages', commande, {domaine: 'Messagerie', action: 'supprimerMessages', ajouterCertificat: true})
 }
 
+function supprimerContacts(uuidContacts) {
+  if(!Array.isArray(uuidContacts)) {
+    uuidContacts = [uuidContacts]
+  }
+  const commande = { uuid_contacts: uuidContacts }
+  return ConnexionClient.emitBlocking('supprimerContacts', commande, {domaine: 'Messagerie', action: 'supprimerContacts', ajouterCertificat: true})
+}
 
 async function enregistrerCallbackEvenementContact(params, cb) { 
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
@@ -164,7 +171,7 @@ expose({
     posterMessage,
     getDomainesMessagerie, getContacts, getReferenceContacts, majContact, marquerLu,
     copierFichierTiers, getCollectionUpload,
-    supprimerMessages,
+    supprimerMessages, supprimerContacts,
 
     initialiserProfil,
 

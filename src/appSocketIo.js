@@ -37,6 +37,7 @@ function configurerEvenements(socket) {
       { eventName: 'majContact', callback: (params, cb) => traiter(socket, mqdao.majContact, {params, cb}) },
       { eventName: 'marquerLu', callback: (params, cb) => traiter(socket, mqdao.marquerLu, {params, cb}) },
       { eventName: 'supprimerMessages', callback: (params, cb) => traiter(socket, mqdao.supprimerMessages, {params, cb}) },
+      { eventName: 'supprimerContacts', callback: (params, cb) => traiter(socket, mqdao.supprimerContacts, {params, cb}) },
 
       // GrosFichiers pour attachements
       { eventName: 'getCollection', callback: (params, cb) => traiter(socket, mqdao.getCollection, {params, cb}) },

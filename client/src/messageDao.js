@@ -121,3 +121,9 @@ export async function countContacts(...args) {
     await _ready
     return _dao.countContacts(...args)
 }
+
+export async function supprimerContacts(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.supprimerContacts(...args)
+}

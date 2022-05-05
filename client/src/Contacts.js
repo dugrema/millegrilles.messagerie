@@ -45,6 +45,16 @@ function Contacts(props) {
         formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb)
     }, [colonnes, userId, setContacts, setCompteContacts, erreurCb])
     
+    const supprimerContactsCb = useCallback(uuidContacts=>{
+        console.debug("Supprimer contacts %O", uuidContacts)
+        workers.connexion.supprimerContacts(uuidContacts).catch(erreurCb)
+            .then(reponse=>{
+                console.debug("Reponse supprimer contacts : %O", reponse)
+                if(reponse.err) erreurCb(reponse.err, "Erreur de suppression de contacts")
+            })
+            .catch(err=>erreurCb(err, "Erreur suppression de contacts"))
+    }, [workers, erreurCb])
+    
     const getContactsSuivants = useCallback(()=>{
         if(colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
@@ -55,7 +65,7 @@ function Contacts(props) {
                 })
                 .catch(erreurCb)
         }
-    }, [workers, colonnes, contacts, formatterContactsCb])
+    }, [colonnes, contacts, formatterContactsCb, userId, erreurCb])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -74,10 +84,12 @@ function Contacts(props) {
         setColonnes(colonnesCourant)
     }, [colonnes, setColonnes])
 
-    let contactSelectionne = ''
-    if(contacts && contacts.length > 0 && uuidContactSelectionne) {
-        contactSelectionne = contacts.filter(item=>item.uuid_contact===uuidContactSelectionne).shift()
-    }
+    const contactSelectionne = useMemo(()=>{
+        if(contacts && contacts.length > 0 && uuidContactSelectionne) {
+            return contacts.filter(item=>item.uuid_contact===uuidContactSelectionne).shift()
+        }
+        return ''
+    }, [contacts, uuidContactSelectionne])
 
     // Charger liste initiale de idb
     useEffect(()=>{
@@ -154,6 +166,14 @@ function Contacts(props) {
                 })
                 if(!trouve) contactsMaj.push(contactMaj)
                 formatterContactsCb(contactsMaj)
+            } else if(action === 'contactsSupprimes') {
+                const uuid_contacts = message.uuid_contacts
+                MessageDao.supprimerContacts(uuid_contacts)
+                    .then(()=>{
+                        const contactsMaj = contacts.filter(item=>!uuid_contacts.includes(item.uuid_contact))
+                        formatterContactsCb(contactsMaj)
+                    })
+                    .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
             } else {
                 console.error("Recu message contact de type inconnu : %O", evenementContact)
             }
@@ -180,14 +200,16 @@ function Contacts(props) {
                 setUuidContactSelectionne={setUuidContactSelectionne} 
                 getContactsSuivants={getContactsSuivants}
                 isListeComplete={isListeComplete} 
-                enteteOnClickCb={enteteOnClickCb} />
+                enteteOnClickCb={enteteOnClickCb} 
+                supprimerContacts={supprimerContactsCb} />
 
             <EditerContact 
                 show={uuidContactSelectionne?true:false} 
                 workers={workers}
                 uuidContactSelectionne={uuidContactSelectionne} 
                 setUuidContactSelectionne={setUuidContactSelectionne} 
-                contact={contactSelectionne} />
+                contact={contactSelectionne} 
+                supprimerContacts={supprimerContactsCb} />
 
         </>
     )
@@ -249,7 +271,7 @@ function AfficherListeContacts(props) {
         workers, etatConnexion, etatAuthentifie, 
         nouveauContact, contacts, compteContacts, colonnes, show, 
         setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
-        enteteOnClickCb,
+        enteteOnClickCb, supprimerContacts,
     } = props
 
     const [selection, setSelection] = useState('')
@@ -260,6 +282,7 @@ function AfficherListeContacts(props) {
     const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
     const supprimerContactCb = useCallback(event=>{
         console.debug("Supprimer %O (event %O)", selection, event)
+        supprimerContacts(selection)
     }, [selection])
 
     const ouvrir = useCallback(event=>{
@@ -307,7 +330,7 @@ function AfficherListeContacts(props) {
                 selection={selection}
                 etatConnexion={etatConnexion}
                 etatAuthentifie={etatAuthentifie}
-                supprimerContactCb={supprimerContactCb}
+                supprimerContacts={supprimerContactCb}
             />
         </div>     
     )

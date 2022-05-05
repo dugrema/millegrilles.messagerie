@@ -190,9 +190,16 @@ function supprimerMessages(socket, params) {
     return transmettreCommande(socket, params, 'supprimerMessages')
 }
 
+function supprimerContacts(socket, params) {
+    return transmettreCommande(socket, params, 'supprimerContacts')
+}
+
 // Listeners
 
-const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = ['evenement.Messagerie.{USER_ID}.majContact']
+const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = [
+    'evenement.Messagerie.{USER_ID}.majContact',
+    'evenement.Messagerie.{USER_ID}.contactsSupprimes',
+]
 
 async function enregistrerCallbackEvenementContact(socket, params, cb) {
     const userId = socket.userId  // Ignorer params, utiliser userId de la session
@@ -281,7 +288,7 @@ module.exports = {
     getProfil, getMessages, getReferenceMessages, getPermissionMessages, getClesFichiers, 
     getContacts, getReferenceContacts, 
     posterMessage, majContact, marquerLu, 
-    attachmentsRequis, supprimerMessages,
+    attachmentsRequis, supprimerMessages, supprimerContacts,
     
     getDomainesMessagerie,
     initialiserProfil,

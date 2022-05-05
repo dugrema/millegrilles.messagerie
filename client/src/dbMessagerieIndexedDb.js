@@ -153,24 +153,30 @@ export async function countMessages(userId, opts) {
 
 export async function mergeReferenceContacts(userId, contacts) {
     const db = await ouvrirDB({upgrade: true})
+    console.debug("mergeReferenceContacts contacts: %O", contacts)
 
     // Parcourir chaque message pour voir s'il existe deja
     const store = db.transaction(STORE_CONTACTS, 'readwrite').store
     for await (let contact of contacts) {
         const uuid_contact = contact.uuid_contact
-        const contactExistant = await store.get(uuid_contact)
-        if(contactExistant) {
-            // Sync, verifier date
-            const date_modification_locale = contactExistant.date_modification
-            if(date_modification_locale < contact.date_modification) {
-                // Indiquer que le contact doit etre maj
-                const contactStale = {...contactExistant, ...contact, '_etatChargement': 'stale'}
-                console.debug("Contact doit etre maj : %O", contactStale)
-                await store.put(contactStale)
-            }
+
+        if(contact.supprime === true) {
+            await store.delete(uuid_contact)
         } else {
-            console.debug("Conserver nouveau contact : %O", contact)
-            await store.put({user_id: userId, ...contact, '_etatChargement': 'nouveau'})
+            const contactExistant = await store.get(uuid_contact)
+            if(contactExistant) {
+                // Sync, verifier date
+                const date_modification_locale = contactExistant.date_modification
+                if(date_modification_locale < contact.date_modification) {
+                    // Indiquer que le contact doit etre maj
+                    const contactStale = {...contactExistant, ...contact, '_etatChargement': 'stale'}
+                    console.debug("Contact doit etre maj : %O", contactStale)
+                    await store.put(contactStale)
+                }
+            } else {
+                console.debug("Conserver nouveau contact : %O", contact)
+                await store.put({user_id: userId, ...contact, '_etatChargement': 'nouveau'})
+            }
         }
     }
 }
@@ -243,4 +249,11 @@ export async function countContacts(userId, opts) {
     }
 
     return compteur
+}
+
+export async function supprimerContacts(uuidContacts) {
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_CONTACTS, 'readwrite').store
+    const promises = uuidContacts.map(item=>store.delete(item))
+    return Promise.all(promises)
 }
