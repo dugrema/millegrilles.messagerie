@@ -178,6 +178,7 @@ function App() {
   }, [workers, setColonnes])
 
   const rafraichirListe = useCallback(async listeCourante => {
+    if(!colonnes || !usager) return
     const { colonne, ordre } = colonnes.tri
     const userId = usager.extensions.userId
     const skip = listeCourante?listeCourante.length:0
@@ -190,7 +191,6 @@ function App() {
 
   // Charger liste initiale
   useEffect(()=>{
-    if(!colonnes || !usager) return
     setListeComplete(false)  // Reset flag liste
     rafraichirListe().catch(erreurCb)
   }, [colonnes, usager, rafraichirListe, setListeComplete, erreurCb])

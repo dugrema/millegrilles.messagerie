@@ -107,6 +107,15 @@ export function MenuContextuelAfficherMessages(props) {
     )
 }
 
+export function MenuContextuelListeContacts(props) {
+    const { contextuel, fermerContextuel, supprimerContactCb } = props
+    return (
+        <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
+            <Row><Button variant="link" onClick={supprimerContactCb}><i className="fa fa-trash"/> Supprimer</Button></Row>
+        </MenuContextuel>
+    )
+}
+
 function retirerAttacher(listeIds, fichiers, setFichiers) {
     console.debug("Retirer attachments %O de %O", listeIds, fichiers)
     const fichiersMaj = fichiers.filter(item=>!listeIds.includes(item.fileId))

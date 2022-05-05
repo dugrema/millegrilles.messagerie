@@ -7,11 +7,12 @@ import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
 import EditerContact from './EditerContact'
+import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
 
 import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
-const PAGE_LIMIT = 20
+const PAGE_LIMIT = 100
 
 function Contacts(props) {
 
@@ -183,13 +184,21 @@ function BreadcrumbContacts(props) {
 
 function AfficherListeContacts(props) {
     const { 
+        workers, etatConnexion, etatAuthentifie, 
         nouveauContact, contacts, colonnes, show, 
         setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
         enteteOnClickCb,
     } = props
 
     const [selection, setSelection] = useState('')
+    const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
+
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+    const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
+    const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
+    const supprimerContactCb = useCallback(event=>{
+        console.debug("Supprimer %O (event %O)", selection, event)
+    }, [selection])
 
     const ouvrir = useCallback(event=>{
         event.preventDefault()
@@ -230,10 +239,21 @@ function AfficherListeContacts(props) {
                 rows={contacts} 
                 // onClick={onClick} 
                 onDoubleClick={ouvrir}
-                // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                onContextMenu={onContextMenuCb}
                 onSelection={onSelectionLignes}
                 onClickEntete={enteteOnClickCb}
                 suivantCb={isListeComplete?'':getContactsSuivants}
+            />
+
+            <MenuContextuelAfficherListeContacts 
+                workers={workers}
+                contextuel={contextuel} 
+                fermerContextuel={fermerContextuel}
+                contacts={contacts}
+                selection={selection}
+                etatConnexion={etatConnexion}
+                etatAuthentifie={etatAuthentifie}
+                supprimerContactCb={supprimerContactCb}
             />
         </div>     
     )
@@ -277,6 +297,12 @@ function AfficherListeContacts(props) {
 //         </Row>
 //     )
 // }
+
+function MenuContextuelAfficherListeContacts(props) {
+    const { contextuel } = props
+    if(!contextuel.show) return ''
+    return <MenuContextuelListeContacts {...props} />
+}
 
 function preparerColonnes() {
 

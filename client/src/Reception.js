@@ -96,7 +96,7 @@ function AfficherListeMessages(props) {
                 suivantCb={isListeComplete?'':getMessagesSuivants}
             />
 
-            <MenuContextuelFavoris 
+            <MenuContextuelMessages 
                 workers={workers}
                 contextuel={contextuel} 
                 fermerContextuel={fermerContextuel}
@@ -105,20 +105,14 @@ function AfficherListeMessages(props) {
                 etatConnexion={etatConnexion}
                 etatAuthentifie={etatAuthentifie}
                 supprimerMessagesCb={supprimerMessages}
-            />            
+            />
         </>
     )
 
 }
 
-function MenuContextuelFavoris(props) {
-
-    // const { contextuel, fichiers, selection } = props
+function MenuContextuelMessages(props) {
     const { contextuel } = props
-
     if(!contextuel.show) return ''
-
-    // console.debug("!!! Selection : %s, FICHIERS : %O", selection, fichiers)
-
     return <MenuContextuelAfficherMessages {...props} />
 }
