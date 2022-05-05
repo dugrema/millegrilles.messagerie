@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { proxy } from 'comlink'
 
 import Button from 'react-bootstrap/Button'
@@ -6,39 +6,56 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
+import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
+import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
+
+import * as MessageDao from './messageDao'
+
 import EditerContact from './EditerContact'
 import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
 
-import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
-import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
-
-const PAGE_LIMIT = 100
+const PAGE_LIMIT = 50,
+      SYNC_LIMIT = 1000
 
 function Contacts(props) {
 
-    const { workers, etatAuthentifie, usager, setAfficherContacts } = props
+    const { workers, etatConnexion, etatAuthentifie, userId, setAfficherContacts } = props
 
     const [colonnes, setColonnes] = useState(preparerColonnes())
     const [contacts, setContacts] = useState('')
+    const [compteContacts, setCompteContacts] = useState(0)
     const [uuidContactSelectionne, setUuidContactSelectionne] = useState('')
     const [evenementContact, addEvenementContact] = useState('')
-    const [isListeComplete, setListeComplete] = useState(false)
+    const [erreur, setErreur] = useState('')
 
+    const isListeComplete = useMemo(()=>{
+        if(contacts) return contacts.length === compteContacts
+        return false
+    }, [contacts, compteContacts])
+
+    const erreurCb = useCallback((err, message)=>{
+        console.error("Erreur generique %s : %O", err, message)
+        setErreur({err, message})
+    }, [setErreur])
+    
     const nouveauContact = useCallback(()=>setUuidContactSelectionne(true), [setUuidContactSelectionne])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
     const retourContacts = useCallback(()=>setUuidContactSelectionne(false), [setUuidContactSelectionne])
-    const formatterContactsCb = useCallback(contacts=>formatterContacts(contacts, colonnes, setContacts), [colonnes, setContacts])
+    const formatterContactsCb = useCallback(contacts=>{
+        formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb)
+    }, [colonnes, userId, setContacts, setCompteContacts, erreurCb])
     
     const getContactsSuivants = useCallback(()=>{
-        const { colonne, ordre } = colonnes.tri
-        workers.connexion.getContacts({colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
-            .then( reponse => {
-                console.debug("Contacts suivant recus : %O", reponse)
-                formatterContactsCb([...contacts, ...reponse.contacts]) 
-                setListeComplete(reponse.contacts.length === 0)
-            })
-            .catch(err=>console.error("Erreur chargement contacts : %O", err))
-    }, [workers, colonnes, contacts, formatterContactsCb, setListeComplete])
+        if(colonnes && userId) {
+            const { colonne, ordre } = colonnes.tri
+            MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
+                .then(liste=>{
+                    const listeMaj = [...contacts, ...liste]
+                    return formatterContactsCb(listeMaj)
+                })
+                .catch(erreurCb)
+        }
+    }, [workers, colonnes, contacts, formatterContactsCb])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -62,23 +79,38 @@ function Contacts(props) {
         contactSelectionne = contacts.filter(item=>item.uuid_contact===uuidContactSelectionne).shift()
     }
 
+    // Charger liste initiale de idb
     useEffect(()=>{
-        if(colonnes) {
+        if(colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
-            workers.connexion.getContacts({colonne, ordre, limit: PAGE_LIMIT})
-                .then( reponse => {
-                    // console.debug("Contacts recus : %O", reponse)
-                    setListeComplete(reponse.contacts.length < PAGE_LIMIT)
-                    formatterContactsCb(reponse.contacts) 
-                })
-                .catch(err=>console.error("Erreur chargement contacts : %O", err))
+            MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
+                .then(formatterContactsCb)
+                .catch(erreurCb)
         }
-    }, [workers, colonnes, formatterContactsCb, setListeComplete])
+    }, [workers, colonnes, userId, formatterContactsCb, erreurCb])
+
+    // Sync liste
+    useEffect(()=>{
+        if(colonnes && userId && etatConnexion && etatAuthentifie) {
+            const { colonne, ordre } = colonnes.tri
+            workers.connexion.getReferenceContacts({limit: SYNC_LIMIT})
+                .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
+                .then(()=>chargerContenuContacts(workers, userId))
+                .then(async uuidsCharges => {
+                    if(uuidsCharges && uuidsCharges.length > 0) {
+                        // Rafraichir ecran
+                        const liste = await MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
+                        formatterContactsCb(liste)
+                    }
+                })
+                .catch(err=>erreurCb(err, "Erreur chargement contacts"))
+        }
+    }, [workers, etatConnexion, etatAuthentifie, colonnes, userId, formatterContactsCb, erreurCb])
 
     // Contacts listener
     useEffect(()=>{
         const { connexion } = workers
-        if(connexion && etatAuthentifie && usager) {
+        if(connexion && etatAuthentifie) {
             const cb = proxy(addEvenementContact)
             const params = {}
             connexion.enregistrerCallbackEvenementContact(params, cb)
@@ -86,31 +118,47 @@ function Contacts(props) {
             return () => connexion.retirerCallbackEvenementContact(params, cb)
                 .catch(err=>console.debug("Erreur retrait evenements contacts : %O", err))
         }
-    }, [workers, etatAuthentifie, usager, addEvenementContact])
+    }, [workers, etatAuthentifie, addEvenementContact])
 
     // Event handling
     useEffect(()=>{
-        if(evenementContact) {
+        if(evenementContact && userId) {
             addEvenementContact('')  // Clear event pour eviter cycle d'update
 
             console.debug("Evenement contact : %O", evenementContact)
 
             // Traiter message
+            const routing = evenementContact.routingKey,
+                  action = routing.split('.').pop()
             const message = evenementContact.message
-            const { uuid_contact } = message
-            let trouve = false
-            const contactsMaj = contacts.map(item=>{
-                if(item.uuid_contact === uuid_contact) {
-                    trouve = true
-                    return message  // Remplacer contact
-                }
-                return item
-            })
-            if(!trouve) contactsMaj.push(message)
 
-            formatterContactsCb(contactsMaj)
+            if(action === 'majContact') {
+                // Conserver information de contact
+                const date_modification = message['en-tete'].estampille
+                const contactMaj = {...message, user_id: userId, date_modification}
+                delete contactMaj['en-tete']
+                delete contactMaj['_certificat']
+                delete contactMaj['_signature']
+
+                MessageDao.updateContact(contactMaj)
+                    .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
+
+                const { uuid_contact } = message
+                let trouve = false
+                const contactsMaj = contacts.map(item=>{
+                    if(item.uuid_contact === uuid_contact) {
+                        trouve = true
+                        return message  // Remplacer contact
+                    }
+                    return item
+                })
+                if(!trouve) contactsMaj.push(contactMaj)
+                formatterContactsCb(contactsMaj)
+            } else {
+                console.error("Recu message contact de type inconnu : %O", evenementContact)
+            }
         }
-    }, [evenementContact, contacts, formatterContactsCb, addEvenementContact])
+    }, [evenementContact, contacts, userId, formatterContactsCb, addEvenementContact])
 
     return (
         <>
@@ -120,10 +168,13 @@ function Contacts(props) {
                 retourMessages={retour} 
                 retourContacts={retourContacts} />
 
+            <AlertTimeout variant="danger" titre="Erreur" value={erreur} setValue={setErreur} />
+
             <AfficherListeContacts 
                 show={uuidContactSelectionne?false:true} 
                 colonnes={colonnes}
                 contacts={contacts} 
+                compteContacts={compteContacts}
                 nouveauContact={nouveauContact}
                 retour={retour} 
                 setUuidContactSelectionne={setUuidContactSelectionne} 
@@ -182,10 +233,21 @@ function BreadcrumbContacts(props) {
 
 }
 
+function AfficherCompteContacts(props) {
+    const value = props.value
+    if(value > 1) {
+        return <p>{value} contacts</p>
+    } else if(value === 1) {
+        return <p>1 contact</p>
+    } else {
+        return <p>Aucun contacts</p>
+    }
+}
+
 function AfficherListeContacts(props) {
     const { 
         workers, etatConnexion, etatAuthentifie, 
-        nouveauContact, contacts, colonnes, show, 
+        nouveauContact, contacts, compteContacts, colonnes, show, 
         setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
         enteteOnClickCb,
     } = props
@@ -211,17 +273,6 @@ function AfficherListeContacts(props) {
         }
     }, [selection, setUuidContactSelectionne])
 
-    // const contactsMappes = useMemo(()=>{
-    //     if(contacts) {
-    //         return contacts.map(item=>{
-    //             const fileId = item.uuid_contact
-    //             const adresse = item.adresses?item.adresses[0]:''
-    //             return {...item, fileId, adresse}
-    //         })
-    //     }
-    //     return []
-    // }, [contacts])
-
     if( !contacts || !show ) return ''
 
     return (
@@ -233,6 +284,9 @@ function AfficherListeContacts(props) {
             </Row>
 
             <h3>Contacts</h3>
+
+            <AfficherCompteContacts value={compteContacts} />
+
             <ListeFichiers 
                 modeView='liste'
                 colonnes={colonnes}
@@ -258,45 +312,7 @@ function AfficherListeContacts(props) {
         </div>     
     )
 
-    // return (
-    //     <>
-    //         <Row>
-    //             <Col>
-    //                 <Button variant="secondary" onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
-    //             </Col>
-    //         </Row>
-
-    //         <Row className="liste-header">
-    //             <Col xs={5} md={4}>Nom</Col>
-    //             <Col xs={7} md={5}>Adresse</Col>
-    //         </Row>
-
-    //         <div className="liste">
-    //             {contacts.map( (item, idx) => {
-    //                 const className = idx%2===0?'even':'odd'
-    //                 return <AfficherContactRow key={item.uuid_contact} className={className} value={item} ouvrir={ouvrir} />
-    //             })}
-    //         </div>
-    //     </>
-    // )
 }
-
-// function AfficherContactRow(props) {
-//     const { ouvrir } = props
-//     const className = props.className || ''
-//     const { nom, adresses, uuid_contact } = props.value
-//     const adresse = [...adresses].shift()
-
-//     return (
-//         <Row onClick={ouvrir} data-uuid={uuid_contact} className={className + " liste-row clickable"}>
-//             <Col xs={12} md={4}>{nom}</Col>
-//             <Col xs={12} md={5}>{adresse}</Col>
-//             <Col className='buttonbar-right'>
-//                 <Button onClick={ouvrir} value={uuid_contact} size="sm" variant="secondary">Ouvrir</Button>
-//             </Col>
-//         </Row>
-//     )
-// }
 
 function MenuContextuelAfficherListeContacts(props) {
     const { contextuel } = props
@@ -318,7 +334,7 @@ function preparerColonnes() {
     return params
 }
 
-function formatterContacts(contacts, colonnes, setContacts) {
+function formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb) {
     // console.debug("formatterContacts colonnes: %O", colonnes)
     const {colonne, ordre} = colonnes.tri
     // let contactsTries = [...contacts]
@@ -339,6 +355,10 @@ function formatterContacts(contacts, colonnes, setContacts) {
     if(ordre < 0) contactsTries = contactsTries.reverse()
 
     setContacts(contactsTries)
+
+    MessageDao.countContacts(userId)
+        .then(setCompteContacts)
+        .catch(erreurCb)
 }
 
 function trierNoms(a, b) {
@@ -348,6 +368,47 @@ function trierNoms(a, b) {
 function trierAdresses(a, b) {
     const chaine = trierNoms
     return trierString('adresse', a, b, {chaine})
+}
+
+async function chargerContenuContacts(workers, userId) {
+    console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
+    let listeUuids = []
+    {
+        const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
+        const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
+        console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
+
+        listeUuids = [...uuidNouveau, ...uuidStale]
+    }
+
+    const BATCH_SIZE = 2
+    let batchUuids = []
+    for await (let uuidContact of listeUuids) {
+        batchUuids.push(uuidContact)
+
+        if(batchUuids.length === BATCH_SIZE) {
+            await chargerBatchContacts(workers, userId, batchUuids)
+            batchUuids = []
+        }
+    }
+    // Derniere batch
+    if(batchUuids.length > 0) await chargerBatchContacts(workers, userId, batchUuids)
+
+    return listeUuids
+}
+
+async function chargerBatchContacts(workers, userId, batchUuids) {
+    console.debug("Charger batch contacts %s : %O", userId, batchUuids)
+    const reponse = await workers.connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
+    if(!reponse.err) {
+        const contacts = reponse.contacts
+        console.debug("Contacts recus : %O", contacts)
+        for await (let contact of contacts) {
+            await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
+        }
+    } else {
+        throw reponse.err
+    }
 }
 
 // function trierString(nomChamp, a, b, opts) {

@@ -91,3 +91,33 @@ export async function countMessages(...args) {
     await _ready
     return _dao.countMessages(...args)
 }
+
+export async function mergeReferenceContacts(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.mergeReferenceContacts(...args)
+}
+
+export async function updateContact(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.updateContact(...args)
+}
+
+export async function getUuidContactsParEtatChargement(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getUuidContactsParEtatChargement(...args)
+}
+
+export async function getContacts(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getContacts(...args)
+}
+
+export async function countContacts(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.countContacts(...args)
+}

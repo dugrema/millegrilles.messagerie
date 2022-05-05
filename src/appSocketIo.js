@@ -33,6 +33,7 @@ function configurerEvenements(socket) {
       { eventName: 'getDomainesMessagerie', callback: (params, cb) => traiter(socket, mqdao.getDomainesMessagerie, {params, cb}) },
       { eventName: 'initialiserProfil', callback: (params, cb) => traiter(socket, mqdao.initialiserProfil, {params, cb}) },
       { eventName: 'getContacts', callback: (params, cb) => traiter(socket, mqdao.getContacts, {params, cb}) },
+      { eventName: 'getReferenceContacts', callback: (params, cb) => traiter(socket, mqdao.getReferenceContacts, {params, cb}) },
       { eventName: 'majContact', callback: (params, cb) => traiter(socket, mqdao.majContact, {params, cb}) },
       { eventName: 'marquerLu', callback: (params, cb) => traiter(socket, mqdao.marquerLu, {params, cb}) },
       { eventName: 'supprimerMessages', callback: (params, cb) => traiter(socket, mqdao.supprimerMessages, {params, cb}) },

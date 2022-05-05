@@ -1,4 +1,4 @@
-import { lazy, useState, useEffect, useCallback, Suspense } from 'react'
+import { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { base64 } from "multiformats/bases/base64"
 import { proxy } from 'comlink'
 
@@ -29,7 +29,8 @@ const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
 const PAGE_LIMIT = 40,
-      SYNC_BATCH_SIZE = 500
+      SYNC_BATCH_SIZE = 500,
+      CONST_LOCALSTORAGE_USAGER = 'messagerie.usager'
 
 function App() {
   
@@ -44,6 +45,19 @@ function App() {
   const [showTransfertModal, setShowTransfertModal] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
   const [erreur, setErreur] = useState('')
+
+  const userId = useMemo(()=>{
+    if(usager) {
+      localStorage.setItem(CONST_LOCALSTORAGE_USAGER, JSON.stringify(usager))
+      return usager.extensions.userId
+    }
+    const usagerLocal = localStorage.getItem(CONST_LOCALSTORAGE_USAGER)
+    if(usagerLocal) {
+      const usagerLocalObj = JSON.parse(usagerLocal)
+      console.debug("Chargement usager localstorage : %O", usagerLocalObj)
+      return usagerLocalObj.extensions.userId
+    }
+  }, [usager])
 
   // Transfert d'information entre pages
   const [messageRepondre, setMessageRepondre] = useState('')
@@ -93,8 +107,8 @@ function App() {
   }, [transfertFichiers, erreurCb])
 
   const formatterMessagesCb = useCallback(messages=>{
-    formatterMessages(messages, colonnes, usager, setListeMessages, setCompteMessages, erreurCb)
-  }, [colonnes, usager, setListeMessages, setCompteMessages, erreurCb])
+    formatterMessages(messages, colonnes, userId, setListeMessages, setCompteMessages, erreurCb)
+  }, [colonnes, userId, setListeMessages, setCompteMessages, erreurCb])
 
   const getMessagesSuivants = useCallback(()=>{
     if(!colonnes || !usager) return
@@ -178,32 +192,31 @@ function App() {
   }, [workers, setColonnes])
 
   const rafraichirListe = useCallback(async listeCourante => {
-    if(!colonnes || !usager) return
+    if(!colonnes || !userId) return
     const { colonne, ordre } = colonnes.tri
-    const userId = usager.extensions.userId
     const skip = listeCourante?listeCourante.length:0
     
     MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT}).then(liste=>{
       formatterMessagesCb(liste) 
     })
     .catch(err=>erreurCb(err, "Erreur chargement messages initiaux"))
-  }, [colonnes, usager, formatterMessagesCb, erreurCb])
+  }, [colonnes, userId, formatterMessagesCb, erreurCb])
 
   // Charger liste initiale
   useEffect(()=>{
     setListeComplete(false)  // Reset flag liste
     rafraichirListe().catch(erreurCb)
-  }, [colonnes, usager, rafraichirListe, setListeComplete, erreurCb])
+  }, [colonnes, rafraichirListe, setListeComplete, erreurCb])
 
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
-    if(workers && usager && etatConnexion && etatAuthentifie) {
+    if(workers && userId && etatConnexion && etatAuthentifie) {
       workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE})
-        .then(reponse=>conserverReferenceMessages(workers, usager, reponse.messages))
+        .then(reponse=>conserverReferenceMessages(workers, userId, reponse.messages))
         .then(rafraichirListe)
         .catch(erreurCb)
     }
-  }, [workers, etatConnexion, etatAuthentifie, usager, erreurCb, rafraichirListe])
+  }, [workers, etatConnexion, userId, etatAuthentifie, erreurCb, rafraichirListe])
 
   // Messages listener
   useEffect(()=>{
@@ -222,10 +235,10 @@ function App() {
   useEffect(()=>{
     if(evenementMessage) {
       addEvenementMessage('')  // Clear event pour eviter cycle d'update
-      traiterEvenementMessage(workers, listeMessages, usager, evenementMessage, formatterMessagesCb)
+      traiterEvenementMessage(workers, listeMessages, userId, evenementMessage, formatterMessagesCb)
         .catch(err=>erreurCb(err, "Erreur traitement evenement message"))
     }
-  }, [workers, evenementMessage, listeMessages, usager, formatterMessagesCb, addEvenementMessage, erreurCb])
+  }, [workers, evenementMessage, listeMessages, userId, formatterMessagesCb, addEvenementMessage, erreurCb])
 
   return (
     <LayoutApplication>
@@ -256,7 +269,8 @@ function App() {
           <Contenu 
             workers={workers} 
             usager={usager}
-            etatConnexion={etatAuthentifie}
+            userId={userId}
+            etatConnexion={etatConnexion&&etatAuthentifie}
             etatAuthentifie={etatAuthentifie}
             downloadAction={downloadAction}
             certificatMaitreDesCles={certificatMaitreDesCles}
@@ -391,11 +405,11 @@ function preparerColonnes(workers) {
   return params
 }
 
-function formatterMessages(messages, colonnes, usager, setMessagesFormattes, setCompteMessages, erreurCb) {
+function formatterMessages(messages, colonnes, userId, setMessagesFormattes, setCompteMessages, erreurCb) {
   // console.debug("formatterContacts colonnes: %O", colonnes)
   const {colonne, ordre} = colonnes.tri || {}
   // let contactsTries = [...contacts]
-  const userId = usager.extensions.userId
+  // const userId = usager.extensions.userId
 
   let messagesTries = messages.map(item=>{
       const certificat = item.certificat_message
@@ -439,11 +453,10 @@ function trierFrom(a, b) {
   return trierString('from', a, b, {chaine: trierDate})
 }
 
-async function traiterEvenementMessage(workers, listeMessages, usager, evenementMessage, formatterMessagesCb) {
+async function traiterEvenementMessage(workers, listeMessages, userId, evenementMessage, formatterMessagesCb) {
   console.debug("Evenement message : %O", evenementMessage)
   const action = evenementMessage.routingKey.split('.').pop()
   const message = evenementMessage.message
-  const userId = usager.extensions.userId
 
   // Mettre a jour les items de la liste de messages
   let trouve = false
@@ -498,18 +511,16 @@ async function traiterEvenementMessage(workers, listeMessages, usager, evenement
   formatterMessagesCb(listeMaj)
 }
 
-async function conserverReferenceMessages(workers, usager, listeReferences) {
-  const userId = usager.extensions.userId
+async function conserverReferenceMessages(workers, userId, listeReferences) {
   await MessageDao.mergeReferenceMessages(userId, listeReferences)
-  await chargerMessagesNouveaux(workers, usager)
+  await chargerMessagesNouveaux(workers, userId)
   
   // Recovery (devrait deja etre complete dans chargerMessagesNouveaux)
-  await dechiffrerMessages(workers, usager)
+  await dechiffrerMessages(workers, userId)
 }
 
-async function chargerMessagesNouveaux(workers, usager) {
+async function chargerMessagesNouveaux(workers, userId) {
   const { connexion } = workers
-  const userId = usager.extensions.userId
 
   const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'nouveau')
 
@@ -552,8 +563,7 @@ async function chargerMessagesNouveaux(workers, usager) {
   await Promise.all(promises)
 }
 
-async function dechiffrerMessages(workers, usager) {
-  const userId = usager.extensions.userId
+async function dechiffrerMessages(workers, userId) {
   const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'charge')
 
   const conserverMessages = async batch => {

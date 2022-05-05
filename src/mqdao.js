@@ -88,6 +88,10 @@ function getContacts(socket, params) {
     return transmettreRequete(socket, params, 'getContacts')
 }
 
+function getReferenceContacts(socket, params) {
+    return transmettreRequete(socket, params, 'getReferenceContacts')
+}
+
 async function posterMessage(socket, params) {
     const { message, commandeMaitrecles } = params
 
@@ -274,7 +278,8 @@ function verifierMessage(message, domaine, action) {
 
 module.exports = {
     challenge, getClesChiffrage,
-    getProfil, getMessages, getReferenceMessages, getPermissionMessages, getClesFichiers, getContacts,
+    getProfil, getMessages, getReferenceMessages, getPermissionMessages, getClesFichiers, 
+    getContacts, getReferenceContacts, 
     posterMessage, majContact, marquerLu, 
     attachmentsRequis, supprimerMessages,
     
