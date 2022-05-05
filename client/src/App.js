@@ -50,6 +50,7 @@ function App() {
 
   // Liste messages
   const [listeMessages, setListeMessages] = useState([])
+  const [compteMessages, setCompteMessages] = useState([])
   const [colonnes, setColonnes] = useState('')
   const [isListeComplete, setListeComplete] = useState(false)
   const [evenementMessage, addEvenementMessage] = useState('')
@@ -91,7 +92,9 @@ function App() {
 
   }, [transfertFichiers, erreurCb])
 
-  const formatterMessagesCb = useCallback(messages=>formatterMessages(messages, colonnes, setListeMessages), [colonnes, setListeMessages])
+  const formatterMessagesCb = useCallback(messages=>{
+    formatterMessages(messages, colonnes, usager, setListeMessages, setCompteMessages, erreurCb)
+  }, [colonnes, usager, setListeMessages, setCompteMessages, erreurCb])
 
   const getMessagesSuivants = useCallback(()=>{
     if(!colonnes || !usager) return
@@ -178,6 +181,7 @@ function App() {
     const { colonne, ordre } = colonnes.tri
     const userId = usager.extensions.userId
     const skip = listeCourante?listeCourante.length:0
+    
     MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT}).then(liste=>{
       formatterMessagesCb(liste) 
     })
@@ -268,6 +272,7 @@ function App() {
             setColonnes={setColonnes}
             listeMessages={listeMessages}
             isListeComplete={isListeComplete}
+            compteMessages={compteMessages}
             getMessagesSuivants={(etatConnexion&&etatAuthentifie)?getMessagesSuivants:null}
             messageRepondre={messageRepondre}
             repondreMessageCb={repondreMessageCb}
@@ -386,10 +391,11 @@ function preparerColonnes(workers) {
   return params
 }
 
-function formatterMessages(messages, colonnes, setMessagesFormattes) {
+function formatterMessages(messages, colonnes, usager, setMessagesFormattes, setCompteMessages, erreurCb) {
   // console.debug("formatterContacts colonnes: %O", colonnes)
   const {colonne, ordre} = colonnes.tri || {}
   // let contactsTries = [...contacts]
+  const userId = usager.extensions.userId
 
   let messagesTries = messages.map(item=>{
       const certificat = item.certificat_message
@@ -416,6 +422,9 @@ function formatterMessages(messages, colonnes, setMessagesFormattes) {
   if(ordre < 0) messagesTries = messagesTries.reverse()
 
   setMessagesFormattes(messagesTries)
+
+  // Maj le compte du nombre de messages
+  MessageDao.countMessages(userId).then(setCompteMessages).catch(erreurCb)
 }
 
 function trierDate(a, b) {

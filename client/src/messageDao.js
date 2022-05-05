@@ -85,3 +85,9 @@ export async function getMessages(...args) {
     await _ready
     return _dao.getMessages(...args)
 }
+
+export async function countMessages(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.countMessages(...args)
+}

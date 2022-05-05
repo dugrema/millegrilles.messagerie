@@ -122,3 +122,24 @@ export async function getMessages(userId, opts) {
 
     return messages
 }
+
+export async function countMessages(userId, opts) {
+    opts = opts || {}
+    const inclure_supprime = opts.inclure_supprime || false
+    
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_MESSAGES, 'readwrite').store
+
+    let compteur = 0
+    let curseur = await store.openCursor()
+    while(curseur) {
+        const value = curseur.value
+        if(value.user_id === userId) {  // Uniquement traiter usager
+            if(value.supprime !== true || inclure_supprime === true) {
+                compteur++
+            }
+        }
+        curseur = await curseur.continue()
+    }
+    return compteur
+}

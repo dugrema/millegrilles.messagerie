@@ -6,7 +6,7 @@ function ListeMessages(props) {
 
     const { 
         workers, etatConnexion, etatAuthentifie, 
-        messages, colonnes, enteteOnClickCb, setUuidMessage,
+        messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage,
         isListeComplete, getMessagesSuivants,
         supprimerMessagesCb,
     } = props
@@ -16,6 +16,8 @@ function ListeMessages(props) {
     return (
         <div>
             <h3>Messages</h3>
+
+            <AfficherNombreMessages value={compteMessages} />
             
             <AfficherListeMessages 
                 workers={workers}
@@ -35,6 +37,18 @@ function ListeMessages(props) {
 }
 
 export default ListeMessages
+
+function AfficherNombreMessages(props) {
+    const compteMessages = props.value
+
+    if(compteMessages > 1) {
+        return <p>{compteMessages} messages</p>
+    } else if(compteMessages === 1) {
+        return <p>1 message</p>
+    } else {
+        return <p>Aucuns messages</p>
+    }
+}
 
 function AfficherListeMessages(props) {
     const { 

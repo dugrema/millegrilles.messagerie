@@ -7,7 +7,7 @@ function Accueil(props) {
 
     const { 
         workers, setUuidMessage,
-        colonnes, setColonnes, listeMessages, getMessagesSuivants, isListeComplete,
+        colonnes, setColonnes, listeMessages, compteMessages, getMessagesSuivants, isListeComplete,
         supprimerMessagesCb,
      } = props
 
@@ -44,6 +44,7 @@ function Accueil(props) {
             <ListeMessages 
                 workers={workers} 
                 messages={listeMessages} 
+                compteMessages={compteMessages}
                 colonnes={colonnes}
                 isListeComplete={isListeComplete}
                 getMessagesSuivants={getMessagesSuivants}
