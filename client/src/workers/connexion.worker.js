@@ -161,6 +161,14 @@ async function retirerCallbackEvenementMessages(params, cb) {
   return ConnexionClient.unsubscribe('retirerCallbackEvenementMessages', cb, params) 
 }
 
+function enregistrerCallbackMajFichier(params, cb) { 
+  return ConnexionClient.subscribe('enregistrerCallbackMajFichier', cb, params)
+}
+
+function retirerCallbackMajFichier(params, cb) { 
+  return ConnexionClient.unsubscribe('retirerCallbackMajFichier', cb, params) 
+}
+
 // Exposer methodes du Worker
 expose({
     ...ConnexionClient, 
@@ -181,5 +189,6 @@ expose({
     // Listeners
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
     enregistrerCallbackEvenementMessages, retirerCallbackEvenementMessages,
+    enregistrerCallbackMajFichier, retirerCallbackMajFichier,
 
 })

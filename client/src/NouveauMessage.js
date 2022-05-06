@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { proxy } from 'comlink'
+
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
@@ -9,7 +11,7 @@ import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import ReactQuill from 'react-quill'
 import { useDropzone } from 'react-dropzone'
 
-import { ListeFichiers, FormatteurTaille } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
 import { posterMessage } from './messageUtils'
 import { chargerProfilUsager } from './profil'
@@ -18,13 +20,14 @@ import { uploaderFichiers } from './fonctionsFichiers'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
-import { Alert } from 'react-bootstrap'
+import { mapper } from './mapperFichier'
 
 function NouveauMessage(props) {
 
     const { 
         workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, userId, dnsMessagerie, 
         showConfirmation, messageRepondre, setMessageRepondre,
+        evenementUpload,
     } = props
 
     const [to, setTo] = useState('')
@@ -37,9 +40,10 @@ function NouveauMessage(props) {
     const [from, setFrom] = useState('')
     const [uuidThread, setUuidThread] = useState('')
     const [showContacts, setShowContacts] = useState(false)
-    const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
     const [attachments, setAttachments] = useState('')
     const [erreur, setErreur] = useState('')
+
+    const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
     const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
 
@@ -61,9 +65,6 @@ function NouveauMessage(props) {
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
-    const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
-    const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
-    const fermerErreur = useCallback(()=>setErreur(''), [setErreur])
 
     const ajouterTo = useCallback(adresses=>{
         if(!adresses) return
@@ -71,21 +72,6 @@ function NouveauMessage(props) {
         if(to) adressesStr = to + '; ' + adressesStr
         setTo(adressesStr)
     }, [to, setTo])
-
-    const selectionner = useCallback( selection => {
-        console.debug("Selection : %O", selection)
-        if(attachments) {
-            // Retirer fuuids deja selectionnes
-            const attachmentsFuuids = attachments.map(item=>item.fuuid)
-            selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
-        }
-        const fuuidsMaj = [...attachments, ...selection]
-        setAttachments(fuuidsMaj)
-    }, [attachments, setAttachments])
-
-    const onDrop = useCallback(acceptedFiles=>preparerUploaderFichiers(workers, acceptedFiles), [workers])
-    const dzHook = useDropzone({onDrop})
-    const {getRootProps, getInputProps} = dzHook
 
     useEffect(()=>{
         if(messageRepondre) {
@@ -113,10 +99,7 @@ function NouveauMessage(props) {
         <>
             <BreadcrumbMessage retourMessages={fermer} />
 
-            <Alert show={erreur?true:false} variant="danger" onClose={fermerErreur} dismissible>
-                <Alert.Heading>Erreur</Alert.Heading>
-                <pre>{erreur}</pre>
-            </Alert>
+            <AlertTimeout value={erreur} setValue={setErreur} titre="Erreur" variant="danger" />
 
             <Form.Label htmlFor="inputTo">To</Form.Label>
             <Row>
@@ -152,28 +135,13 @@ function NouveauMessage(props) {
                 <Editeur content={content} setContent={setContent} />
             </Form.Group>
 
-            <Row>
-                <Col xs={6} md={4} lg={3}>Attachments</Col>
-                <Col className="buttonbar-right">
-                    <span {...getRootProps()}>
-                        <input {...getInputProps()}/>
-                        <Button variant="secondary">
-                            <i className="fa fa-plus" />
-                            {' '}Upload
-                        </Button>
-                    </span>
-                    <Button variant="secondary" onClick={choisirFichiersAttaches}>
-                    <i className="fa fa-folder" />
-                        {' '}Collections
-                    </Button>
-                </Col>
-            </Row>
-    
             <AfficherAttachments 
                 workers={workers} 
                 etatConnexion={etatConnexion} 
                 attachments={attachments} 
-                setAttachments={setAttachments} />
+                setAttachments={setAttachments} 
+                evenementUpload={evenementUpload} 
+                erreurCb={erreurCb} />
 
             <br className="clear"/>
 
@@ -190,12 +158,7 @@ function NouveauMessage(props) {
                 fermer={fermerContacts} 
                 ajouterAdresses={ajouterTo} 
                 userId={userId} />
-            <ModalSelectionnerAttachement 
-                show={showAttacherFichiers} 
-                etatConnexion={etatConnexion}
-                workers={workers} 
-                fermer={fermerAttacherFichiers} 
-                selectionner={selectionner} />
+            
         </>
     )
 
@@ -288,7 +251,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
 }
 
 async function preparerUploaderFichiers(workers, acceptedFiles) {
-    console.debug("Preparer upload fichiers")
+    console.debug("Preparer upload fichiers : %O", acceptedFiles)
     const { connexion } = workers
 
     // Obtenir tuuid de la collection d'upload
@@ -296,27 +259,137 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
     console.debug("Information collection upload : %O", infoCollectionUpload)
     const cuuid = infoCollectionUpload.tuuid  // Collection destination pour l'upload
 
-    const reponseUpload = await uploaderFichiers(workers, cuuid, acceptedFiles)
-    console.debug("Reponse upload : %O", reponseUpload)
+    const infoUploads = await uploaderFichiers(workers, cuuid, acceptedFiles)
+    console.debug("Info uplodas : %O", infoUploads)
+
+    return {infoCollectionUpload, cuuid, infoUploads}
 }
 
 function AfficherAttachments(props) {
-    const { workers, attachments, setAttachments, etatConnexion } = props
+    const { workers, attachments, setAttachments, etatConnexion, evenementUpload, erreurCb } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
     const [selection, setSelection] = useState('')
-
+    const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
+    const [evenementUpload1, addEvenementUpload1] = useState('')
+    
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+    const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
+    const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
+
+    const addEvenementUpload1Proxy = useMemo(()=>proxy(addEvenementUpload1), [addEvenementUpload1])
+    const tuuidsAttachments = useMemo(()=>{
+        if(attachments) {
+            const liste = attachments.filter(item=>(item.tuuid||item.fileId)).map(item=>(item.tuuid||item.fileId))
+            console.debug("Liste attachments tuuids : %O", liste)
+            return liste
+        }
+        return []
+    }, [attachments])
+
+    const selectionner = useCallback( selection => {
+        console.debug("Selection : %O", selection)
+        if(attachments) {
+            // Retirer fuuids deja selectionnes
+            const attachmentsFuuids = attachments.map(item=>item.fuuid)
+            selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
+        }
+        const fuuidsMaj = [...attachments, ...selection]
+        setAttachments(fuuidsMaj)
+    }, [attachments, setAttachments])
+
+    const onDrop = useCallback(acceptedFiles=>{
+        preparerUploaderFichiers(workers, acceptedFiles)
+            .then(info=>{
+                console.debug("Preparer uploads info : %O", info)
+                const { infoUploads } = info
+                const listeSelection = infoUploads.map(item=>{
+                    const { correlation, transaction } = item
+                    return { fileId: correlation, correlation, ...transaction }
+                })
+                selectionner(listeSelection)
+            })
+            .catch(erreurCb)
+    }, [workers, selectionner, erreurCb])
+    const dzHook = useDropzone({onDrop})
+    const {getRootProps, getInputProps} = dzHook
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
-    if(!attachments || attachments.length === 0) return ''
+    // Capturer evenement upload
+    useEffect(()=>addEvenementUpload1(evenementUpload), [evenementUpload, addEvenementUpload1])
+    // Traiter evenement upload
+    useEffect(()=>{
+        if(evenementUpload1 && attachments) {
+            addEvenementUpload1('')  // Eviter cycle
+            console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
+            if(evenementUpload1.routingKey) {
+                const { tuuid } = evenementUpload1.message
+                const attachmentsMaj = attachments.map(item=>{
+                    const fileId = item.fileId || item.tuuid
+                    if(fileId === tuuid) { // Remplacer
+                        const fichier = {fileId, ...evenementUpload1.message}
+                        const fichierMappe = mapper(fichier, workers)
+                        return fichierMappe
+                    }
+                    return item
+                })
+                console.debug("Attachments maj : %O", attachmentsMaj)
+                setAttachments(attachmentsMaj)
+            } else {
+                const { complete, transaction } = evenementUpload1
+                // const nouvelUpload = { correlation: complete, ...transaction }
+                const attachmentsMaj = attachments.map(item=>{
+                    if(item.correlation === complete) { // Remplacer
+                        const entete = transaction['en-tete']
+                        const tuuid = entete.uuid_transaction
+                        return {fileId: tuuid, tuuid, ...transaction}
+                    }
+                    return item
+                })
+                setAttachments(attachmentsMaj)
+            }
+        }
+    }, [workers, evenementUpload1, attachments, setAttachments, addEvenementUpload1])
+
+    // Enregistrer evenements ecoute maj fichiers (attachments)
+    useEffect(()=>{
+        const { connexion } = workers
+        if(tuuidsAttachments && tuuidsAttachments.length > 0) {
+            const params = {tuuids: tuuidsAttachments}
+            console.debug("Ajouter listener fichiers %O", params)
+            connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
+            return () => {
+                console.debug("Retirer listener fichiers %O", params)
+                connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
+            }
+        }
+    }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
+
+    // if(!attachments || attachments.length === 0) return ''
 
     return (
         <div>
+            <Row>
+                <Col xs={6} md={4} lg={3}>Attachments</Col>
+                <Col className="buttonbar-right">
+                    <span {...getRootProps()}>
+                        <input {...getInputProps()}/>
+                        <Button variant="secondary">
+                            <i className="fa fa-plus" />
+                            {' '}Upload
+                        </Button>
+                    </span>
+                    <Button variant="secondary" onClick={choisirFichiersAttaches}>
+                    <i className="fa fa-folder" />
+                        {' '}Collections
+                    </Button>
+                </Col>
+            </Row>
+
             <Row>
                 <Col>
                     <BoutonsFormat modeView={modeView} setModeView={setModeView} />
@@ -347,7 +420,15 @@ function AfficherAttachments(props) {
                 // showInfoModalOuvrir={showInfoModalOuvrir}
                 // downloadAction={downloadAction}
                 etatConnexion={etatConnexion}
-            />            
+            />
+
+            <ModalSelectionnerAttachement 
+                show={showAttacherFichiers} 
+                etatConnexion={etatConnexion}
+                workers={workers} 
+                fermer={fermerAttacherFichiers} 
+                selectionner={selectionner} />
+
         </div>
     )
 }

@@ -25,12 +25,16 @@ export async function uploaderFichiers(workers, cuuid, acceptedFiles) {
     const cert = await connexion.getCertificatsMaitredescles()
     const { certificat } = cert
 
-    if(certificat) {
-        transfertFichiers.up_setCertificat(certificat)
-        transfertFichiers.up_ajouterFichiersUpload(acceptedFiles, params)
-            .catch(err=>{console.error("Erreur preparation upload fichiers : %O", err)})
-    } else {
-        console.error("Erreur getCertificatsMaitredescles - aucun certificat recu")
+    try {
+        if(certificat) {
+            transfertFichiers.up_setCertificat(certificat)
+            const infoUploads = await transfertFichiers.up_ajouterFichiersUpload(acceptedFiles, params)
+            return infoUploads
+        } else {
+            console.error("Erreur getCertificatsMaitredescles - aucun certificat recu")
+        }
+    } catch(err) {
+        console.error("Erreur preparation upload fichiers : %O", err)
     }
     
 }

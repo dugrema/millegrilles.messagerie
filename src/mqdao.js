@@ -235,6 +235,43 @@ function retirerCallbackEvenementMessages(socket, params, cb) {
     socket.unsubscribe(opts, cb)
 }
 
+const CONST_ROUTINGKEYS_MAJFICHIER = ['evenement.grosfichiers.majFichier']
+
+const mapperMajFichiers = {
+  exchanges: ['2.prive'],
+  routingKeyTest: /^evenement\.grosfichiers\.majFichier$/,
+  mapRoom: (message, _rk, _exchange) => {
+    const tuuid = message.tuuid
+    if(tuuid) {
+      return `2.prive/evenement.grosfichiers.majFichier/${tuuid}`
+    }
+  }
+}
+
+function enregistrerCallbackMajFichier(socket, params, cb) {
+  const tuuids = params.tuuids
+  const opts = { 
+    routingKeys: CONST_ROUTINGKEYS_MAJFICHIER,
+    exchanges: ['2.prive'],
+    roomParam: tuuids,
+    mapper: mapperMajFichiers,
+  }
+
+  debug("enregistrerCallbackMajFichier : %O", opts)
+  socket.subscribe(opts, cb)
+}
+
+function retirerCallbackMajFichier(socket, params, cb) {
+  const tuuids = params.tuuids
+  const opts = { 
+    routingKeys: CONST_ROUTINGKEYS_MAJFICHIER, 
+    exchanges: ['2.prive'],
+    roomParam: tuuids,
+  }
+  debug("retirerCallbackMajFichier sur %O", opts)
+  socket.unsubscribe(opts, cb)
+}
+
 // Fonctions generiques
 
 async function transmettreRequete(socket, params, action, opts) {
@@ -300,6 +337,7 @@ module.exports = {
     // Evenements
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,
     enregistrerCallbackEvenementMessages, retirerCallbackEvenementMessages,
+    enregistrerCallbackMajFichier, retirerCallbackMajFichier,
 
     // ecouterMajFichiers, ecouterMajCollections, ecouterTranscodageProgres, 
     // retirerTranscodageProgres, 

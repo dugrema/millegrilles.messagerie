@@ -68,6 +68,7 @@ function App() {
   const [colonnes, setColonnes] = useState('')
   const [isListeComplete, setListeComplete] = useState(false)
   const [evenementMessage, addEvenementMessage] = useState('')
+  const [evenementUpload, addEvenementUpload] = useState('')
 
   const { transfertFichiers } = workers
   const etatAuthentifie = usager && formatteurPret
@@ -165,8 +166,18 @@ function App() {
           .then(infoConnexion=>{console.info("Info connexion : %O", infoConnexion)})
           .catch(err=>{console.debug("Erreur de connexion : %O", err)})
       }
+      if(workers.transfertFichiers) {
+        // Hook recepteur d'evenements upload
+        const proxCb = proxy((pending, pctEnCours, flags)=>{
+          console.debug("Evenement transfert fichier pending=%O, pctEnCours=%O, flags=%O", pending, pctEnCours, flags)
+          if(flags && flags.complete && flags.transaction) {
+            addEvenementUpload({rk: 'upload', ...flags})
+          }
+        })
+        workers.transfertFichiers.up_setCallbackUpload(proxCb).catch(erreurCb)
+      }
     }
-  }, [workers, setUsager, setEtatConnexion, setFormatteurPret])
+  }, [workers, setUsager, setEtatConnexion, setFormatteurPret, addEvenementUpload, erreurCb])
 
   useEffect(()=>{
       if(!etatAuthentifie) return 
@@ -292,6 +303,7 @@ function App() {
             repondreMessageCb={repondreMessageCb}
             setMessageRepondre={setMessageRepondre}
             supprimerMessagesCb={supprimerMessagesCb}
+            evenementUpload={evenementUpload}
             erreurCb={erreurCb}
           />
 
