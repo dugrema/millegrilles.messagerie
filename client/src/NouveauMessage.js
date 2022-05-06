@@ -325,7 +325,7 @@ function AfficherAttachments(props) {
     useEffect(()=>{
         if(evenementUpload1 && attachments) {
             addEvenementUpload1('')  // Eviter cycle
-            console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
+            // console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
             if(evenementUpload1.routingKey) {
                 const { tuuid } = evenementUpload1.message
                 const attachmentsMaj = attachments.map(item=>{
@@ -374,7 +374,7 @@ function AfficherAttachments(props) {
                 const { complete, transaction } = evenementUpload1
                 // const nouvelUpload = { correlation: complete, ...transaction }
                 const attachmentsMaj = attachments.map(item=>{
-                    if(item.correlation === complete) { // Remplacer
+                    if(transaction && item.correlation === complete) { // Remplacer
                         const entete = transaction['en-tete']
                         const tuuid = entete.uuid_transaction
                         return {fileId: tuuid, tuuid, ...transaction, pret: false}
@@ -391,10 +391,10 @@ function AfficherAttachments(props) {
         const { connexion } = workers
         if(tuuidsAttachments && tuuidsAttachments.length > 0) {
             const params = {tuuids: tuuidsAttachments}
-            console.debug("Ajouter listener fichiers %O", params)
+            // console.debug("Ajouter listener fichiers %O", params)
             connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
             return () => {
-                console.debug("Retirer listener fichiers %O", params)
+                // console.debug("Retirer listener fichiers %O", params)
                 connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
             }
         }

@@ -169,10 +169,10 @@ function App() {
       if(workers.transfertFichiers) {
         // Hook recepteur d'evenements upload
         const proxCb = proxy((pending, pctEnCours, flags)=>{
-          console.debug("Evenement transfert fichier pending=%O, pctEnCours=%O, flags=%O", pending, pctEnCours, flags)
-          if(flags && flags.complete && flags.transaction) {
-            addEvenementUpload({rk: 'upload', ...flags})
-          }
+          // console.debug("Evenement transfert fichier pending=%O, pctEnCours=%O, flags=%O", pending, pctEnCours, flags)
+          //if(flags && flags.complete && flags.transaction) {
+            addEvenementUpload({rk: 'upload', pending, pctEnCours, ...flags})
+          //}
         })
         workers.transfertFichiers.up_setCallbackUpload(proxCb).catch(erreurCb)
       }
@@ -319,6 +319,8 @@ function App() {
         fermer={showTransfertModalFermer} 
         workers={workers}
         setEtatTransfert={setEtatTransfert}
+        isEtatUploadExterne={true}
+        etatUploadExterne={evenementUpload}
         erreurCb={erreurCb}
       />
 

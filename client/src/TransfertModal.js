@@ -7,7 +7,7 @@ import Button from 'react-bootstrap/Button'
 
 function TransfertModal(props) {
 
-    const { workers, setEtatTransfert } = props
+    const { workers, setEtatTransfert, evenementUpload } = props
     const { transfertFichiers } = workers
 
     const [etatDownload, setEtatDownload] = useState({})
@@ -18,6 +18,15 @@ function TransfertModal(props) {
         // console.debug("Transfert update\nDownload : %O\nUpload: %O", etatDownload, etatUpload)
         setEtatTransfert({download: etatDownload, upload: etatUpload})
     }, [setEtatTransfert, etatDownload, etatUpload])
+
+    useEffect(()=>{
+        console.debug("Evenement upload dans modal : %O", evenementUpload)
+        // const proxySetEtatUpload = proxy((nbFichiersPending, pctFichierEnCours, flags)=>{
+        //     flags = flags || {}
+        //     handleUploadUpdate(transfertFichiers, {nbFichiersPending, pctFichierEnCours, ...flags}, setEtatUpload)
+        // })
+        // transfertFichiers.up_setCallbackUpload(proxySetEtatUpload)
+    }, [transfertFichiers, setEtatUpload, evenementUpload])
 
     // Entretien idb/cache de fichiers
     useEffect(()=>{
@@ -35,11 +44,11 @@ function TransfertModal(props) {
         // Faire premiere maj
         handleDownloadUpdate(transfertFichiers, {}, setEtatDownload)
 
-        const proxySetEtatUpload = proxy((nbFichiersPending, pctFichierEnCours, flags)=>{
-            flags = flags || {}
-            handleUploadUpdate(transfertFichiers, {nbFichiersPending, pctFichierEnCours, ...flags}, setEtatUpload)
-        })
-        transfertFichiers.up_setCallbackUpload(proxySetEtatUpload)
+        // const proxySetEtatUpload = proxy((nbFichiersPending, pctFichierEnCours, flags)=>{
+        //     flags = flags || {}
+        //     handleUploadUpdate(transfertFichiers, {nbFichiersPending, pctFichierEnCours, ...flags}, setEtatUpload)
+        // })
+        // transfertFichiers.up_setCallbackUpload(proxySetEtatUpload)
 
         return () => {
             // clearInterval(intervalId)
