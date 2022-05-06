@@ -14,7 +14,7 @@ import * as MessageDao from './messageDao'
 import EditerContact from './EditerContact'
 import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
 
-const PAGE_LIMIT = 50,
+const PAGE_LIMIT = 200,
       SYNC_LIMIT = 1000
 
 function Contacts(props) {

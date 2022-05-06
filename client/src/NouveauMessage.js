@@ -23,7 +23,7 @@ import { Alert } from 'react-bootstrap'
 function NouveauMessage(props) {
 
     const { 
-        workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, dnsMessagerie, 
+        workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, userId, dnsMessagerie, 
         showConfirmation, messageRepondre, setMessageRepondre,
     } = props
 
@@ -67,7 +67,7 @@ function NouveauMessage(props) {
 
     const ajouterTo = useCallback(adresses=>{
         if(!adresses) return
-        let adressesStr = adresses.map(item=>item.adresses[0]).join('; ')
+        let adressesStr = adresses.filter(item=>item&&item.adresses&&item.adresses.length>0).map(item=>item.adresses[0]).join('; ')
         if(to) adressesStr = to + '; ' + adressesStr
         setTo(adressesStr)
     }, [to, setTo])
@@ -184,7 +184,12 @@ function NouveauMessage(props) {
                 </Col>
             </Row>
 
-            <ModalContacts show={showContacts} workers={workers} fermer={fermerContacts} ajouterAdresses={ajouterTo} />
+            <ModalContacts 
+                show={showContacts} 
+                workers={workers} 
+                fermer={fermerContacts} 
+                ajouterAdresses={ajouterTo} 
+                userId={userId} />
             <ModalSelectionnerAttachement 
                 show={showAttacherFichiers} 
                 etatConnexion={etatConnexion}
