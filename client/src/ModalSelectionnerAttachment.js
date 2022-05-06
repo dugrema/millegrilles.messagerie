@@ -163,7 +163,10 @@ function trierNom(a, b) {
 
 function preprarerDonnees(liste, workers, opts) {
     opts = opts || {}
-    const listeMappee = liste.map(item=>mapper(item, workers))
+    const listeMappee = liste.map(item=>{
+        const itemMappe = mapper(item, workers)
+        return {...itemMappe, pret: true}
+    })
 
     if(opts.trier) {
         listeMappee.sort(opts.trier)

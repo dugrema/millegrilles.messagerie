@@ -41,6 +41,7 @@ function NouveauMessage(props) {
     const [uuidThread, setUuidThread] = useState('')
     const [showContacts, setShowContacts] = useState(false)
     const [attachments, setAttachments] = useState('')
+    const [attachmentsPrets, setAttachmentsPrets] = useState('')
     const [erreur, setErreur] = useState('')
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
@@ -141,13 +142,14 @@ function NouveauMessage(props) {
                 attachments={attachments} 
                 setAttachments={setAttachments} 
                 evenementUpload={evenementUpload} 
+                setAttachmentsPrets={setAttachmentsPrets}
                 erreurCb={erreurCb} />
 
             <br className="clear"/>
 
             <Row>
                 <Col className="buttonbar">
-                    <Button onClick={envoyerCb}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
+                    <Button onClick={envoyerCb} disabled={!attachmentsPrets}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
                     <Button variant="secondary" onClick={fermer}>Annuler</Button>
                 </Col>
             </Row>
@@ -266,7 +268,7 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
 }
 
 function AfficherAttachments(props) {
-    const { workers, attachments, setAttachments, etatConnexion, evenementUpload, erreurCb } = props
+    const { workers, attachments, setAttachments, setAttachmentsPrets, etatConnexion, evenementUpload, erreurCb } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -283,9 +285,7 @@ function AfficherAttachments(props) {
     const addEvenementUpload1Proxy = useMemo(()=>proxy(addEvenementUpload1), [addEvenementUpload1])
     const tuuidsAttachments = useMemo(()=>{
         if(attachments) {
-            const liste = attachments.filter(item=>(item.tuuid||item.fileId)).map(item=>(item.tuuid||item.fileId))
-            console.debug("Liste attachments tuuids : %O", liste)
-            return liste
+            return attachments.filter(item=>(item.tuuid||item.fileId)).map(item=>(item.tuuid||item.fileId))
         }
         return []
     }, [attachments])
@@ -332,12 +332,43 @@ function AfficherAttachments(props) {
                     const fileId = item.fileId || item.tuuid
                     if(fileId === tuuid) { // Remplacer
                         const fichier = {fileId, ...evenementUpload1.message}
+                        // Determiner si l'attachment est pret
+                        const mimetype = fichier.mimetype
+                        let pret = true
+                        if(mimetype) {
+                            const version_courante = fichier.version_courante || {}
+                            const { images, video } = version_courante
+                            const baseType = mimetype.toLowerCase().split('/').shift()
+                            if(mimetype === 'application/pdf') {
+                                if(images) {
+                                    pret = !! (images && images.thumb)
+                                }
+                            } else if (baseType === 'image') {
+                                pret = false
+                                if(images) {
+                                    // Attendre webp et jpg
+                                    const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
+                                    const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
+                                    console.debug("Webp: %O, jpg: %O", webp, jpg)
+                                    pret = !! (webp && jpg)
+                                }
+                            } else if (baseType === 'video') {
+                                pret = false
+                                if(images && video) {
+                                    pret = images && images.thumb
+                                    const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
+                                    const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
+                                    pret = !! (images && images.thumb && mp4 && webm)
+                                }
+                            }
+                        }
+
                         const fichierMappe = mapper(fichier, workers)
-                        return fichierMappe
+
+                        return {...fichierMappe, tuuid, pret}
                     }
                     return item
                 })
-                console.debug("Attachments maj : %O", attachmentsMaj)
                 setAttachments(attachmentsMaj)
             } else {
                 const { complete, transaction } = evenementUpload1
@@ -346,7 +377,7 @@ function AfficherAttachments(props) {
                     if(item.correlation === complete) { // Remplacer
                         const entete = transaction['en-tete']
                         const tuuid = entete.uuid_transaction
-                        return {fileId: tuuid, tuuid, ...transaction}
+                        return {fileId: tuuid, tuuid, ...transaction, pret: false}
                     }
                     return item
                 })
@@ -368,6 +399,15 @@ function AfficherAttachments(props) {
             }
         }
     }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
+
+    useEffect(()=>{
+        if(attachments) {
+            const pret = attachments.reduce((acc, item)=>acc&&item.pret, true)
+            setAttachmentsPrets(pret)
+        } else {
+            setAttachmentsPrets(true)
+        }
+    }, [attachments, setAttachmentsPrets])
 
     // if(!attachments || attachments.length === 0) return ''
 
@@ -460,8 +500,6 @@ function MenuContextuel(props) {
 
     if(!contextuel.show) return ''
 
-    console.debug("!!! Selection : %s, FICHIERS : %O", selection, attachments)
-
     if( selection && selection.length > 1 ) {
         return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
@@ -477,16 +515,27 @@ function MenuContextuel(props) {
 
 function preparerColonnes() {
     const params = {
-        ordreColonnes: ['nom', 'taille', 'mimetype', 'boutonDetail'],
+        ordreColonnes: ['nom', 'taille', 'mimetype', 'pret', 'boutonDetail'],
         paramsColonnes: {
             'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 7},
             'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
-            'mimetype': {'label': 'Type', className: 'details', xs: 8, lg: 2},
+            'mimetype': {'label': 'Type', className: 'details', xs: 6, lg: 2},
+            'pret': {'label': 'Etat', formatteur: PretFormatteur, className: 'details', xs: 2, lg: 1},
             'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
         },
         // tri: {colonne: 'nom', ordre: 1},
     }
     return params
+}
+
+function PretFormatteur(props) {
+    const data = props.data || {},
+          pret = !!data.pret
+    if(pret) {
+        return <i className="fa fa-check" />
+    } else {
+        return <i className="fa fa-spinner fa-spin" />
+    }
 }
 
 function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
