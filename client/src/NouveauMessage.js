@@ -21,6 +21,7 @@ import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
 import { mapper } from './mapperFichier'
+import * as MessageDao from './messageDao'
 
 function NouveauMessage(props) {
 
@@ -43,21 +44,37 @@ function NouveauMessage(props) {
     const [attachments, setAttachments] = useState('')
     const [attachmentsPrets, setAttachmentsPrets] = useState('')
     const [erreur, setErreur] = useState('')
+    const [idDraft, setIdDraft] = useState('')
+    const [drafts, setDrafts] = useState('')
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
-    const fermer = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
+    const supprimerDraftCb = useCallback(idDraft=>{
+        idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
+        MessageDao.supprimerDraft(idDraft).catch(erreurCb)
+        const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
+        setDrafts(draftsMaj)
+    }, [drafts, setDrafts, erreurCb])
+
+    const fermer = useCallback(()=>{
+        supprimerDraftCb(idDraft)
+        setAfficherNouveauMessage(false)
+    }, [setAfficherNouveauMessage, supprimerDraftCb, idDraft])
 
     const envoyerCb = useCallback(()=>{
         // const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments}
         envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
-            .then(()=>{showConfirmation("Message envoye"); fermer();})
+            .then(()=>{
+                showConfirmation("Message envoye")
+                supprimerDraftCb(idDraft)
+                fermer()
+            })
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
                 setErreur("Erreur envoi message\n%s", ''+err)
             })
-    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, replyTo, content, uuidThread, attachments, fermer])
+    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, replyTo, content, uuidThread, attachments, fermer, supprimerDraftCb, idDraft])
 
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
     // const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
@@ -73,6 +90,30 @@ function NouveauMessage(props) {
         if(to) adressesStr = to + '; ' + adressesStr
         setTo(adressesStr)
     }, [to, setTo])
+
+    const chargerDraft = useCallback(idDraft=>{
+        MessageDao.getDraft(idDraft)
+            .then(draft=>{
+                console.debug("Recharger draft : %O", draft)
+                const {from, to, replyTo, content, attachments} = draft
+                setIdDraft(draft.idDraft)
+                setFrom(from)
+                setTo(to)
+                setReplyTo(replyTo)
+                setContent(content)
+                setAttachments(attachments)
+            })
+            .catch(erreurCb)
+    }, [setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, erreurCb])
+
+    useEffect(()=>{
+        MessageDao.getListeDrafts()
+            .then(drafts=>{
+                console.debug("Drafts : %O", drafts)
+                setDrafts(drafts)
+            })
+            .catch(erreurCb)
+    }, [setDrafts, erreurCb])
 
     useEffect(()=>{
         if(messageRepondre) {
@@ -96,11 +137,34 @@ function NouveauMessage(props) {
     //}, [workers, usager, dnsMessagerie, setProfil, setReplyTo])
     }, [workers, usager, dnsMessagerie, setReplyTo])
 
+    useEffect(()=>{
+        if(!idDraft) {
+            if(to || content || attachments) {  // Champs modifiables par l'usager
+                // Creer un nouveau draft
+                console.debug("Creer nouveau id draft")
+                MessageDao.ajouterDraft().then(idDraft=>{
+                    console.debug("Creer draft, nouveau id : %O", idDraft)
+                    setIdDraft(idDraft)
+                }).catch(erreurCb)
+            }
+        } else {
+            // Conserver information draft
+            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments}).catch(erreurCb)
+        }
+    }, [idDraft, from, to, replyTo, content, attachments, setIdDraft, erreurCb])
+
     return (
         <>
             <BreadcrumbMessage retourMessages={fermer} />
 
             <AlertTimeout value={erreur} setValue={setErreur} titre="Erreur" variant="danger" />
+
+            <AfficherDrafts 
+                drafts={drafts} 
+                setDrafts={setDrafts} 
+                chargerDraft={chargerDraft} 
+                supprimerCb={supprimerDraftCb}
+                erreurCb={erreurCb} />
 
             <Form.Label htmlFor="inputTo">To</Form.Label>
             <Row>
@@ -189,6 +253,36 @@ function Editeur(props) {
             <ReactQuill className="editeur-body" value={content} onChange={handleChange} />
             <br className="clear"/>
         </>
+    )
+}
+
+function AfficherDrafts(props) {
+    const { drafts, setDrafts, chargerDraft, supprimerCb, erreurCb } = props
+    const nbDrafts = drafts?drafts.length:0
+
+    const chargerDraftCb = useCallback(event=>{
+        const idDraft = Number.parseInt(event.currentTarget.value)
+        chargerDraft(idDraft)
+    }, [chargerDraft])
+
+    if(nbDrafts === 0) return ''
+
+    return (
+        <div>
+            <p>{nbDrafts} Drafts</p>
+            {drafts.map(item=>{
+                return (
+                    <Row key={item.idDraft}>
+                        <Col sm={2} md={1}>{item.idDraft}</Col>
+                        <Col sm={6} md={8}>{item.to}</Col>
+                        <Col sm={4} md={3}>
+                            <Button size="sm" variant="secondary" onClick={chargerDraftCb} value={item.idDraft}>Charger</Button>
+                            <Button size="sm" variant="secondary" onClick={supprimerCb} value={item.idDraft}>Supprimer</Button>
+                        </Col>
+                    </Row>
+                )
+            })}
+        </div>
     )
 }
 

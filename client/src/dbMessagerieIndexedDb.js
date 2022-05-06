@@ -257,3 +257,43 @@ export async function supprimerContacts(uuidContacts) {
     const promises = uuidContacts.map(item=>store.delete(item))
     return Promise.all(promises)
 }
+
+export async function ajouterDraft() {
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_DRAFTS, 'readwrite').store
+    return store.add({})
+}
+
+export async function sauvegarderDraft(idDraft, message) {
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_DRAFTS, 'readwrite').store
+    return store.put(message, idDraft)
+}
+
+export async function getListeDrafts() {
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_DRAFTS, 'readwrite').store
+    let cursor = await store.openCursor()
+    const drafts = []
+    while(cursor) {
+        const { key, value } = cursor
+        console.debug("getListeDrafts key: %s, value : %O", key, value)
+        drafts.push({idDraft: key, ...value})
+        cursor = await cursor.continue()
+    }
+    return drafts
+}
+
+export async function getDraft(idDraft) {
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_DRAFTS, 'readwrite').store
+    const draft = await store.get(idDraft)
+    return {idDraft, ...draft}
+}
+
+export async function supprimerDraft(idDraft) {
+    console.debug("Supprimer draft : %O", idDraft)
+    const db = await ouvrirDB({upgrade: true})
+    const store = db.transaction(STORE_DRAFTS, 'readwrite').store
+    await store.delete(idDraft)
+}

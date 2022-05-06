@@ -127,3 +127,33 @@ export async function supprimerContacts(...args) {
     await _ready
     return _dao.supprimerContacts(...args)
 }
+
+export async function ajouterDraft(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.ajouterDraft(...args)
+}
+
+export async function sauvegarderDraft(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.sauvegarderDraft(...args)
+}
+
+export async function getListeDrafts(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getListeDrafts(...args)
+}
+
+export async function getDraft(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.getDraft(...args)
+}
+
+export async function supprimerDraft(...args) {
+    if(_ready === false) throw new Error("messageDao pas initialise")
+    await _ready
+    return _dao.supprimerDraft(...args)
+}
