@@ -27,7 +27,7 @@ function ModalSelectionnerAttachement(props) {
     const selectionnerCb = useCallback(()=>{ 
 
         // Extraire info detaillee des fichiers
-        console.debug("Liste a filtrer : %O", liste)
+        // console.debug("Liste a filtrer : %O", liste)
         const detailSelection = liste.filter(item=>selection.includes(item.fileId))
 
         selectionner(detailSelection)
@@ -44,7 +44,7 @@ function ModalSelectionnerAttachement(props) {
         } else {
             // Determiner le type de fichier
             //showPreviewAction(value.fileId)
-            console.debug("!!! Preview action fichier TODO !!! %O", value)
+            // console.debug("!!! Preview action fichier TODO !!! %O", value)
         }
     }, [liste, setCuuidCourant, breadcrumb, setBreadcrumb])
 
@@ -65,7 +65,7 @@ function ModalSelectionnerAttachement(props) {
         if(show) {
             workers.connexion.getFavoris()
                 .then(reponse=>{
-                    console.debug("Favoris grosfichiers : %O", reponse)
+                    // console.debug("Favoris grosfichiers : %O", reponse)
                     setFavoris(reponse.favoris)
                 })
                 .catch(err=>console.error("Erreur chargement favoris grosfichiers : %O", err))
@@ -81,11 +81,11 @@ function ModalSelectionnerAttachement(props) {
         if(!cuuidCourant) {
             if(favoris) {
                 // Utiliser liste de favoris
-                console.debug("Set liste protege avec favoris: %O", favoris)
+                // console.debug("Set liste protege avec favoris: %O", favoris)
                 setListe( preprarerDonnees(favoris, workers, {trier: trierNom}) )
             }
         } else {
-            console.debug("Set liste avec cuuidCourant %s", cuuidCourant)
+            // console.debug("Set liste avec cuuidCourant %s", cuuidCourant)
             chargerCollection(workers, cuuidCourant, setListe)
         }
     }, [show, workers, etatConnexion, favoris, setListe, cuuidCourant])
@@ -179,7 +179,7 @@ async function chargerCollection(workers, cuuid, setListe, usager) {
     // console.debug("Charger collection %s", cuuid)
     const { connexion } = workers
     const reponse = await connexion.getCollection(cuuid)
-    console.debug("!!! Reponse collection %s = %O", cuuid, reponse)
+    // console.debug("!!! Reponse collection %s = %O", cuuid, reponse)
     const { documents } = reponse
 
     // Precharger les cles des images thumbnails, small et posters
@@ -196,7 +196,7 @@ async function chargerCollection(workers, cuuid, setListe, usager) {
     }).reduce((arr, item)=>{
         return [...arr, ...item]
     }, [])
-    console.debug("Fuuids images : %O", fuuidsImages)
+    // console.debug("Fuuids images : %O", fuuidsImages)
 
     // // Verifier les cles qui sont deja connues
     // let fuuidsInconnus = []
@@ -230,7 +230,7 @@ async function chargerCollection(workers, cuuid, setListe, usager) {
 
     if(documents) {
         const donnees = preprarerDonnees(documents, workers)
-        console.debug("chargerCollection donnees : %O", donnees)
+        // console.debug("chargerCollection donnees : %O", donnees)
         setListe( donnees )
     }
 }

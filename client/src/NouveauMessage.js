@@ -673,19 +673,23 @@ function BoutonsFormat(props) {
 }
 
 function MenuContextuel(props) {
-
+    // console.debug("MenuContextuel propppies : %O", props)
     const { contextuel, attachments, selection } = props
 
     if(!contextuel.show) return ''
 
     if( selection && selection.length > 1 ) {
         return <MenuContextuelAttacherMultiselect {...props} />
-    } else if(selection.length>0) {
+    } else if(selection && selection.length>0) {
         const fichierTuuid = selection[0]
-        const attachment = attachments.filter(item=>item.fuuid===fichierTuuid).pop()
+        const attachment = attachments.filter(item=>item.fileId===fichierTuuid).pop()
         if(attachment) {
             return <MenuContextuelAttacher attachment={attachment} {...props} />
+        } else {
+            console.warn("Aucun match selection pour menu contextuel %s pas inclus dans %O", fichierTuuid, attachments)
         }
+    } else {
+        console.warn("Aucune selection pour menu contextuel")
     }
 
     return ''
