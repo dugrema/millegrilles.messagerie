@@ -1,5 +1,8 @@
-import { usagerDao /*saveCleDechiffree, getCleDechiffree*/ } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, forgecommon /*saveCleDechiffree, getCleDechiffree*/ } from '@dugrema/millegrilles.reactjs'
+import { pki } from '@dugrema/node-forge'
 import pako from 'pako'
+
+const { extraireExtensionsMillegrille } = forgecommon
 
 export async function dechiffrerMessage(workers, message) {
     const {uuid_transaction, hachage_bytes, message_chiffre} = message
@@ -7,20 +10,34 @@ export async function dechiffrerMessage(workers, message) {
     let liste_hachage_bytes = [hachage_bytes]
     if(message.attachments) liste_hachage_bytes = [...liste_hachage_bytes, ...message.attachments]
 
-    const cles = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes})
+    // Valider le message
+    //console.trace("Verifier message : %O", message)
+    const certificat_message = message.certificat_message
+    const certForge = pki.certificateFromPem(certificat_message)
+    const extensions = extraireExtensionsMillegrille(certForge)
+    console.debug("Extensions cert : %O", extensions)
+    const userId = extensions.userId
 
-    // console.debug("dechiffrerMessage cles : %O", cles)
-    const cle = cles[hachage_bytes],
-          cleDechiffree = cle.cleSecrete
-    // console.debug("dechiffrerMessage params cle: %O, cleDechiffree: %O\nMessage: %O", cle, cleDechiffree, message_chiffre)
-    let messageDechiffre = await workers.chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag)
-    // console.debug("Message dechiffre : %O", messageDechiffre)
-    messageDechiffre = pako.inflate(messageDechiffre).buffer
-    // console.debug("Message gunzip : %O", messageDechiffre)
-    messageDechiffre = new TextDecoder().decode(messageDechiffre)
-    // console.debug("dechiffrerMessage Message dechiffrage raw :\n%s", messageDechiffre)
-    const messageDict = JSON.parse(messageDechiffre)
-    // console.debug("dechiffrage message dict : %O", messageDict)
+    // Dechiffrer le message
+    const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes})
+        .then(cles=>{
+            // console.debug("dechiffrerMessage cles : %O", cles)
+            const cle = cles[hachage_bytes],
+                cleDechiffree = cle.cleSecrete
+            // console.debug("dechiffrerMessage params cle: %O, cleDechiffree: %O\nMessage: %O", cle, cleDechiffree, message_chiffre)
+            return workers.chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag)
+        })
+        .then(messageDechiffre=>pako.inflate(messageDechiffre).buffer)
+        .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
+        .then(JSON.parse)
+
+    const resultatValider = await workers.chiffrage.verifierMessage({...messageDechiffre, '_certificat': certificat_message})
+        .catch(err=>{
+            console.error("Erreur validation message : %O", err)
+            return false
+        })
+
+    const messageDict = {...messageDechiffre, validation: {valide: resultatValider, userId}}
 
     return messageDict
 }
