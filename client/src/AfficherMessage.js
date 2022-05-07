@@ -88,7 +88,7 @@ function AfficherMessage(props) {
     useEffect(()=>{
         // console.debug("Message dechiffre : %O", messageDechiffre)
         // if(messageDechiffre && !message.lu) {
-        if(etatConnexion && etatAuthentifie && !message.lu) {
+        if(etatConnexion && etatAuthentifie && message && !message.lu) {
             // console.debug("Marquer message %s comme lu", message.uuid_transaction)
             marquerMessageLu(workers, message.uuid_transaction)
         }
@@ -136,7 +136,9 @@ function BreadcrumbMessage(props) {
 
 function RenderMessage(props) {
     // console.debug("RenderMessage : %O", props)
-    const { workers, message, infoMessage, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb } = props
+    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb } = props
+    const message = props.message || {}
+    const infoMessage = props.infoMessage || {}
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
     const entete = message['en-tete'] || {},
           estampille = entete.estampille
@@ -158,7 +160,7 @@ function RenderMessage(props) {
             .catch(erreurCb)
     }, [workers, uuid_transaction, setUuidMessage, erreurCb])
 
-    if(!message) return ''
+    if(!props.message) return ''
 
     return (
         <>

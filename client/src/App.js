@@ -54,7 +54,7 @@ function App() {
     const usagerLocal = localStorage.getItem(CONST_LOCALSTORAGE_USAGER)
     if(usagerLocal) {
       const usagerLocalObj = JSON.parse(usagerLocal)
-      console.debug("Chargement usager localstorage : %O", usagerLocalObj)
+      // console.debug("Chargement usager localstorage : %O", usagerLocalObj)
       return usagerLocalObj.extensions.userId
     }
   }, [usager])
@@ -93,7 +93,7 @@ function App() {
   }, [setConfirmation])
 
   const downloadAction = useCallback( fichier => {
-    console.debug("Download fichier %O", fichier)
+    // console.debug("Download fichier %O", fichier)
     const { 
       fuuid, mimetype, nom: filename, taille, 
       cle
@@ -140,10 +140,10 @@ function App() {
   }, [setMessageRepondre, setAfficherNouveauMessage])
 
   const supprimerMessagesCb = useCallback(uuidTransactions => {
-    console.debug("Supprimer message %s", uuidTransactions)
+    // console.debug("Supprimer message %s", uuidTransactions)
     workers.connexion.supprimerMessages(uuidTransactions)
         .then(reponse=>{
-            console.debug("Messages supprimes : %O", reponse)
+            // console.debug("Messages supprimes : %O", reponse)
         })
         .catch(erreurCb)
   }, [workers, erreurCb])
@@ -468,7 +468,7 @@ function trierFrom(a, b) {
 }
 
 async function traiterEvenementMessage(workers, listeMessages, userId, evenementMessage, formatterMessagesCb) {
-  console.debug("Evenement message : %O", evenementMessage)
+  // console.debug("Evenement message : %O", evenementMessage)
   const action = evenementMessage.routingKey.split('.').pop()
   const message = evenementMessage.message
 
@@ -582,7 +582,7 @@ async function dechiffrerMessages(workers, userId) {
 
   const conserverMessages = async batch => {
     const uuid_messages = [...batch]
-    console.debug("Traiter batch messages non dechiffres : %O", uuid_messages)
+    // console.debug("Traiter batch messages non dechiffres : %O", uuid_messages)
 
     for await (const uuid_message of uuid_messages) {
       const message = await MessageDao.getMessage(uuid_message)

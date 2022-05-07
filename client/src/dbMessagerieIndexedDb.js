@@ -277,7 +277,7 @@ export async function getListeDrafts() {
     const drafts = []
     while(cursor) {
         const { key, value } = cursor
-        console.debug("getListeDrafts key: %s, value : %O", key, value)
+        // console.debug("getListeDrafts key: %s, value : %O", key, value)
         drafts.push({idDraft: key, ...value})
         cursor = await cursor.continue()
     }

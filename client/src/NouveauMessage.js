@@ -56,8 +56,8 @@ function NouveauMessage(props) {
         setDrafts(draftsMaj)
     }, [drafts, setDrafts, erreurCb])
 
-    const fermer = useCallback(()=>{
-        supprimerDraftCb(idDraft)
+    const fermer = useCallback( supprimerDraft => {
+        if(supprimerDraft === true) supprimerDraftCb(idDraft)
         setAfficherNouveauMessage(false)
     }, [setAfficherNouveauMessage, supprimerDraftCb, idDraft])
 
@@ -68,13 +68,18 @@ function NouveauMessage(props) {
             .then(()=>{
                 showConfirmation("Message envoye")
                 supprimerDraftCb(idDraft)
-                fermer()
+                fermer(true)
             })
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
-                setErreur("Erreur envoi message\n%s", ''+err)
+                // setErreur("Erreur envoi message\n%s", ''+err)
+                erreurCb(err, 'Erreur envoi message')
             })
-    }, [workers, showConfirmation, setErreur, certificatMaitreDesCles, from, to, replyTo, content, uuidThread, attachments, fermer, supprimerDraftCb, idDraft])
+    }, [
+        workers, showConfirmation, certificatMaitreDesCles, 
+        from, to, replyTo, content, uuidThread, attachments, 
+        fermer, supprimerDraftCb, idDraft, erreurCb,
+    ])
 
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
     // const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
@@ -94,29 +99,33 @@ function NouveauMessage(props) {
     const chargerDraft = useCallback(idDraft=>{
         MessageDao.getDraft(idDraft)
             .then(draft=>{
-                console.debug("Recharger draft : %O", draft)
+                // console.debug("Recharger draft : %O", draft)
                 const {from, to, replyTo, content, attachments} = draft
                 setIdDraft(draft.idDraft)
                 setFrom(from)
                 setTo(to)
                 setReplyTo(replyTo)
                 setContent(content)
-                const attachmentsMappes = Object.values(attachments).map(fichier=>{
-                    const fuuid = fichier.fileId
-                    const row = preparerRowAttachment(workers, fichier)
-                    const fichierMappe = {...row, ...fichier, fuuid}
-                    return fichierMappe
-                })
-                console.debug("Attachments : %O, attachments mappes : %O", attachments, attachmentsMappes)
-                setAttachments(attachmentsMappes)
+                if(attachments) {
+                    const attachmentsMappes = Object.values(attachments).map(fichier=>{
+                        const fuuid = fichier.fileId
+                        const row = preparerRowAttachment(workers, fichier)
+                        const fichierMappe = {...row, ...fichier, fuuid}
+                        return fichierMappe
+                    })
+                    // console.debug("Attachments : %O, attachments mappes : %O", attachments, attachmentsMappes)
+                    setAttachments(attachmentsMappes)
+                } else {
+                    setAttachments('')
+                }
             })
             .catch(erreurCb)
-    }, [setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, erreurCb])
+    }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, erreurCb])
 
     useEffect(()=>{
         MessageDao.getListeDrafts()
             .then(drafts=>{
-                console.debug("Drafts : %O", drafts)
+                // console.debug("Drafts : %O", drafts)
                 setDrafts(drafts)
             })
             .catch(erreurCb)
@@ -148,15 +157,15 @@ function NouveauMessage(props) {
         if(!idDraft) {
             if(to || content || attachments) {  // Champs modifiables par l'usager
                 // Creer un nouveau draft
-                console.debug("Creer nouveau id draft")
+                // console.debug("Creer nouveau id draft")
                 MessageDao.ajouterDraft().then(idDraft=>{
-                    console.debug("Creer draft, nouveau id : %O", idDraft)
+                    // console.debug("Creer draft, nouveau id : %O", idDraft)
                     setIdDraft(idDraft)
                 }).catch(erreurCb)
             }
         } else {
             // Conserver information draft
-            console.debug("Sauvegarder draft %s (attachments: %O)", idDraft, attachments)
+            // console.debug("Sauvegarder draft %s (attachments: %O)", idDraft, attachments)
             // const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...attachments])
             let attachmentsMapping = null
             if(attachments) {
@@ -164,7 +173,7 @@ function NouveauMessage(props) {
                 attachmentsMapping = attachments.map(item=>{
                     const attach = {}
                     fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
-                    console.debug("attach : %O", attach)
+                    // console.debug("attach : %O", attach)
                     return attach
                 })
             }
@@ -233,7 +242,8 @@ function NouveauMessage(props) {
             <Row>
                 <Col className="buttonbar">
                     <Button onClick={envoyerCb} disabled={!attachmentsPrets}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
-                    <Button variant="secondary" onClick={fermer}>Annuler</Button>
+                    <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Enregistrer</Button>
+                    <Button variant="secondary" onClick={()=>fermer(true)}><i className="fa fa-trash"/> Supprimer</Button>
                 </Col>
             </Row>
 
@@ -276,7 +286,7 @@ function Editeur(props) {
 }
 
 function AfficherDrafts(props) {
-    const { drafts, setDrafts, chargerDraft, supprimerCb, erreurCb } = props
+    const { drafts, chargerDraft, supprimerCb } = props
     const nbDrafts = drafts?drafts.length:0
 
     const chargerDraftCb = useCallback(event=>{
@@ -292,12 +302,12 @@ function AfficherDrafts(props) {
             {drafts.map(item=>{
                 return (
                     <Row key={item.idDraft}>
-                        <Col sm={2} md={1}>{item.idDraft}</Col>
-                        <Col sm={6} md={8}>{item.to}</Col>
+                        <Col sm={2} md={1}># {item.idDraft}</Col>
                         <Col sm={4} md={3}>
                             <Button size="sm" variant="secondary" onClick={chargerDraftCb} value={item.idDraft}>Charger</Button>
                             <Button size="sm" variant="secondary" onClick={supprimerCb} value={item.idDraft}>Supprimer</Button>
                         </Col>
+                        <Col sm={6} md={8}>{item.to}</Col>
                     </Row>
                 )
             })}
@@ -313,7 +323,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
         // let fuuids = []
         // let fuuidsCleSeulement = []
 
-        console.debug("Traiter attachments : %O", opts.attachments)
+        // console.debug("Traiter attachments : %O", opts.attachments)
 
         // Mapper data attachments
         const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments])
@@ -360,11 +370,11 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
 
         // Ajouter attachments et fuuids aux opts
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
-        console.debug("envoyer opts %O", opts)
+        // console.debug("envoyer opts %O", opts)
     }
 
     const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
-    console.debug("Resultat posterMessage : %O", resultat)
+    if(resultat.err) throw resultat.err
 }
 
 function mapperAttachments(attachments) {
@@ -386,7 +396,7 @@ function mapperAttachments(attachments) {
             // dateFichier: dateAjout,
         }
         delete mapping.tuuid
-        console.debug("Mapping attachment : %O", mapping)
+        // console.debug("Mapping attachment : %O", mapping)
 
         if(version_courante) {
             if(version_courante.images) {
@@ -420,16 +430,16 @@ function mapperAttachments(attachments) {
 }
 
 async function preparerUploaderFichiers(workers, acceptedFiles) {
-    console.debug("Preparer upload fichiers : %O", acceptedFiles)
+    // console.debug("Preparer upload fichiers : %O", acceptedFiles)
     const { connexion } = workers
 
     // Obtenir tuuid de la collection d'upload
     const infoCollectionUpload = await connexion.getCollectionUpload()
-    console.debug("Information collection upload : %O", infoCollectionUpload)
+    // console.debug("Information collection upload : %O", infoCollectionUpload)
     const cuuid = infoCollectionUpload.tuuid  // Collection destination pour l'upload
 
     const infoUploads = await uploaderFichiers(workers, cuuid, acceptedFiles)
-    console.debug("Info uplodas : %O", infoUploads)
+    // console.debug("Info uplodas : %O", infoUploads)
 
     return {infoCollectionUpload, cuuid, infoUploads}
 }
@@ -458,7 +468,7 @@ function AfficherAttachments(props) {
     }, [attachments])
 
     const selectionner = useCallback( selection => {
-        console.debug("Selection : %O", selection)
+        // console.debug("Selection : %O", selection)
         if(attachments) {
             // Retirer fuuids deja selectionnes
             const attachmentsFuuids = attachments.map(item=>item.fuuid)
@@ -471,7 +481,7 @@ function AfficherAttachments(props) {
     const onDrop = useCallback(acceptedFiles=>{
         preparerUploaderFichiers(workers, acceptedFiles)
             .then(info=>{
-                console.debug("Preparer uploads info : %O", info)
+                // console.debug("Preparer uploads info : %O", info)
                 const { infoUploads } = info
                 const listeSelection = infoUploads.map(item=>{
                     const { correlation, transaction } = item
@@ -744,7 +754,7 @@ function preparerRowAttachment(workers, fichier) {
                 // Attendre webp et jpg
                 const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
                 const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
-                console.debug("Webp: %O, jpg: %O", webp, jpg)
+                // console.debug("Webp: %O, jpg: %O", webp, jpg)
                 pret = !! (webp && jpg)
             }
         } else if (baseType === 'video') {
