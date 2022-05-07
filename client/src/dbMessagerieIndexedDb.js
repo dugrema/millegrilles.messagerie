@@ -107,6 +107,7 @@ export async function getMessages(userId, opts) {
     const ordre = opts.ordre || -1
     const direction = ordre<0?'prev':'next'
     const inclure_supprime = opts.inclure_supprime || false
+    const supprime = opts.supprime || false
 
     const db = await ouvrirDB({upgrade: true})
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index(colonne)
@@ -117,8 +118,14 @@ export async function getMessages(userId, opts) {
     while(curseur) {
         const value = curseur.value
         if(value.user_id === userId) {  // Uniquement traiter usager
-            if(value.supprime !== true || inclure_supprime === true) {
-                if(position++ >= skip) messages.push(curseur.value)
+            if(supprime === false) {
+                if(value.supprime !== true || inclure_supprime === true) {
+                    if(position++ >= skip) messages.push(curseur.value)
+                }
+            } else if(supprime === true) {
+                if(value.supprime === true) {
+                    if(position++ >= skip) messages.push(curseur.value)
+                }
             }
         }
         if(messages.length === limit) break
@@ -131,6 +138,7 @@ export async function getMessages(userId, opts) {
 export async function countMessages(userId, opts) {
     opts = opts || {}
     const inclure_supprime = opts.inclure_supprime || false
+    const supprime = opts.supprime || false
     
     const db = await ouvrirDB({upgrade: true})
     const store = db.transaction(STORE_MESSAGES, 'readwrite').store
@@ -140,8 +148,14 @@ export async function countMessages(userId, opts) {
     while(curseur) {
         const value = curseur.value
         if(value.user_id === userId) {  // Uniquement traiter usager
-            if(value.supprime !== true || inclure_supprime === true) {
-                compteur++
+            if(supprime === false) {
+                if(value.supprime !== true || inclure_supprime === true) {
+                    compteur++
+                }
+            } else if(supprime === true) {
+                if(value.supprime === true) {
+                    compteur++
+                }
             }
         }
         curseur = await curseur.continue()
@@ -257,6 +271,8 @@ export async function supprimerContacts(uuidContacts) {
     const promises = uuidContacts.map(item=>store.delete(item))
     return Promise.all(promises)
 }
+
+// Draft
 
 export async function ajouterDraft() {
     const db = await ouvrirDB({upgrade: true})

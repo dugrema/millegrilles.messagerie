@@ -77,6 +77,7 @@ function App() {
   const [afficherContacts, setAfficherContacts] = useState(false)
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   const [uuidMessage, setUuidMessage] = useState('')
+  const [dossier, setDossier] = useState('')
 
   const erreurCb = useCallback((err, message)=>{
     console.error("Erreur generique %s : %O", err, message)
@@ -108,8 +109,9 @@ function App() {
   }, [transfertFichiers, erreurCb])
 
   const formatterMessagesCb = useCallback(messages=>{
-    formatterMessages(messages, colonnes, userId, setListeMessages, setCompteMessages, erreurCb)
-  }, [colonnes, userId, setListeMessages, setCompteMessages, erreurCb])
+    const supprime = dossier === 'supprimes'
+    formatterMessages(messages, colonnes, userId, setListeMessages, setCompteMessages, erreurCb, {supprime})
+  }, [colonnes, userId, setListeMessages, setCompteMessages, dossier, erreurCb])
 
   const getMessagesSuivants = useCallback(()=>{
     if(!colonnes || !usager) return
@@ -206,12 +208,14 @@ function App() {
     if(!colonnes || !userId) return
     const { colonne, ordre } = colonnes.tri
     const skip = listeCourante?listeCourante.length:0
+
+    const inclure_supprime = dossier === 'supprimes'
     
-    MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT}).then(liste=>{
+    MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT, supprime: inclure_supprime}).then(liste=>{
       formatterMessagesCb(liste) 
     })
     .catch(err=>erreurCb(err, "Erreur chargement messages initiaux"))
-  }, [colonnes, userId, formatterMessagesCb, erreurCb])
+  }, [colonnes, userId, formatterMessagesCb, dossier, erreurCb])
 
   // Charger liste initiale
   useEffect(()=>{
@@ -222,12 +226,13 @@ function App() {
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
     if(workers && userId && etatConnexion && etatAuthentifie) {
-      workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE})
+      const inclure_supprime = dossier === 'supprimes'
+      workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE, inclure_supprime})
         .then(reponse=>conserverReferenceMessages(workers, userId, reponse.messages))
         .then(rafraichirListe)
         .catch(erreurCb)
     }
-  }, [workers, etatConnexion, userId, etatAuthentifie, erreurCb, rafraichirListe])
+  }, [workers, etatConnexion, userId, etatAuthentifie, dossier, erreurCb, rafraichirListe])
 
   // Messages listener
   useEffect(()=>{
@@ -304,6 +309,8 @@ function App() {
             setMessageRepondre={setMessageRepondre}
             supprimerMessagesCb={supprimerMessagesCb}
             evenementUpload={evenementUpload}
+            dossier={dossier}
+            setDossier={setDossier}
             erreurCb={erreurCb}
           />
 
@@ -419,7 +426,8 @@ function preparerColonnes(workers) {
   return params
 }
 
-function formatterMessages(messages, colonnes, userId, setMessagesFormattes, setCompteMessages, erreurCb) {
+function formatterMessages(messages, colonnes, userId, setMessagesFormattes, setCompteMessages, erreurCb, opts) {
+  opts = opts || {}
   // console.debug("formatterContacts colonnes: %O", colonnes)
   const {colonne, ordre} = colonnes.tri || {}
   // let contactsTries = [...contacts]
@@ -452,7 +460,7 @@ function formatterMessages(messages, colonnes, userId, setMessagesFormattes, set
   setMessagesFormattes(messagesTries)
 
   // Maj le compte du nombre de messages
-  MessageDao.countMessages(userId).then(setCompteMessages).catch(erreurCb)
+  MessageDao.countMessages(userId, opts).then(setCompteMessages).catch(erreurCb)
 }
 
 function trierDate(a, b) {
@@ -541,7 +549,7 @@ async function chargerMessagesNouveaux(workers, userId) {
   const promises = []
   const conserverMessages = async batch => {
     const uuid_messages = [...batch]
-    const reponse = await connexion.getMessages({uuid_messages})
+    const reponse = await connexion.getMessages({uuid_messages, inclure_supprime: true})
     if(reponse.messages && reponse.messages.length > 0) {
       for await (const message of reponse.messages) {
         const messageCharge = {user_id: userId, ...message, '_etatChargement': 'charge'}

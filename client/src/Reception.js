@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
+import Nav from 'react-bootstrap/Nav'
 
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
@@ -11,12 +12,19 @@ function ListeMessages(props) {
 
     const { 
         workers, etatConnexion, etatAuthentifie, 
-        messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage,
+        messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage, setDossier,
         isListeComplete, getMessagesSuivants,
         supprimerMessagesCb, setAfficherNouveauMessage,
     } = props
 
+    const [filtreMessage, setFiltreMessage] = useState('actifs')
+
     const afficherNouveauMessageCb = useCallback(() => setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
+
+    useEffect(()=>{
+        if(filtreMessage === 'supprimes') setDossier('supprimes')
+        else setDossier('')
+    }, [filtreMessage, setDossier])
 
     if(!messages) return <p>Aucun message disponible.</p>
     
@@ -25,10 +33,20 @@ function ListeMessages(props) {
             <h3>Messages</h3>
 
             <Row>
-                <Col xs={12} md={8} className="buttonbar-left">
+                <Col xs={12} md={3} className="buttonbar-left">
                     <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
                 </Col>
-                <Col xs={12} md={4} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+                <Col xs={12} md={6} className="buttonbar-left">
+                    <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
+                        <Nav.Item>
+                            <Nav.Link eventKey="actifs">Actifs</Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
+                        </Nav.Item>
+                    </Nav>
+                </Col>
+                <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
             </Row>
 
             <AfficherListeMessages 

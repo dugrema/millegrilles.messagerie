@@ -7,7 +7,7 @@ function Accueil(props) {
 
     const { 
         workers, setUuidMessage,
-        colonnes, setColonnes, listeMessages, compteMessages, getMessagesSuivants, isListeComplete,
+        colonnes, setColonnes, listeMessages, compteMessages, getMessagesSuivants, isListeComplete, setDossier,
         supprimerMessagesCb, setAfficherNouveauMessage,
      } = props
 
@@ -42,7 +42,8 @@ function Accueil(props) {
                 enteteOnClickCb={enteteOnClickCb}
                 setUuidMessage={setUuidMessage}  
                 supprimerMessagesCb={supprimerMessagesCb} 
-                setAfficherNouveauMessage={setAfficherNouveauMessage} />
+                setAfficherNouveauMessage={setAfficherNouveauMessage} 
+                setDossier={setDossier} />
         </>
     )
 
