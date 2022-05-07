@@ -15,7 +15,7 @@ export async function dechiffrerMessage(workers, message) {
     const certificat_message = message.certificat_message
     const certForge = pki.certificateFromPem(certificat_message)
     const extensions = extraireExtensionsMillegrille(certForge)
-    console.debug("Extensions cert : %O", extensions)
+    // console.debug("Extensions cert : %O", extensions)
     const userId = extensions.userId
 
     // Dechiffrer le message
