@@ -101,7 +101,14 @@ function NouveauMessage(props) {
                 setTo(to)
                 setReplyTo(replyTo)
                 setContent(content)
-                setAttachments(attachments)
+                const attachmentsMappes = Object.values(attachments).map(fichier=>{
+                    const fuuid = fichier.fileId
+                    const row = preparerRowAttachment(workers, fichier)
+                    const fichierMappe = {...row, ...fichier, fuuid}
+                    return fichierMappe
+                })
+                console.debug("Attachments : %O, attachments mappes : %O", attachments, attachmentsMappes)
+                setAttachments(attachmentsMappes)
             })
             .catch(erreurCb)
     }, [setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, erreurCb])
@@ -149,7 +156,19 @@ function NouveauMessage(props) {
             }
         } else {
             // Conserver information draft
-            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments}).catch(erreurCb)
+            console.debug("Sauvegarder draft %s (attachments: %O)", idDraft, attachments)
+            // const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...attachments])
+            let attachmentsMapping = null
+            if(attachments) {
+                const fieldsConserver = ['duree', 'fileId', 'fuuid', 'mimetype', 'nom', 'pret', 'taille', 'version_courante']
+                attachmentsMapping = attachments.map(item=>{
+                    const attach = {}
+                    fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
+                    console.debug("attach : %O", attach)
+                    return attach
+                })
+            }
+            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping}).catch(erreurCb)
         }
     }, [idDraft, from, to, replyTo, content, attachments, setIdDraft, erreurCb])
 
@@ -290,28 +309,86 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
     opts = opts || {}
 
     if(opts.attachments) {
-        let attachmentsMapping = {}
-        let fuuids = []
-        let fuuidsCleSeulement = []
+        // let attachmentsMapping = {}
+        // let fuuids = []
+        // let fuuidsCleSeulement = []
 
         console.debug("Traiter attachments : %O", opts.attachments)
 
         // Mapper data attachments
-        opts.attachments.forEach( attachment => {
-            const { fuuid, version_courante } = attachment
-            fuuids.push(fuuid)
+        const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments])
+        // opts.attachments.forEach( attachment => {
+        //     const { fuuid, version_courante } = attachment
+        //     fuuids.push(fuuid)
 
-            const mapping = {
-                ...version_courante,
-                fuuid,
-                // nom: attachment.nom,
-                // mimetype: version_courante.mimetype,
-                // taille: version_courante.taille,
-                // dateFichier: dateAjout,
-            }
-            delete mapping.tuuid
-            console.debug("Mapping attachment : %O", mapping)
+        //     const mapping = {
+        //         ...version_courante,
+        //         fuuid,
+        //         // nom: attachment.nom,
+        //         // mimetype: version_courante.mimetype,
+        //         // taille: version_courante.taille,
+        //         // dateFichier: dateAjout,
+        //     }
+        //     delete mapping.tuuid
+        //     console.debug("Mapping attachment : %O", mapping)
 
+        //     if(version_courante.images) {
+        //         const images = version_courante.images
+        //         // mapping.images = {...images}
+        //         Object.values(images).forEach(image=>{
+        //             if(image.data_chiffre || image.data) {
+        //                 fuuidsCleSeulement.push(image.hachage)
+        //             } else if(image.hachage) {
+        //                 // console.debug("Attacher image : %O", image)
+        //                 fuuids.push(image.hachage)
+        //             }
+        //         })
+        //     }
+        //     if(version_courante.video) {
+        //         const videos = version_courante.video
+        //         // mapping.video = {...videos}
+        //         Object.values(videos).forEach(video=>{
+        //             // console.debug("Attache video : %O", video)
+        //             if(video.fuuid_video) {
+        //                 fuuids.push(video.fuuid_video)
+        //             }
+        //         })
+        //     }
+
+        //     attachmentsMapping[fuuid] = mapping
+        // })
+
+        // Ajouter attachments et fuuids aux opts
+        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
+        console.debug("envoyer opts %O", opts)
+    }
+
+    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
+    console.debug("Resultat posterMessage : %O", resultat)
+}
+
+function mapperAttachments(attachments) {
+    // Mapper data attachments
+    let attachmentsMapping = {}
+    let fuuids = []
+    let fuuidsCleSeulement = []
+
+    attachments.forEach( attachment => {
+        const { fuuid, version_courante } = attachment
+        fuuids.push(fuuid)
+
+        const mapping = {
+            ...version_courante,
+            fuuid,
+            // nom: attachment.nom,
+            // mimetype: version_courante.mimetype,
+            // taille: version_courante.taille,
+            // dateFichier: dateAjout,
+        }
+        delete mapping.tuuid
+        console.debug("Mapping attachment : %O", mapping)
+
+        if(version_courante) {
             if(version_courante.images) {
                 const images = version_courante.images
                 // mapping.images = {...images}
@@ -334,16 +411,12 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
                     }
                 })
             }
+        }
 
-            attachmentsMapping[fuuid] = mapping
-        })
+        attachmentsMapping[fuuid] = mapping
+    })
 
-        // Ajouter attachments et fuuids aux opts
-        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
-    }
-
-    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
-    console.debug("Resultat posterMessage : %O", resultat)
+    return {attachmentsMapping, fuuids, fuuidsCleSeulement}
 }
 
 async function preparerUploaderFichiers(workers, acceptedFiles) {
@@ -427,39 +500,40 @@ function AfficherAttachments(props) {
                     if(fileId === tuuid) { // Remplacer
                         const fichier = {fileId, ...evenementUpload1.message}
                         // Determiner si l'attachment est pret
-                        const mimetype = fichier.mimetype
-                        let pret = true
-                        if(mimetype) {
-                            const version_courante = fichier.version_courante || {}
-                            const { images, video } = version_courante
-                            const baseType = mimetype.toLowerCase().split('/').shift()
-                            if(mimetype === 'application/pdf') {
-                                if(images) {
-                                    pret = !! (images && images.thumb)
-                                }
-                            } else if (baseType === 'image') {
-                                pret = false
-                                if(images) {
-                                    // Attendre webp et jpg
-                                    const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
-                                    const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
-                                    console.debug("Webp: %O, jpg: %O", webp, jpg)
-                                    pret = !! (webp && jpg)
-                                }
-                            } else if (baseType === 'video') {
-                                pret = false
-                                if(images && video) {
-                                    pret = images && images.thumb
-                                    const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
-                                    const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
-                                    pret = !! (images && images.thumb && mp4 && webm)
-                                }
-                            }
-                        }
+                        return preparerRowAttachment(workers, fichier)
+                        // const mimetype = fichier.mimetype
+                        // let pret = true
+                        // if(mimetype) {
+                        //     const version_courante = fichier.version_courante || {}
+                        //     const { images, video } = version_courante
+                        //     const baseType = mimetype.toLowerCase().split('/').shift()
+                        //     if(mimetype === 'application/pdf') {
+                        //         if(images) {
+                        //             pret = !! (images && images.thumb)
+                        //         }
+                        //     } else if (baseType === 'image') {
+                        //         pret = false
+                        //         if(images) {
+                        //             // Attendre webp et jpg
+                        //             const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
+                        //             const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
+                        //             console.debug("Webp: %O, jpg: %O", webp, jpg)
+                        //             pret = !! (webp && jpg)
+                        //         }
+                        //     } else if (baseType === 'video') {
+                        //         pret = false
+                        //         if(images && video) {
+                        //             pret = images && images.thumb
+                        //             const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
+                        //             const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
+                        //             pret = !! (images && images.thumb && mp4 && webm)
+                        //         }
+                        //     }
+                        // }
 
-                        const fichierMappe = mapper(fichier, workers)
+                        // const fichierMappe = mapper(fichier, workers)
 
-                        return {...fichierMappe, tuuid, pret}
+                        // return {...fichierMappe, tuuid, pret}
                     }
                     return item
                 })
@@ -650,4 +724,42 @@ function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
 
     const uuidThread = messageRepondre.uuid_thread || messageRepondre.uuid_transaction
     setUuidThread(uuidThread)
+}
+
+function preparerRowAttachment(workers, fichier) {
+    const tuuid = fichier.tuuid || fichier.fileId
+    const mimetype = fichier.mimetype
+    let pret = true
+    if(mimetype) {
+        const version_courante = fichier.version_courante || {}
+        const { images, video } = version_courante
+        const baseType = mimetype.toLowerCase().split('/').shift()
+        if(mimetype === 'application/pdf') {
+            if(images) {
+                pret = !! (images && images.thumb)
+            }
+        } else if (baseType === 'image') {
+            pret = false
+            if(images) {
+                // Attendre webp et jpg
+                const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
+                const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
+                console.debug("Webp: %O, jpg: %O", webp, jpg)
+                pret = !! (webp && jpg)
+            }
+        } else if (baseType === 'video') {
+            pret = false
+            if(images && video) {
+                pret = images && images.thumb
+                const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
+                const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
+                pret = !! (images && images.thumb && mp4 && webm)
+            }
+        }
+    }
+
+    const fichierRebuild = {...fichier, tuuid}
+    const fichierMappe = mapper(fichierRebuild, workers)
+
+    return {...fichierMappe, tuuid, pret}
 }
