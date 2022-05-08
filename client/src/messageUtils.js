@@ -24,8 +24,8 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 
     const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
 
-    // console.debug("Enveloppe message : %O", enveloppeMessage)
-    // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
+    console.debug("Enveloppe message : %O", enveloppeMessage)
+    console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
     // poster
     const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles)
@@ -37,7 +37,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-    // console.debug("Signer message, params opts : %O", opts)
+    console.debug("Signer message, params opts : %O", opts)
 
     const {connexion, chiffrage} = workers
     const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts
@@ -61,7 +61,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     let fuuidsCles = fuuids
     if(attachments) {
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
-        fuuidsCles = fuuidsCles || attachments.map(item=>item.fuuid)
+        // fuuidsCles = fuuidsCles || attachments.map(item=>item.fuuid)
         if(fuuidsCleSeulement) {
             fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
         }
@@ -131,7 +131,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     }
    
     if(attachments) {
-        enveloppeMessage.attachments = fuuidsCles
+        enveloppeMessage.attachments = fuuids
     }
 
     const enveloppeMessageSigne = await connexion.formatterMessage(enveloppeMessage, 'Messagerie')
@@ -146,5 +146,5 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     const enveloppeRoutage = await connexion.formatterMessage(
         routageMessage, 'Messagerie', {action: 'poster', ajouterCertificat: true})
 
-    return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles }
+    return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles, fuuids }
 }
