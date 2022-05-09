@@ -183,19 +183,19 @@ async function chargerCollection(workers, cuuid, setListe, usager) {
     const { documents } = reponse
 
     // Precharger les cles des images thumbnails, small et posters
-    const fuuidsImages = documents.map(item=>{
-        const { version_courante } = item
-        if(version_courante && version_courante.images) {
-            const fuuidsImages = Object.keys(version_courante.images)
-                .filter(item=>['thumb', 'thumbnail', 'poster', 'small'].includes(item))
-                .map(item=>version_courante.images[item].hachage)
-                .reduce((arr, item)=>{arr.push(item); return arr}, [])
-            return fuuidsImages
-        }
-        return []
-    }).reduce((arr, item)=>{
-        return [...arr, ...item]
-    }, [])
+    // const fuuidsImages = documents.map(item=>{
+    //     const { version_courante } = item
+    //     if(version_courante && version_courante.images) {
+    //         const fuuidsImages = Object.keys(version_courante.images)
+    //             .filter(item=>['thumb', 'thumbnail', 'poster', 'small'].includes(item))
+    //             .map(item=>version_courante.images[item].hachage)
+    //             .reduce((arr, item)=>{arr.push(item); return arr}, [])
+    //         return fuuidsImages
+    //     }
+    //     return []
+    // }).reduce((arr, item)=>{
+    //     return [...arr, ...item]
+    // }, [])
     // console.debug("Fuuids images : %O", fuuidsImages)
 
     // // Verifier les cles qui sont deja connues

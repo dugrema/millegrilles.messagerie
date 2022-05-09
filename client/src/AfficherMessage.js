@@ -369,7 +369,7 @@ function AfficherAttachments(props) {
 
         setAttachmentsList(listeMappee)
 
-    }, [workers, attachments, setAttachmentsList])
+    }, [workers, attachments, supportMedia, setAttachmentsList])
 
     if(!attachmentsList) return ''
 
