@@ -1,5 +1,5 @@
 import {loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader} from '@dugrema/millegrilles.reactjs/src/imageLoading'
-import {supporteFormatWebp, supporteFormatWebm} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
+// import {supporteFormatWebp, supporteFormatWebm} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
 
 const ICONE_FOLDER = <i className="fa fa-folder fa-lg"/>
 const ICONE_FICHIER = <i className="fa fa-file fa-lg"/>
@@ -16,11 +16,11 @@ const Icones = {
     ICONE_FICHIER_VIDEO, ICONE_FICHIER_TEXT, ICONE_FICHIER_ZIP, ICONE_QUESTION,
 }
 
-// Detection format media
-const supporteWebm = supporteFormatWebm()
-let supporteWebp = false
-supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.warn("Erreur detection webp : %O", err))
-// console.debug("Support webm : %O", supporteWebm)
+// // Detection format media
+// const supporteWebm = supporteFormatWebm()
+// let supporteWebp = false
+// supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.warn("Erreur detection webp : %O", err))
+// // console.debug("Support webm : %O", supporteWebm)
 
 export { Icones }
 
@@ -28,6 +28,9 @@ export function mapper(row, workers, opts) {
     opts = opts || {}
     const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
     const cles = opts.cles || {}
+    const supportMedia = opts.supportMedia || {},
+          supporteWebp = !!supportMedia.webp,
+          supporteWebm = !!supportMedia.webm
 
     // console.debug("!!! MAPPER %O, opts: %O", row, opts)
 

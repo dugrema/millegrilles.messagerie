@@ -7,21 +7,21 @@ import {loadFichierChiffre, fileResourceLoader} from '@dugrema/millegrilles.reac
 function PreviewFichiers(props) {
     // console.debug("PreviewFichiers proppies : %O", props)
 
-    const { workers, fuuid, fichiers, showPreview, setShowPreview, support } = props
+    const { workers, fuuid, fichiers, showPreview, setShowPreview, supportMedia } = props
 
     const [ liste, setListe ] = useState([])
 
     useEffect(()=>{
         if(showPreview) {
             // console.debug("Liste fichiers pour previews : %O", fichiers)
-            const liste = preparerPreviews(workers, fuuid, fichiers, support)
+            const liste = preparerPreviews(workers, fuuid, fichiers, supportMedia)
             // console.debug("Liste fichiers mappee pour previews : %O", liste)
             setListe(liste)
         } else {
             // Vider la liste
             setListe([])
         }
-    }, [workers, fuuid, fichiers, showPreview, support, setListe] )
+    }, [workers, fuuid, fichiers, showPreview, supportMedia, setListe] )
 
     // console.debug("PreviewFichiers liste : %O", liste)
 
@@ -37,9 +37,10 @@ function PreviewFichiers(props) {
 
 export default PreviewFichiers
 
-function preparerPreviews(workers, tuuidSelectionne, liste, support) {
+function preparerPreviews(workers, tuuidSelectionne, liste, supportMedia) {
+    // console.debug("!!! preparerPreviews : tuuid: %s, liste %O", tuuidSelectionne, liste)
 
-    const optionsLoader = {supporteWebm: support.webm, supporteWebp: support.webp}
+    const optionsLoader = {supporteWebm: supportMedia.webm, supporteWebp: supportMedia.webp}
 
     const fichierSelectionne = liste.filter(item=>item.fileId===tuuidSelectionne).pop()
     const versionCourante = fichierSelectionne.version_courante || {}

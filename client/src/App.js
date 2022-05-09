@@ -13,6 +13,7 @@ import {
   LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate, AlertTimeout 
 } from '@dugrema/millegrilles.reactjs'
 
+import { detecterSupport } from './fonctionsFichiers'
 import * as MessageDao from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
@@ -45,6 +46,7 @@ function App() {
   const [showTransfertModal, setShowTransfertModal] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
   const [erreur, setErreur] = useState('')
+  const [supportMedia, setSupportMedia] = useState({})
 
   const userId = useMemo(()=>{
     if(usager) {
@@ -152,13 +154,14 @@ function App() {
 
   // Chargement des proprietes et workers
   useEffect(()=>{
+    detecterSupport(setSupportMedia)
     Promise.all([
       importerWorkers(setWorkers),
       MessageDao.init(),
     ])
       .then(()=>{ console.info("Chargement de l'application complete") })
       .catch(err=>{erreurCb(err, "Erreur chargement application")})
-  }, [setWorkers, erreurCb])
+  }, [setWorkers, setSupportMedia, erreurCb])
 
   useEffect(()=>{
     setWorkersTraitementFichiers(workers)
@@ -284,6 +287,7 @@ function App() {
 
           <Contenu 
             workers={workers} 
+            supportMedia={supportMedia}
             usager={usager}
             userId={userId}
             etatConnexion={etatConnexion&&etatAuthentifie}

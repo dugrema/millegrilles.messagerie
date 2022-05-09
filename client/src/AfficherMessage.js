@@ -10,7 +10,7 @@ import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegr
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
 import { mapper } from './mapperFichier'
-import { detecterSupport } from './fonctionsFichiers'
+// import { detecterSupport } from './fonctionsFichiers'
 
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
 import PreviewFichiers from './FilePlayer'
@@ -21,7 +21,7 @@ function AfficherMessage(props) {
     const { 
         workers, etatConnexion, etatAuthentifie, downloadAction,
         uuidMessage, setUuidMessage, listeMessages,
-        certificatMaitreDesCles, repondreMessageCb 
+        certificatMaitreDesCles, repondreMessageCb, supportMedia,
     } = props
     const message = useMemo(()=>listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop(), [uuidMessage, listeMessages])
     // const [messageDechiffre, setMessageDechiffre] = useState('')
@@ -107,7 +107,8 @@ function AfficherMessage(props) {
                 infoMessage={message} 
                 setUuidMessage={setUuidMessage}
                 choisirCollectionCb={choisirCollectionCb} 
-                repondreCb={repondreCb} />
+                repondreCb={repondreCb} 
+                supportMedia={supportMedia} />
 
             <ModalSelectionnerCollection 
                 show={showChoisirCollection} 
@@ -136,7 +137,7 @@ function BreadcrumbMessage(props) {
 
 function RenderMessage(props) {
     // console.debug("RenderMessage : %O", props)
-    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb } = props
+    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, supportMedia } = props
     const message = props.message || {}
     const infoMessage = props.infoMessage || {}
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
@@ -187,7 +188,8 @@ function RenderMessage(props) {
                 downloadAction={downloadAction}
                 attachments={attachments} 
                 attachments_inline={attachments_inline} 
-                choisirCollectionCb={choisirCollectionCb} />
+                choisirCollectionCb={choisirCollectionCb} 
+                supportMedia={supportMedia} />
         </>
     )
 }
@@ -297,7 +299,7 @@ async function marquerMessageLu(workers, uuid_transaction) {
 
 function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb } = props
+    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb, supportMedia } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -305,7 +307,7 @@ function AfficherAttachments(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
     const [selection, setSelection] = useState('')
     const [showPreview, setShowPreview] = useState(false)
-    const [support, setSupport] = useState({})
+    // const [support, setSupport] = useState({})
     const [fuuidSelectionne, setFuuidSelectionne] = useState('')
 
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
@@ -327,7 +329,7 @@ function AfficherAttachments(props) {
         }
     }, [selection, setShowPreview, setFuuidSelectionne])
 
-    useEffect(()=>detecterSupport(setSupport), [setSupport])
+    // useEffect(()=>detecterSupport(setSupport), [setSupport])
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
     // useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
@@ -362,7 +364,7 @@ function AfficherAttachments(props) {
         // console.debug("Dict attachments combines : %O", dictAttachments)
 
         const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
-        const listeMappee = liste.map(item=>mapper(item, workers, {cles}))
+        const listeMappee = liste.map(item=>mapper(item, workers, {cles, supportMedia}))
         // console.debug("Liste mappee : %O", listeMappee)
 
         setAttachmentsList(listeMappee)
@@ -414,7 +416,7 @@ function AfficherAttachments(props) {
                 setShowPreview={setShowPreview}
                 fuuid={fuuidSelectionne}
                 fichiers={attachmentsList}
-                support={support}
+                supportMedia={supportMedia}
             />
 
         </>

@@ -28,7 +28,7 @@ function NouveauMessage(props) {
     const { 
         workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, userId, dnsMessagerie, 
         showConfirmation, messageRepondre, setMessageRepondre,
-        evenementUpload,
+        evenementUpload, supportMedia,
     } = props
 
     const [to, setTo] = useState('')
@@ -235,6 +235,7 @@ function NouveauMessage(props) {
                 setAttachments={setAttachments} 
                 evenementUpload={evenementUpload} 
                 setAttachmentsPrets={setAttachmentsPrets}
+                supportMedia={supportMedia}
                 erreurCb={erreurCb} />
 
             <br className="clear"/>
