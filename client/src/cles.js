@@ -8,7 +8,10 @@ export async function dechiffrerMessage(workers, message) {
     const {uuid_transaction, hachage_bytes, message_chiffre} = message
 
     let liste_hachage_bytes = [hachage_bytes]
-    if(message.attachments) liste_hachage_bytes = [...liste_hachage_bytes, ...message.attachments]
+    if(message.attachments) {
+        const hachage_bytes_attachments = Object.keys(message.attachments)
+        liste_hachage_bytes = [...liste_hachage_bytes, ...hachage_bytes_attachments]
+    }
 
     // Valider le message
     //console.trace("Verifier message : %O", message)

@@ -336,7 +336,7 @@ function AfficherAttachments(props) {
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
-
+        console.debug("!!! useEffect attachments : %O", attachments)
         const { cles, fichiers } = attachments
 
         const dictAttachments = {}
