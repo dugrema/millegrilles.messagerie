@@ -495,9 +495,11 @@ async function traiterEvenementMessage(workers, listeMessages, userId, evenement
     // Dechiffrer le message immediatement
     const messageDechiffre = await dechiffrerMessage(workers, message)
     const resultat = {...messageCharge, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+    
     // Retirer le contenu chiffre
     delete resultat.message_chiffre
     delete resultat.certificat_message
+    delete resultat.certificat_millegrille
     await MessageDao.updateMessage(resultat, {replace: true})
 
     const { uuid_transaction } = message
@@ -562,9 +564,11 @@ async function chargerMessagesNouveaux(workers, userId) {
         // Dechiffrer le message immediatement
         const messageDechiffre = await dechiffrerMessage(workers, message)
         const resultat = {...messageCharge, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+
         // Retirer le contenu chiffre
         delete resultat.message_chiffre
         delete resultat.certificat_message
+        delete resultat.certificat_millegrille
         await MessageDao.updateMessage(resultat, {replace: true})
       }
     }

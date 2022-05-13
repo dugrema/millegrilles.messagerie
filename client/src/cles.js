@@ -14,8 +14,8 @@ export async function dechiffrerMessage(workers, message) {
     }
 
     // Valider le message
-    //console.trace("Verifier message : %O", message)
-    const certificat_message = message.certificat_message
+    const certificat_message = message.certificat_message,
+          certificat_millegrille = message.certificat_millegrille
     const certForge = pki.certificateFromPem(certificat_message)
     const extensions = extraireExtensionsMillegrille(certForge)
     // console.debug("Extensions cert : %O", extensions)
@@ -34,7 +34,10 @@ export async function dechiffrerMessage(workers, message) {
         .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
         .then(JSON.parse)
 
-    const resultatValider = await workers.chiffrage.verifierMessage({...messageDechiffre, '_certificat': certificat_message})
+    const resultatValider = await workers.chiffrage.verifierMessage(
+        {...messageDechiffre, '_certificat': certificat_message, '_millegrille': certificat_millegrille}, 
+        {support_idmg_tiers: true}
+    )
         .catch(err=>{
             console.error("Erreur validation message : %O", err)
             return false
