@@ -154,6 +154,7 @@ function validateStatusHead(status) {
 async function verifierPoster(req, res, next) {
     // const idmg = req.idmg
     // const host = req.headers.host
+    debug("verifierPoster HEADERS : %O", req.headers)
     const body = req.body
     debug("Message body\n%O", body)
 
