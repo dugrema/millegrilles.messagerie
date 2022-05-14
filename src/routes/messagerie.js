@@ -146,7 +146,7 @@ async function appliquerRateLimit(req, typeRate, opts) {
         if(quotaInt > 0) {
             // Decrementer quota pour la periode TTL deja etablie
             const quotaMaj = '' + (quotaInt-1)
-            redisClient.set(cleRedis, quotaMaj, 'KEEPTTL')
+            redisClient.set(cleRedis, quotaMaj, {KEEPTTL: true})
         } else {
             return true  // Limite atteinte
         }
@@ -156,7 +156,8 @@ async function appliquerRateLimit(req, typeRate, opts) {
         const quotaInt = Number.parseInt(limite)
         const quotaMaj = '' + (quotaInt-1)
         const expiration = opts.expiration || EXPIRATION_RATE_REDIS
-        redisClient.set(cleRedis, quotaMaj, 'NX', 'EX', expiration)
+        debug("Creation nouveau rate %s pour %s, expiration dans %s", quotaMaj, cleRedis, expiration)
+        redisClient.set(cleRedis, quotaMaj, {NX: true, EX: expiration})
     }
 
     return false  // Limite n'est pas atteinte
