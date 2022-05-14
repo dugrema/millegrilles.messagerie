@@ -24,8 +24,8 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 
     const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
 
-    console.debug("Enveloppe message : %O", enveloppeMessage)
-    console.debug("Commande maitre des cles : %O", commandeMaitrecles)
+    // console.debug("Enveloppe message : %O", enveloppeMessage)
+    // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
     // poster
     const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles)
@@ -37,7 +37,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-    console.debug("Signer message, params opts : %O", opts)
+    // console.debug("Signer message, params opts : %O", opts)
 
     const {connexion, chiffrage} = workers
     const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts

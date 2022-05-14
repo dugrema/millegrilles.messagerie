@@ -336,7 +336,6 @@ function AfficherAttachments(props) {
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
-        console.debug("!!! useEffect attachments : %O", attachments)
         const { cles, fichiers } = attachments
 
         const dictAttachments = {}
@@ -468,7 +467,6 @@ function MenuContextuel(props) {
     // console.debug("!!! Selection : %s, FICHIERS : %O, mappes : %O", selection, attachments, attachmentsList)
 
     if( selection && selection.length > 1 ) {
-        console.warn("!!! Multiselect TODO !!!")
         return ''
         // return <MenuContextuelAttacherMultiselect {...props} />
     } else if(selection.length>0) {
