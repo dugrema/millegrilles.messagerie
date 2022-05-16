@@ -1,4 +1,4 @@
-import { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import React, { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { base64 } from "multiformats/bases/base64"
 import { proxy } from 'comlink'
 
@@ -272,7 +272,6 @@ function App() {
   // Contacts, sync initial
   useEffect(()=>{
     if(colonnes && userId && etatConnexion && etatAuthentifie) {
-        const { colonne, ordre } = colonnes.tri
         workers.connexion.getReferenceContacts({limit: SYNC_BATCH_SIZE})
             .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
             .then(()=>chargerContenuContacts(workers, userId))
@@ -411,7 +410,7 @@ function Contenu(props) {
     Page = Accueil
   }
 
-  return <Page {...props} />
+  return <ErrorBoundary><Page {...props}/></ErrorBoundary>
 }
 
 function Footer(props) {
@@ -660,4 +659,46 @@ async function dechiffrerMessages(workers, userId) {
     conserverMessages(batch_uuid_transactions).catch(err=>console.error("Erreur traitement batch messages : %O", err))
   }
 
+}
+
+class ErrorBoundary extends React.Component {
+
+  state = {
+    hasError: false,
+    error: '',
+    errorInfo: '',
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error("ErrorBoundary Erreur : %O\nInfo: %O", error, errorInfo);
+    this.setState({error, errorInfo})
+  }
+
+  render() {
+    if (this.state.hasError) {
+
+      const errorInfo = this.state.errorInfo || {},
+            stack = errorInfo.stack || errorInfo.componentStack
+
+      // You can render any custom fallback UI
+      return (
+        <div>
+          <h1>Something went wrong.</h1>
+
+          <p>{''+this.state.error}</p>
+
+          <pre>{''+stack}</pre>
+
+        </div>
+      )
+    }
+
+    return this.props.children; 
+  }
 }

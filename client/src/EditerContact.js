@@ -5,7 +5,9 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import InputGroup from 'react-bootstrap/InputGroup'
 
-const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)\/((?:(?!\d+\.|-)[a-zA-Z0-9_-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,}))$/
+const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)\/(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/
+//const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)\/((?:(?!\d+\.|-)[a-zA-Z0-9_-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,}))$/
+//const VALIDATEUR_ADRESSE = new RegExp("^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)/((?:(?!d+.|-)[a-zA-Z0-9_-]{1,63}(?<!-).?)+(?:[a-zA-Z]{2,}))$")
 
 console.debug("VALIDATEUR_ADRESSE : %O", VALIDATEUR_ADRESSE)
 
