@@ -5,7 +5,9 @@ import pako from 'pako'
 const { extraireExtensionsMillegrille } = forgecommon
 
 export async function dechiffrerMessage(workers, message) {
-    const {uuid_transaction, hachage_bytes, message_chiffre} = message
+    const {uuid_transaction, hachage_bytes, message_chiffre, date_envoi, user_id} = message
+
+    let messages_envoyes = date_envoi?true:false
 
     let liste_hachage_bytes = [hachage_bytes]
     if(message.attachments) {
@@ -13,16 +15,8 @@ export async function dechiffrerMessage(workers, message) {
         liste_hachage_bytes = [...liste_hachage_bytes, ...hachage_bytes_attachments]
     }
 
-    // Valider le message
-    const certificat_message = message.certificat_message,
-          certificat_millegrille = message.certificat_millegrille
-    const certForge = pki.certificateFromPem(certificat_message)
-    const extensions = extraireExtensionsMillegrille(certForge)
-    // console.debug("Extensions cert : %O", extensions)
-    const userId = extensions.userId
-
     // Dechiffrer le message
-    const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes})
+    const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes, messages_envoyes})
         .then(cles=>{
             // console.debug("dechiffrerMessage cles : %O", cles)
             const cle = cles[hachage_bytes],
@@ -33,15 +27,27 @@ export async function dechiffrerMessage(workers, message) {
         .then(messageDechiffre=>pako.inflate(messageDechiffre).buffer)
         .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
         .then(JSON.parse)
+    
+    let userId = user_id,
+        resultatValider = null
+    if(!messages_envoyes) {
+        // Message incoming, valider
+        const certificat_message = message.certificat_message,
+            certificat_millegrille = message.certificat_millegrille
+        const certForge = pki.certificateFromPem(certificat_message)
+        const extensions = extraireExtensionsMillegrille(certForge)
+        // console.debug("Extensions cert : %O", extensions)
+        userId = extensions.userId
 
-    const resultatValider = await workers.chiffrage.verifierMessage(
-        {...messageDechiffre, '_certificat': certificat_message, '_millegrille': certificat_millegrille}, 
-        {support_idmg_tiers: true}
-    )
+        resultatValider = await workers.chiffrage.verifierMessage(
+            {...messageDechiffre, '_certificat': certificat_message, '_millegrille': certificat_millegrille}, 
+            {support_idmg_tiers: true}
+        )
         .catch(err=>{
             console.error("Erreur validation message : %O", err)
             return false
         })
+    }
 
     const messageDict = {...messageDechiffre, validation: {valide: resultatValider, userId}}
 
@@ -51,6 +57,7 @@ export async function dechiffrerMessage(workers, message) {
 export async function getClesMessages(workers, uuid_transaction_message, opts) {
     opts = opts || {}
     const { liste_hachage_bytes } = opts
+    const messages_envoyes = opts.messages_envoyes?true:false
 
     if(liste_hachage_bytes) {
         const cles = {}
@@ -79,7 +86,7 @@ export async function getClesMessages(workers, uuid_transaction_message, opts) {
         }
     }
 
-    const reponseCles = await workers.connexion.getPermissionMessages([uuid_transaction_message])
+    const reponseCles = await workers.connexion.getPermissionMessages([uuid_transaction_message], {messages_envoyes})
     const cles = reponseCles.cles
     // console.debug("Reponse cles : %O", reponseCles)
     for(let cle_hachage_bytes in cles) {

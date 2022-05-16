@@ -23,6 +23,7 @@ function ListeMessages(props) {
 
     useEffect(()=>{
         if(filtreMessage === 'supprimes') setDossier('supprimes')
+        else if (filtreMessage === 'envoyes') setDossier('envoyes')
         else setDossier('')
     }, [filtreMessage, setDossier])
 
@@ -39,7 +40,10 @@ function ListeMessages(props) {
                 <Col xs={12} md={6} className="buttonbar-left">
                     <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
                         <Nav.Item>
-                            <Nav.Link eventKey="actifs">Actifs</Nav.Link>
+                            <Nav.Link eventKey="actifs">Reception</Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
                         </Nav.Item>
                         <Nav.Item>
                             <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>

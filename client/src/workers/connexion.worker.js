@@ -21,8 +21,10 @@ function getReferenceMessages(requete) {
   return ConnexionClient.emitBlocking('getReferenceMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getReferenceMessages', ajouterCertificat: true})
 }
 
-function getPermissionMessages(uuid_transaction_messages) {
-  const requete = {uuid_transaction_messages}
+function getPermissionMessages(uuid_transaction_messages, opts) {
+  opts = opts || {}
+  const messages_envoyes = opts.messages_envoyes?true:false
+  const requete = {uuid_transaction_messages, messages_envoyes}
   return ConnexionClient.emitBlocking('getPermissionMessages', requete, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getPermissionMessages', ajouterCertificat: true})
 }
 

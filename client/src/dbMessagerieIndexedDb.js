@@ -45,6 +45,7 @@ function createObjectStores(db, oldVersion) {
             // Index messages
             messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
             messageStore.createIndex('date_reception', ['user_id', 'date_reception'])
+            messageStore.createIndex('date_envoi', ['user_id', 'date_envoi'])
             messageStore.createIndex('from', ['user_id', 'from', 'date_reception'])
             messageStore.createIndex('subject', ['user_id', 'subject', 'date_reception'])
 
@@ -76,14 +77,44 @@ export async function mergeReferenceMessages(userId, messages) {
         if(!messageExistant) {
             // console.debug("Conserver nouveau message : %O", message)
             await store.put({user_id: userId, ...message, '_etatChargement': 'nouveau'})
+        } else {
+            // Verifier si on doit ajouter date_envoi ou date_reception
+            const { date_envoi: date_envoi_ref, date_reception: date_reception_ref } = message
+            const { date_envoi: date_envoi_local, date_reception: date_reception_local } = messageExistant
+            if(date_reception_ref && !date_reception_local) {
+                // Injecter date reception (le message etait deja dans boite d'envoi)
+                await store.put({date_reception: date_reception_ref})
+            } else if(date_envoi_ref && !date_envoi_local) {
+                // Injecter date envoi (le message etait deja dans la boite d'envoi)
+                await store.put({date_envoi: date_envoi_ref})
+            }
         }
     }
 }
 
-export async function getUuidMessagesParEtatChargement(userId, etatChargement) {
+export async function getUuidMessagesParEtatChargement(userId, etatChargement, opts) {
+    opts = opts || {}
+    const messages_envoyes = opts.messages_envoyes?true:false
+
     const db = await ouvrirDB({upgrade: true})
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index('etatChargement')
-    return await index.getAllKeys([userId, etatChargement])
+
+    let curseur = await index.openCursor([userId, etatChargement])
+    const uuid_messages = []
+    while(curseur) {
+        const { key, value } = curseur
+        // console.debug("Message %O = %O", key, value)
+        const { uuid_transaction, date_envoi, date_reception } = value
+        if(messages_envoyes) {
+            // S'assurer que c'est un message envoye (avec date_envoi)
+            if(date_envoi) uuid_messages.push(uuid_transaction)
+        } else {
+            if(date_reception) uuid_messages.push(uuid_transaction)
+        }
+        curseur = await curseur.continue()
+    }
+
+    return uuid_messages
 }
 
 export async function updateMessage(message, opts) {
@@ -101,33 +132,29 @@ export async function updateMessage(message, opts) {
 
 export async function getMessages(userId, opts) {
     opts = opts || {}
-    const skip = opts.skip || 0
-    const limit = opts.limit || 40
-    const colonne = opts.colonne || 'date_reception'
+
+    const filtreFct = preparerFiltreMessages(userId, opts)
+
     const ordre = opts.ordre || -1
     const direction = ordre<0?'prev':'next'
-    const inclure_supprime = opts.inclure_supprime || false
-    const supprime = opts.supprime || false
+    const messages_envoyes = opts.messages_envoyes?true:false
+    const colonne = opts.colonne || (messages_envoyes?'date_envoi':'date_reception')
+    const limit = opts.limit || 40
+    const skipCount = opts.skip || 0
 
     const db = await ouvrirDB({upgrade: true})
-    const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index(colonne)
+    const index = db.transaction(STORE_MESSAGES, 'readonly').store.index(colonne)
 
     let position = 0
     const messages = []
     let curseur = await index.openCursor(null, direction)
     while(curseur) {
         const value = curseur.value
-        if(value.user_id === userId) {  // Uniquement traiter usager
-            if(supprime === false) {
-                if(value.supprime !== true || inclure_supprime === true) {
-                    if(position++ >= skip) messages.push(curseur.value)
-                }
-            } else if(supprime === true) {
-                if(value.supprime === true) {
-                    if(position++ >= skip) messages.push(curseur.value)
-                }
-            }
+
+        if(filtreFct(value)) {
+            if(position++ >= skipCount) messages.push(value)
         }
+
         if(messages.length === limit) break
         curseur = await curseur.continue()
     }
@@ -135,28 +162,58 @@ export async function getMessages(userId, opts) {
     return messages
 }
 
+function preparerFiltreMessages(userId, opts) {
+
+    const inclure_supprime = opts.inclure_supprime || false
+    const supprime = opts.supprime || false,
+          messages_envoyes = opts.messages_envoyes?true:false
+
+    const filtreFct = data => {
+        const { date_envoi, date_reception } = data
+
+        let conserver = false,
+            skip = false
+
+        if(messages_envoyes) {
+            if(!date_envoi) skip = true  // Skip message (recu)
+        } else {
+            if(!date_reception) skip = true  // Skip message (envoye)
+        }
+
+        if(!skip && data.user_id === userId) {  // Uniquement traiter usager
+            if(supprime === false) {
+                if(data.supprime !== true || inclure_supprime === true) {
+                    conserver = true
+                }
+            } else if(supprime === true) {
+                if(data.supprime === true) {
+                    conserver = true
+                }
+            }
+        }
+
+        return conserver
+    }
+
+    return filtreFct
+}
+
 export async function countMessages(userId, opts) {
     opts = opts || {}
-    const inclure_supprime = opts.inclure_supprime || false
-    const supprime = opts.supprime || false
+    // const inclure_supprime = opts.inclure_supprime || false
+    // const supprime = opts.supprime || false
     
     const db = await ouvrirDB({upgrade: true})
-    const store = db.transaction(STORE_MESSAGES, 'readwrite').store
+    const store = db.transaction(STORE_MESSAGES, 'readonly').store
+
+    const filtreFct = preparerFiltreMessages(userId, opts)
 
     let compteur = 0
     let curseur = await store.openCursor()
     while(curseur) {
         const value = curseur.value
-        if(value.user_id === userId) {  // Uniquement traiter usager
-            if(supprime === false) {
-                if(value.supprime !== true || inclure_supprime === true) {
-                    compteur++
-                }
-            } else if(supprime === true) {
-                if(value.supprime === true) {
-                    compteur++
-                }
-            }
+        if(filtreFct(value)) {
+            compteur++
         }
         curseur = await curseur.continue()
     }

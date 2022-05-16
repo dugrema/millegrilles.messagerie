@@ -111,8 +111,9 @@ function App() {
   }, [transfertFichiers, erreurCb])
 
   const formatterMessagesCb = useCallback(messages=>{
-    const supprime = dossier === 'supprimes'
-    formatterMessages(messages, colonnes, userId, setListeMessages, setCompteMessages, erreurCb, {supprime})
+    const supprime = dossier === 'supprimes',
+          messages_envoyes = dossier === 'envoyes'
+    formatterMessages(messages, colonnes, userId, setListeMessages, setCompteMessages, erreurCb, {dossier, messages_envoyes, supprime})
   }, [colonnes, userId, setListeMessages, setCompteMessages, dossier, erreurCb])
 
   const getMessagesSuivants = useCallback(()=>{
@@ -204,34 +205,36 @@ function App() {
   }, [workers, etatAuthentifie, setIdmg, setCertificatMaitreDesCles, setDnsMessagerie])
   
   useEffect(()=>{
-    if(workers) setColonnes(preparerColonnes(workers))
-  }, [workers, setColonnes])
+    if(workers) {
+      let messages_envoyes = false
+      if(dossier === 'envoyes') messages_envoyes = true
+      setColonnes(preparerColonnes(workers, {messages_envoyes}))
+    }
+  }, [workers, setColonnes, dossier])
 
   const rafraichirListe = useCallback(async listeCourante => {
     if(!colonnes || !userId) return
     const { colonne, ordre } = colonnes.tri
     const skip = listeCourante?listeCourante.length:0
 
-    const inclure_supprime = dossier === 'supprimes'
+    const inclure_supprime = dossier === 'supprimes',
+          envoyes = dossier === 'envoyes', 
+          params_messages = {colonne, ordre, skip, limit: PAGE_LIMIT, supprime: inclure_supprime, messages_envoyes: envoyes}
     
-    MessageDao.getMessages(userId, {colonne, ordre, skip, limit: PAGE_LIMIT, supprime: inclure_supprime}).then(liste=>{
+    MessageDao.getMessages(userId, params_messages).then(liste=>{
+      // console.debug("Rafraichir liste resultat : %O", liste)
       formatterMessagesCb(liste) 
     })
     .catch(err=>erreurCb(err, "Erreur chargement messages initiaux"))
   }, [colonnes, userId, formatterMessagesCb, dossier, erreurCb])
 
-  // Charger liste initiale
-  useEffect(()=>{
-    setListeComplete(false)  // Reset flag liste
-    rafraichirListe().catch(erreurCb)
-  }, [colonnes, rafraichirListe, setListeComplete, erreurCb])
-
   // Sync liste de messages avec la base de donnees locale
   useEffect(()=>{
     if(workers && userId && etatConnexion && etatAuthentifie) {
-      const inclure_supprime = dossier === 'supprimes'
-      workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE, inclure_supprime})
-        .then(reponse=>conserverReferenceMessages(workers, userId, reponse.messages))
+      const inclure_supprime = dossier === 'supprimes',
+            envoyes = dossier === 'envoyes'
+      workers.connexion.getReferenceMessages({limit: SYNC_BATCH_SIZE, inclure_supprime, messages_envoyes: envoyes})
+        .then(reponse=>conserverReferenceMessages(workers, userId, reponse.messages, {messages_envoyes: envoyes}))
         .then(rafraichirListe)
         .catch(erreurCb)
     }
@@ -401,17 +404,21 @@ function Footer(props) {
   )
 }
 
-function preparerColonnes(workers) {
+function preparerColonnes(workers, opts) {
+  opts = opts || {}
+
+  const messages_envoyes = opts.messages_envoyes?true:false
+  const colonne_date = messages_envoyes?'date_envoi':'date_reception'
 
   const params = {
-      ordreColonnes: ['date_reception', 'from', 'subject', 'boutonDetail'],
+      ordreColonnes: [colonne_date, 'from', 'subject', 'boutonDetail'],
       paramsColonnes: {
-          'date_reception': {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
+          [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
           'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
           'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
           'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
       },
-      tri: {colonne: 'date_reception', ordre: -1},
+      tri: {colonne: colonne_date, ordre: -1},
       // rowLoader: data => dechiffrerMessage(workers, data)
       rowLoader: async data => {
           if(data['_etatChargement'] !== 'dechiffre') {
@@ -468,7 +475,11 @@ function formatterMessages(messages, colonnes, userId, setMessagesFormattes, set
 }
 
 function trierDate(a, b) {
-  return trierNombre('date_reception', a, b)
+  let resultat = trierNombre('date_reception', a, b)
+  if(resultat === 0) {
+    resultat = trierNombre('date_envoi', a, b)
+  }
+  return resultat
 }
 
 function trierSubject(a, b) {
@@ -491,7 +502,7 @@ async function traiterEvenementMessage(workers, listeMessages, userId, evenement
     
     // Conserver le message dans la DB
     const messageCharge = {user_id: userId, ...message, '_etatChargement': 'charge'}
-    await MessageDao.updateMessage(messageCharge, {replace: true})
+    await MessageDao.updateMessage(messageCharge)  //, {replace: true})
     // Dechiffrer le message immediatement
     const messageDechiffre = await dechiffrerMessage(workers, message)
     const resultat = {...messageCharge, ...messageDechiffre, '_etatChargement': 'dechiffre'}
@@ -500,7 +511,7 @@ async function traiterEvenementMessage(workers, listeMessages, userId, evenement
     delete resultat.message_chiffre
     delete resultat.certificat_message
     delete resultat.certificat_millegrille
-    await MessageDao.updateMessage(resultat, {replace: true})
+    await MessageDao.updateMessage(resultat)  //, {replace: true})
 
     const { uuid_transaction } = message
     listeMaj = listeMaj.map(item=>{
@@ -539,23 +550,27 @@ async function traiterEvenementMessage(workers, listeMessages, userId, evenement
   formatterMessagesCb(listeMaj)
 }
 
-async function conserverReferenceMessages(workers, userId, listeReferences) {
+async function conserverReferenceMessages(workers, userId, listeReferences, opts) {
+  opts = opts || {}
+  const messages_envoyes = opts.messages_envoyes?true:false
   await MessageDao.mergeReferenceMessages(userId, listeReferences)
-  await chargerMessagesNouveaux(workers, userId)
+  await chargerMessagesNouveaux(workers, userId, {messages_envoyes})
   
   // Recovery (devrait deja etre complete dans chargerMessagesNouveaux)
   await dechiffrerMessages(workers, userId)
 }
 
-async function chargerMessagesNouveaux(workers, userId) {
+async function chargerMessagesNouveaux(workers, userId, opts) {
+  opts = opts || {}
+  const messages_envoyes = opts.messages_envoyes
   const { connexion } = workers
 
-  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'nouveau')
+  const uuid_transactions = await MessageDao.getUuidMessagesParEtatChargement(userId, 'nouveau', {messages_envoyes})
 
   const promises = []
   const conserverMessages = async batch => {
     const uuid_messages = [...batch]
-    const reponse = await connexion.getMessages({uuid_messages, inclure_supprime: true})
+    const reponse = await connexion.getMessages({uuid_messages, inclure_supprime: true, messages_envoyes})
     if(reponse.messages && reponse.messages.length > 0) {
       for await (const message of reponse.messages) {
         const messageCharge = {user_id: userId, ...message, '_etatChargement': 'charge'}
@@ -569,7 +584,7 @@ async function chargerMessagesNouveaux(workers, userId) {
         delete resultat.message_chiffre
         delete resultat.certificat_message
         delete resultat.certificat_millegrille
-        await MessageDao.updateMessage(resultat, {replace: true})
+        await MessageDao.updateMessage(resultat)  //, {replace: true})
       }
     }
   }
@@ -607,7 +622,7 @@ async function dechiffrerMessages(workers, userId) {
       // Retirer le contenu chiffre
       delete resultat.message_chiffre
       delete resultat.certificat_message
-      await MessageDao.updateMessage(resultat, {replace: true})
+      await MessageDao.updateMessage(resultat)  // , {replace: true})
     }
 
   }

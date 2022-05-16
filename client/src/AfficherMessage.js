@@ -336,38 +336,44 @@ function AfficherAttachments(props) {
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
-        const { cles, fichiers } = attachments
 
-        const dictAttachments = {}
-        fichiers.forEach( attachmentObj => {
-            const attachment = {...attachmentObj}
-            const fuuid = attachment.fuuid
-            const version_courante = {
-                mimetype: attachment.mimetype || 'application/bytes',
-            }
-            if(attachment.images) {
-                 version_courante.images = {...attachment.images}
-                 delete attachment.images
-            }
-            if(attachment.video) {
-                version_courante.video = {...attachment.video}
-                delete attachment.video
-            }
-            dictAttachments[fuuid] = {
-                ...attachment, 
-                fileId: fuuid, fuuid_v_courante: fuuid, 
-                version_courante,
-            }
-        })
- 
-        // console.debug("Dict attachments combines : %O", dictAttachments)
+        if(Array.isArray(attachments)) {
+            // Message envoye, pas d'info
+            console.debug("Liste attachments message envoye : %O", attachments)
+        } else {
+            // Message recu
+            const { cles, fichiers } = attachments
 
-        const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
-        const listeMappee = liste.map(item=>mapper(item, workers, {cles, supportMedia}))
-        // console.debug("Liste mappee : %O", listeMappee)
+            const dictAttachments = {}
+            fichiers.forEach( attachmentObj => {
+                const attachment = {...attachmentObj}
+                const fuuid = attachment.fuuid
+                const version_courante = {
+                    mimetype: attachment.mimetype || 'application/bytes',
+                }
+                if(attachment.images) {
+                    version_courante.images = {...attachment.images}
+                    delete attachment.images
+                }
+                if(attachment.video) {
+                    version_courante.video = {...attachment.video}
+                    delete attachment.video
+                }
+                dictAttachments[fuuid] = {
+                    ...attachment, 
+                    fileId: fuuid, fuuid_v_courante: fuuid, 
+                    version_courante,
+                }
+            })
 
-        setAttachmentsList(listeMappee)
+            // console.debug("Dict attachments combines : %O", dictAttachments)
 
+            const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
+            const listeMappee = liste.map(item=>mapper(item, workers, {cles, supportMedia}))
+            // console.debug("Liste mappee : %O", listeMappee)
+
+            setAttachmentsList(listeMappee)
+        }
     }, [workers, attachments, supportMedia, setAttachmentsList])
 
     if(!attachmentsList) return ''
