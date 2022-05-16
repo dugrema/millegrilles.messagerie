@@ -126,10 +126,10 @@ function NouveauMessage(props) {
 
     useEffect(()=>{
         if(messageRepondre) {
-            preparerReponse(messageRepondre, setTo, setContent, setUuidThread)
+            preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles)
             setMessageRepondre('')  // Reset message repondre
         }
-    }, [messageRepondre, setTo, setContent, setUuidThread, setMessageRepondre])
+    }, [workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
 
     useEffect(()=>{
         const from = `@${usager.nomUsager}/${dnsMessagerie}`
@@ -639,7 +639,7 @@ function PretFormatteur(props) {
     }
 }
 
-function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
+function preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles) {
     const { message, conserverAttachments, clearTo } = messageRepondre
     const to = message.replyTo || message.from
     if(clearTo !== true) {
@@ -659,6 +659,21 @@ function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
 
     const uuidThread = message.uuid_thread || message.uuid_transaction
     setUuidThread(uuidThread)
+
+    if(conserverAttachments && message.attachments) {
+        const { cles, fichiers } = message.attachments
+        setAttachmentsCles(cles)
+
+        const rowsAttachments = fichiers.map(item=>{
+            const fuuid = item.fuuid,
+                  fileId = fuuid
+            const itemMappe = {fileId, ...item, version_courante: item}  // Simuler mapping avec version_courante
+            let rowAttachment = preparerRowAttachment(workers, itemMappe)
+            rowAttachment = {...rowAttachment, fuuid}
+            return rowAttachment
+        })
+        setAttachments(rowsAttachments)
+    }
 }
 
 function preparerRowAttachment(workers, fichier) {
