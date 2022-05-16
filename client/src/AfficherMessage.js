@@ -21,7 +21,7 @@ function AfficherMessage(props) {
     const { 
         workers, etatConnexion, etatAuthentifie, downloadAction,
         uuidMessage, setUuidMessage, listeMessages,
-        certificatMaitreDesCles, repondreMessageCb, supportMedia,
+        certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, supportMedia,
     } = props
     const message = useMemo(()=>listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop(), [uuidMessage, listeMessages])
     // const [messageDechiffre, setMessageDechiffre] = useState('')
@@ -42,54 +42,17 @@ function AfficherMessage(props) {
         const attachment = attachmentACopier
         setAttachmentACopier('')  // Reset attachment
 
-        // console.debug("Copier attachment pour message : %O", messageDechiffre)
-        // const cles = messageDechiffre.attachments.cles
         const cles = message.attachments.cles
 
         copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    // }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, messageDechiffre])
     }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, message])
 
-    const repondreCb = useCallback(()=>{
-        // console.debug("Repondre a message %O", message)
-        // repondreMessageCb({...message, ...messageDechiffre})
-    //}, [workers, message, messageDechiffre, repondreMessageCb])
-        repondreMessageCb({...message})
-    }, [message, repondreMessageCb])
-
-    // useEffect( () => { 
-    //     // if(!etatConnexion) return
-    //     // workers.connexion.getMessages({uuid_messages: [uuidMessage]}).then(messages=>{
-    //     //     // console.debug("Messages recus : %O", messages)
-    //     //     setMessage(messages.messages.shift())
-    //     // })
-
-    // }, [workers, etatConnexion, setMessage])
-
-    // Charger et dechiffrer message
-    // useEffect(()=>{
-    //     if(!etatConnexion) return
-    //     if(message['_etatChargement' === 'dechiffre']) setMessageDechiffre(message)
-    //     // workers.connexion.getMessages({uuid_messages: [uuidMessage]})
-    //     //     .then(messages=>{
-    //     //         // console.debug("Messages recus : %O", messages)
-    //     //         const message = messages.messages.shift()
-    //     //         setMessage(message)
-    //     //         return dechiffrerMessage(workers, message)
-    //     //     })
-    //     //     .then(messageDechiffre=>{
-    //     //         // console.debug("Message dechiffre : %O", messageDechiffre)
-    //     //         setMessageDechiffre(messageDechiffre)
-    //     //     })
-    //     //     .catch(err=>console.error("Erreur chargement message : %O", err))
-    // }, [workers, message, setMessageDechiffre])
+    const repondreCb = useCallback(()=>repondreMessageCb({...message}), [message, repondreMessageCb])
+    const transfererCb = useCallback(()=>transfererMessageCb({...message}), [message, transfererMessageCb])
 
     useEffect(()=>{
-        // console.debug("Message dechiffre : %O", messageDechiffre)
-        // if(messageDechiffre && !message.lu) {
-        if(etatConnexion && etatAuthentifie && message && !message.lu) {
-            // console.debug("Marquer message %s comme lu", message.uuid_transaction)
+        if(etatConnexion && etatAuthentifie && message && !message.lu && !message.date_envoi) {
             marquerMessageLu(workers, message.uuid_transaction)
         }
     }, [workers, etatConnexion, etatAuthentifie, message])  // , messageDechiffre])
@@ -108,6 +71,7 @@ function AfficherMessage(props) {
                 setUuidMessage={setUuidMessage}
                 choisirCollectionCb={choisirCollectionCb} 
                 repondreCb={repondreCb} 
+                transfererCb={transfererCb}
                 supportMedia={supportMedia} />
 
             <ModalSelectionnerCollection 
@@ -137,7 +101,7 @@ function BreadcrumbMessage(props) {
 
 function RenderMessage(props) {
     // console.debug("RenderMessage : %O", props)
-    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, supportMedia } = props
+    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, supportMedia } = props
     const message = props.message || {}
     const infoMessage = props.infoMessage || {}
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
@@ -172,8 +136,9 @@ function RenderMessage(props) {
                         <AfficherDateSujet date_reception={date_reception} date_estampille={dateEstampille} subject={subject} />
                     </Col>
                     <Col>
-                        <div className="buttonbar-right">
+                        <div className="buttonbar-right mail">
                             <Button onClick={repondreCb}><i className="fa fa-reply"/>{' '}Repondre</Button>
+                            <Button variant="secondary" onClick={transfererCb}><i className="fa fa-mail-forward"/>{' '}Transferer</Button>
                             <Button variant="secondary" onClick={supprimerCb}><i className="fa fa-trash"/>{' '}Supprimer</Button>
                         </div>
                     </Col>

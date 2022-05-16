@@ -62,6 +62,12 @@
 
 .buttonbar-right BUTTON {
     margin-left: 1em;
+    margin-bottom: 0.2em;
+}
+
+.buttonbar-right.mail BUTTON {
+    font-size: smaller;
+    width: 8em;
 }
 
 label.form-label {

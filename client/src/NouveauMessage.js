@@ -320,58 +320,11 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
     opts = opts || {}
 
     if(opts.attachments) {
-        // let attachmentsMapping = {}
-        // let fuuids = []
-        // let fuuidsCleSeulement = []
-
-        // console.debug("Traiter attachments : %O", opts.attachments)
-
         // Mapper data attachments
         const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments])
-        // opts.attachments.forEach( attachment => {
-        //     const { fuuid, version_courante } = attachment
-        //     fuuids.push(fuuid)
-
-        //     const mapping = {
-        //         ...version_courante,
-        //         fuuid,
-        //         // nom: attachment.nom,
-        //         // mimetype: version_courante.mimetype,
-        //         // taille: version_courante.taille,
-        //         // dateFichier: dateAjout,
-        //     }
-        //     delete mapping.tuuid
-        //     console.debug("Mapping attachment : %O", mapping)
-
-        //     if(version_courante.images) {
-        //         const images = version_courante.images
-        //         // mapping.images = {...images}
-        //         Object.values(images).forEach(image=>{
-        //             if(image.data_chiffre || image.data) {
-        //                 fuuidsCleSeulement.push(image.hachage)
-        //             } else if(image.hachage) {
-        //                 // console.debug("Attacher image : %O", image)
-        //                 fuuids.push(image.hachage)
-        //             }
-        //         })
-        //     }
-        //     if(version_courante.video) {
-        //         const videos = version_courante.video
-        //         // mapping.video = {...videos}
-        //         Object.values(videos).forEach(video=>{
-        //             // console.debug("Attache video : %O", video)
-        //             if(video.fuuid_video) {
-        //                 fuuids.push(video.fuuid_video)
-        //             }
-        //         })
-        //     }
-
-        //     attachmentsMapping[fuuid] = mapping
-        // })
 
         // Ajouter attachments et fuuids aux opts
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
-        // console.debug("envoyer opts %O", opts)
     }
 
     const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
@@ -512,39 +465,6 @@ function AfficherAttachments(props) {
                         const fichier = {fileId, ...evenementUpload1.message}
                         // Determiner si l'attachment est pret
                         return preparerRowAttachment(workers, fichier)
-                        // const mimetype = fichier.mimetype
-                        // let pret = true
-                        // if(mimetype) {
-                        //     const version_courante = fichier.version_courante || {}
-                        //     const { images, video } = version_courante
-                        //     const baseType = mimetype.toLowerCase().split('/').shift()
-                        //     if(mimetype === 'application/pdf') {
-                        //         if(images) {
-                        //             pret = !! (images && images.thumb)
-                        //         }
-                        //     } else if (baseType === 'image') {
-                        //         pret = false
-                        //         if(images) {
-                        //             // Attendre webp et jpg
-                        //             const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
-                        //             const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
-                        //             console.debug("Webp: %O, jpg: %O", webp, jpg)
-                        //             pret = !! (webp && jpg)
-                        //         }
-                        //     } else if (baseType === 'video') {
-                        //         pret = false
-                        //         if(images && video) {
-                        //             pret = images && images.thumb
-                        //             const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
-                        //             const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
-                        //             pret = !! (images && images.thumb && mp4 && webm)
-                        //         }
-                        //     }
-                        // }
-
-                        // const fichierMappe = mapper(fichier, workers)
-
-                        // return {...fichierMappe, tuuid, pret}
                     }
                     return item
                 })
@@ -722,22 +642,25 @@ function PretFormatteur(props) {
 }
 
 function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
-    // console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
-    const to = messageRepondre.replyTo || messageRepondre.from
-    setTo(to)
+    console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
+    const { message, conserverAttachments, clearTo } = messageRepondre
+    const to = message.replyTo || message.from
+    if(clearTo !== true) {
+        setTo(to)
+    }
 
-    const dateMessageOriginalInt = messageRepondre['en-tete'].estampille || messageRepondre.date_reception
+    const dateMessageOriginalInt = message['en-tete'].estampille || message.date_reception
     const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
     const messageOriginal = []
     messageOriginal.push('<br><br><p>-----</p>')
     messageOriginal.push('<p>On ' + dateMessageOriginal + ', ' + to + ' wrote:</p>')
-    if(messageRepondre.subject) {
-        messageOriginal.push('<p>' + messageRepondre.subject + '</p>')
+    if(message.subject) {
+        messageOriginal.push('<p>' + message.subject + '</p>')
     }
-    messageOriginal.push(messageRepondre.content)
+    messageOriginal.push(message.content)
     setContent(messageOriginal.join(''))
 
-    const uuidThread = messageRepondre.uuid_thread || messageRepondre.uuid_transaction
+    const uuidThread = message.uuid_thread || message.uuid_transaction
     setUuidThread(uuidThread)
 }
 

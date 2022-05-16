@@ -140,7 +140,13 @@ function App() {
   }, [colonnes, listeMessages, usager, formatterMessagesCb, setListeComplete, erreurCb])
 
   const repondreMessageCb = useCallback(message => {
-    setMessageRepondre(message)
+    setMessageRepondre({message, conserverAttachments: false})
+    setUuidMessage('')
+    setAfficherNouveauMessage(true)
+  }, [setMessageRepondre, setAfficherNouveauMessage])
+
+  const transfererMessageCb = useCallback(message => {
+    setMessageRepondre({message, conserverAttachments: true, clearTo: true})
     setUuidMessage('')
     setAfficherNouveauMessage(true)
   }, [setMessageRepondre, setAfficherNouveauMessage])
@@ -325,6 +331,7 @@ function App() {
             getMessagesSuivants={(etatConnexion&&etatAuthentifie)?getMessagesSuivants:null}
             messageRepondre={messageRepondre}
             repondreMessageCb={repondreMessageCb}
+            transfererMessageCb={transfererMessageCb}
             setMessageRepondre={setMessageRepondre}
             supprimerMessagesCb={supprimerMessagesCb}
             evenementUpload={evenementUpload}
