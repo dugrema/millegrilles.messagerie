@@ -13,6 +13,8 @@ import {
   LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate, AlertTimeout 
 } from '@dugrema/millegrilles.reactjs'
 
+import Contacts, {chargerContenuContacts} from './Contacts'
+
 import { detecterSupport } from './fonctionsFichiers'
 import * as MessageDao from './messageDao'
 import { setWorkers as setWorkersTraitementFichiers } from './workers/traitementFichiers'
@@ -26,7 +28,6 @@ import Menu from './Menu'
 
 const Accueil = lazy(() => import('./Accueil'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
-const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
 const PAGE_LIMIT = 40,
@@ -261,6 +262,17 @@ function App() {
         .catch(err=>erreurCb(err, "Erreur traitement evenement message"))
     }
   }, [workers, evenementMessage, listeMessages, userId, formatterMessagesCb, addEvenementMessage, erreurCb])
+
+  // Contacts, sync initial
+  useEffect(()=>{
+    if(colonnes && userId && etatConnexion && etatAuthentifie) {
+        const { colonne, ordre } = colonnes.tri
+        workers.connexion.getReferenceContacts({limit: SYNC_BATCH_SIZE})
+            .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
+            .then(()=>chargerContenuContacts(workers, userId))
+            .catch(err=>erreurCb(err, "Erreur chargement contacts"))
+    }
+  }, [workers, etatConnexion, etatAuthentifie, colonnes, userId, erreurCb])
 
   return (
     <LayoutApplication>

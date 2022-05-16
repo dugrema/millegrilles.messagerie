@@ -46,10 +46,10 @@ function Contacts(props) {
     }, [colonnes, userId, setContacts, setCompteContacts, erreurCb])
     
     const supprimerContactsCb = useCallback(uuidContacts=>{
-        console.debug("Supprimer contacts %O", uuidContacts)
+        // console.debug("Supprimer contacts %O", uuidContacts)
         workers.connexion.supprimerContacts(uuidContacts).catch(erreurCb)
             .then(reponse=>{
-                console.debug("Reponse supprimer contacts : %O", reponse)
+                // console.debug("Reponse supprimer contacts : %O", reponse)
                 if(reponse.err) erreurCb(reponse.err, "Erreur de suppression de contacts")
             })
             .catch(err=>erreurCb(err, "Erreur suppression de contacts"))
@@ -137,7 +137,7 @@ function Contacts(props) {
         if(evenementContact && userId) {
             addEvenementContact('')  // Clear event pour eviter cycle d'update
 
-            console.debug("Evenement contact : %O", evenementContact)
+            // console.debug("Evenement contact : %O", evenementContact)
 
             // Traiter message
             const routing = evenementContact.routingKey,
@@ -281,7 +281,7 @@ function AfficherListeContacts(props) {
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
     const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
     const supprimerContactCb = useCallback(event=>{
-        console.debug("Supprimer %O (event %O)", selection, event)
+        // console.debug("Supprimer %O (event %O)", selection, event)
         supprimerContacts(selection)
     }, [selection, supprimerContacts])
 
@@ -289,7 +289,7 @@ function AfficherListeContacts(props) {
         event.preventDefault()
         event.stopPropagation()
 
-        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        // console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length > 0) {
             const uuid_contact = selection[0]
             setUuidContactSelectionne(uuid_contact)
@@ -393,13 +393,13 @@ function trierAdresses(a, b) {
     return trierString('adresse', a, b, {chaine})
 }
 
-async function chargerContenuContacts(workers, userId) {
-    console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
+export async function chargerContenuContacts(workers, userId) {
+    // console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
     let listeUuids = []
     {
         const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
         const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
-        console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
+        // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
 
         listeUuids = [...uuidNouveau, ...uuidStale]
     }
@@ -421,11 +421,11 @@ async function chargerContenuContacts(workers, userId) {
 }
 
 async function chargerBatchContacts(workers, userId, batchUuids) {
-    console.debug("Charger batch contacts %s : %O", userId, batchUuids)
+    // console.debug("Charger batch contacts %s : %O", userId, batchUuids)
     const reponse = await workers.connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
     if(!reponse.err) {
         const contacts = reponse.contacts
-        console.debug("Contacts recus : %O", contacts)
+        // console.debug("Contacts recus : %O", contacts)
         for await (let contact of contacts) {
             await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
         }
