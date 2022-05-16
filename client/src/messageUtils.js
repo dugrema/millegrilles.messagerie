@@ -37,10 +37,8 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
 export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
-    // console.debug("Signer message, params opts : %O", opts)
-
     const {connexion, chiffrage} = workers
-    const {cc, bcc, attachments, fuuids, fuuidsCleSeulement} = opts
+    const {cc, bcc, attachments, attachmentsCles, fuuids, fuuidsCleSeulement} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'uuid_thread', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())
@@ -61,39 +59,21 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     let fuuidsCles = fuuids
     if(attachments) {
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
-        // fuuidsCles = fuuidsCles || attachments.map(item=>item.fuuid)
         if(fuuidsCleSeulement) {
             fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
         }
-        // console.debug("Get cles attachments fuuids : %O", fuuidsCles)
-        const cles = await getClesAttachments(workers, fuuidsCles)
-        // console.debug("Reponse cles : %O", cles)
 
-        // Encoder les cles secretes en base64
-        for(let hachage_bytes in cles) {
-            const cle = cles[hachage_bytes]
-            const cleSecreteBase64 = base64.encode(new Buffer.from(cle.cleSecrete, 'binary'))
-            cle.cleSecrete = cleSecreteBase64
-
-            // Cleanup
-            delete cle.date
+        // Retirer cles deja connues
+        const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])
+        let clesAttachmentsPrets = {...attachmentsCles}
+        if(fuuidsClesInconnues.length > 0) {
+            console.warn("signerMessage : il manque des cles (%O), charger maintenant", fuuidsClesInconnues)
+            const cles = await getClesFormattees(workers, fuuidsClesInconnues)
+            clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
         }
 
-        // const attachmentsCles = attachments.map( attachment => {
-        //     const { fuuid } = attachment
-        //     const cle = cles[fuuid]
-        //     const cleSecreteBase64 = base64.encode(new Buffer.from(cle.cleSecrete, 'binary'))
-        //     return {
-        //         ...attachment,
-        //         cleSecrete: cleSecreteBase64, 
-        //         format: cle.format,
-        //         iv: cle.iv,
-        //         tag: cle.tag,
-        //     }
-        // })
-
         message.attachments = {
-            cles,
+            cles: clesAttachmentsPrets,
             fichiers: attachments
         }
     }
@@ -147,4 +127,20 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
         routageMessage, 'Messagerie', {action: 'poster', ajouterCertificat: true})
 
     return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles, fuuids }
+}
+
+export async function getClesFormattees(workers, fuuidsCles) {
+    const cles = await getClesAttachments(workers, fuuidsCles)
+
+    // Encoder les cles secretes en base64
+    for(let hachage_bytes in cles) {
+        const cle = cles[hachage_bytes]
+        const cleSecreteBase64 = base64.encode(new Buffer.from(cle.cleSecrete, 'binary'))
+        cle.cleSecrete = cleSecreteBase64
+
+        // Cleanup
+        delete cle.date
+    }
+
+    return cles
 }

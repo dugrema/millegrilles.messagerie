@@ -13,9 +13,10 @@ import { useDropzone } from 'react-dropzone'
 
 import { ListeFichiers, FormatteurTaille, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
-import { posterMessage } from './messageUtils'
+import { posterMessage, getClesFormattees } from './messageUtils'
 import { chargerProfilUsager } from './profil'
 import { uploaderFichiers } from './fonctionsFichiers'
+// import { getClesAttachments } from './cles'
 
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
@@ -32,16 +33,13 @@ function NouveauMessage(props) {
     } = props
 
     const [to, setTo] = useState('')
-    // const [cc, setCc] = useState('')
-    // const [bcc, setBcc] = useState('')
-    // const [subject, setSubject] = useState('')
     const [content, setContent] = useState('')
-    // const [profil, setProfil] = useState('')
     const [replyTo, setReplyTo] = useState('')
     const [from, setFrom] = useState('')
     const [uuidThread, setUuidThread] = useState('')
     const [showContacts, setShowContacts] = useState(false)
     const [attachments, setAttachments] = useState('')
+    const [attachmentsCles, setAttachmentsCles] = useState({})
     const [attachmentsPrets, setAttachmentsPrets] = useState('')
     const [erreur, setErreur] = useState('')
     const [idDraft, setIdDraft] = useState('')
@@ -62,8 +60,7 @@ function NouveauMessage(props) {
     }, [setAfficherNouveauMessage, supprimerDraftCb, idDraft])
 
     const envoyerCb = useCallback(()=>{
-        // const opts = {cc, bcc, reply_to: replyTo, uuid_thread: uuidThread, attachments}
-        const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments}
+        const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles}
         envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
             .then(()=>{
                 showConfirmation("Message envoye")
@@ -72,19 +69,15 @@ function NouveauMessage(props) {
             })
             .catch(err=>{
                 console.error("Erreur envoi message : %O", err)
-                // setErreur("Erreur envoi message\n%s", ''+err)
                 erreurCb(err, 'Erreur envoi message')
             })
     }, [
         workers, showConfirmation, certificatMaitreDesCles, 
-        from, to, replyTo, content, uuidThread, attachments, 
+        from, to, replyTo, content, uuidThread, attachments, attachmentsCles,
         fermer, supprimerDraftCb, idDraft, erreurCb,
     ])
 
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
-    // const ccChange = useCallback(event=>setCc(event.currentTarget.value), [setCc])
-    // const bccChange = useCallback(event=>setBcc(event.currentTarget.value), [setBcc])
-    // const subjectChange = useCallback(event=>setSubject(event.currentTarget.value), [setSubject])
     const replyToChange = useCallback(event=>setReplyTo(event.currentTarget.value), [setReplyTo])
     const fermerContacts = useCallback(event=>setShowContacts(false), [setShowContacts])
     const choisirContacts = useCallback(event=>setShowContacts(true), [setShowContacts])
@@ -99,8 +92,7 @@ function NouveauMessage(props) {
     const chargerDraft = useCallback(idDraft=>{
         MessageDao.getDraft(idDraft)
             .then(draft=>{
-                // console.debug("Recharger draft : %O", draft)
-                const {from, to, replyTo, content, attachments} = draft
+                const {from, to, replyTo, content, attachments, attachmentsCles} = draft
                 setIdDraft(draft.idDraft)
                 setFrom(from)
                 setTo(to)
@@ -108,19 +100,20 @@ function NouveauMessage(props) {
                 setContent(content)
                 if(attachments) {
                     const attachmentsMappes = Object.values(attachments).map(fichier=>{
-                        const fuuid = fichier.fileId
+                        const fuuid = fichier.fuuid
                         const row = preparerRowAttachment(workers, fichier)
                         const fichierMappe = {...row, ...fichier, fuuid}
                         return fichierMappe
                     })
-                    // console.debug("Attachments : %O, attachments mappes : %O", attachments, attachmentsMappes)
                     setAttachments(attachmentsMappes)
+                    setAttachmentsCles(attachmentsCles)
                 } else {
                     setAttachments('')
+                    setAttachmentsCles({})
                 }
             })
             .catch(erreurCb)
-    }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, erreurCb])
+    }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, setAttachmentsCles, erreurCb])
 
     useEffect(()=>{
         MessageDao.getListeDrafts()
@@ -144,29 +137,20 @@ function NouveauMessage(props) {
 
         chargerProfilUsager(workers, {usager, dnsMessagerie})
             .then( profil => {
-                // console.debug("Profil recu : %O", profil)
-                // setProfil(profil)
                 const replyTo = profil.adresses?profil.adresses[0]:''
                 setReplyTo(replyTo)
             })
             .catch(err=>console.error("Erreur chargement profil : %O", err))
-    //}, [workers, usager, dnsMessagerie, setProfil, setReplyTo])
     }, [workers, usager, dnsMessagerie, setReplyTo])
 
     useEffect(()=>{
         if(!idDraft) {
             if(to || content || attachments) {  // Champs modifiables par l'usager
                 // Creer un nouveau draft
-                // console.debug("Creer nouveau id draft")
-                MessageDao.ajouterDraft().then(idDraft=>{
-                    // console.debug("Creer draft, nouveau id : %O", idDraft)
-                    setIdDraft(idDraft)
-                }).catch(erreurCb)
+                MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
             }
         } else {
             // Conserver information draft
-            // console.debug("Sauvegarder draft %s (attachments: %O)", idDraft, attachments)
-            // const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...attachments])
             let attachmentsMapping = null
             if(attachments) {
                 const fieldsConserver = ['duree', 'fileId', 'fuuid', 'mimetype', 'nom', 'pret', 'taille', 'version_courante']
@@ -177,9 +161,9 @@ function NouveauMessage(props) {
                     return attach
                 })
             }
-            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping}).catch(erreurCb)
+            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
         }
-    }, [idDraft, from, to, replyTo, content, attachments, setIdDraft, erreurCb])
+    }, [idDraft, from, to, replyTo, content, attachments, attachmentsCles, setIdDraft, erreurCb])
 
     return (
         <>
@@ -233,6 +217,8 @@ function NouveauMessage(props) {
                 etatConnexion={etatConnexion} 
                 attachments={attachments} 
                 setAttachments={setAttachments} 
+                attachmentsCles={attachmentsCles}
+                setAttachmentsCles={setAttachmentsCles}
                 evenementUpload={evenementUpload} 
                 setAttachmentsPrets={setAttachmentsPrets}
                 supportMedia={supportMedia}
@@ -399,7 +385,10 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
 }
 
 function AfficherAttachments(props) {
-    const { workers, attachments, setAttachments, setAttachmentsPrets, etatConnexion, evenementUpload, erreurCb } = props
+    const { 
+        workers, etatConnexion, evenementUpload, erreurCb,
+        attachments, setAttachments, setAttachmentsPrets, attachmentsCles, setAttachmentsCles, 
+    } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -422,7 +411,6 @@ function AfficherAttachments(props) {
     }, [attachments])
 
     const selectionner = useCallback( selection => {
-        // console.debug("Selection : %O", selection)
         if(attachments) {
             // Retirer fuuids deja selectionnes
             const attachmentsFuuids = attachments.map(item=>item.fuuid)
@@ -430,7 +418,17 @@ function AfficherAttachments(props) {
         }
         const fuuidsMaj = [...attachments, ...selection]
         setAttachments(fuuidsMaj)
-    }, [attachments, setAttachments])
+
+        // Extraire la liste complete des fuuids de la selection
+        const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
+        const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
+        getClesFormattees(workers, listeFuuidsCles)
+            .then(cles=>{
+                const clesMaj = {...attachmentsCles, ...cles}
+                setAttachmentsCles(clesMaj)
+            })
+            .catch(err=>console.error("Erreur chargement cles fuuids %s : %O", listeFuuidsCles, err))
+    }, [workers, attachments, attachmentsCles, setAttachments, setAttachmentsCles])
 
     const onDrop = useCallback(acceptedFiles=>{
         preparerUploaderFichiers(workers, acceptedFiles)
@@ -642,7 +640,6 @@ function PretFormatteur(props) {
 }
 
 function preparerReponse(messageRepondre, setTo, setContent, setUuidThread) {
-    console.debug("Initialiser valeurs de la reponse a partir de : %O", messageRepondre)
     const { message, conserverAttachments, clearTo } = messageRepondre
     const to = message.replyTo || message.from
     if(clearTo !== true) {

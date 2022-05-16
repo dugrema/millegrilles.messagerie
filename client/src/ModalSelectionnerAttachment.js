@@ -27,7 +27,7 @@ function ModalSelectionnerAttachement(props) {
     const selectionnerCb = useCallback(()=>{ 
 
         // Extraire info detaillee des fichiers
-        // console.debug("Liste a filtrer : %O", liste)
+        console.debug("Liste a filtrer : %O", liste)
         const detailSelection = liste.filter(item=>selection.includes(item.fileId))
 
         selectionner(detailSelection)
@@ -176,10 +176,8 @@ function preprarerDonnees(liste, workers, opts) {
 }
 
 async function chargerCollection(workers, cuuid, setListe, usager) {
-    // console.debug("Charger collection %s", cuuid)
     const { connexion } = workers
     const reponse = await connexion.getCollection(cuuid)
-    // console.debug("!!! Reponse collection %s = %O", cuuid, reponse)
     const { documents } = reponse
 
     // Precharger les cles des images thumbnails, small et posters
