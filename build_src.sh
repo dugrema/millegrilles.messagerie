@@ -17,7 +17,7 @@ build_app() {
 
   echo "Installer toutes les dependances"
   cd $REP_CLIENT
-  npm i
+  npm i --force
 
   echo "Build React"
   npm run build
