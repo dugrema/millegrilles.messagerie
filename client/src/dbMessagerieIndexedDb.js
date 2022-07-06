@@ -38,7 +38,7 @@ function createObjectStores(db, oldVersion) {
     switch(oldVersion) {
         case 0:
             db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'hachage_bytes'})
-            messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: 'uuid_transaction'})
+            messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['uuid_transaction', 'user_id']})
             contactStore = db.createObjectStore(STORE_CONTACTS, {keyPath: 'uuid_contact'})
             db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
             
