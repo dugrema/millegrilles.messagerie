@@ -14,6 +14,7 @@ import { mapper } from './mapperFichier'
 
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
 import PreviewFichiers from './FilePlayer'
+import AfficherVideo from './AfficherVideo'
 
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
@@ -27,6 +28,7 @@ function AfficherMessage(props) {
     // const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [attachmentACopier, setAttachmentACopier] = useState('')
+    const [afficherVideo, setAfficherVideo] = useState(false)
 
     const retour = useCallback(()=>{setUuidMessage('')}, [setUuidMessage])
     const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
@@ -72,7 +74,9 @@ function AfficherMessage(props) {
                 choisirCollectionCb={choisirCollectionCb} 
                 repondreCb={repondreCb} 
                 transfererCb={transfererCb}
-                supportMedia={supportMedia} />
+                supportMedia={supportMedia} 
+                afficherVideo={afficherVideo}
+                setAfficherVideo={setAfficherVideo} />
 
             <ModalSelectionnerCollection 
                 show={showChoisirCollection} 
@@ -101,7 +105,10 @@ function BreadcrumbMessage(props) {
 
 function RenderMessage(props) {
     // console.debug("RenderMessage : %O", props)
-    const { workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, supportMedia } = props
+    const { 
+        workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, 
+        afficherVideo, supportMedia, setAfficherVideo, 
+    } = props
     const message = props.message || {}
     const infoMessage = props.infoMessage || {}
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
@@ -145,6 +152,47 @@ function RenderMessage(props) {
                 </Row>
             </Header>
 
+            <ContenuMessage 
+                content={content}
+                workers={workers} 
+                etatConnexion={etatConnexion}
+                downloadAction={downloadAction}
+                attachments={attachments} 
+                attachments_inline={attachments_inline} 
+                choisirCollectionCb={choisirCollectionCb} 
+                supportMedia={supportMedia} 
+                afficherVideo={afficherVideo}
+                setAfficherVideo={setAfficherVideo} />
+
+        </>
+    )
+}
+
+function ContenuMessage(props) {
+    const { 
+        workers, etatConnexion, downloadAction, content, afficherVideo, 
+        attachments, attachments_inline, choisirCollectionCb, supportMedia, 
+        setAfficherVideo,
+    } = props
+
+    const fichiers = attachments.fichiers
+
+    const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
+
+    if(afficherVideo) {
+        console.debug("ContenuMessage PROPPIES : %O", props)
+        const fileItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
+        console.debug("Fichier selectionne : %O", fileItem)
+        return (
+            <AfficherVideo
+                support={supportMedia}
+                fichier={fileItem}
+                fermer={fermerAfficherVideo} />
+        )
+    }
+
+    return (
+        <>
             <AfficherMessageQuill content={content} />
 
             <AfficherAttachments 
@@ -154,7 +202,8 @@ function RenderMessage(props) {
                 attachments={attachments} 
                 attachments_inline={attachments_inline} 
                 choisirCollectionCb={choisirCollectionCb} 
-                supportMedia={supportMedia} />
+                supportMedia={supportMedia} 
+                setAfficherVideo={setAfficherVideo} />        
         </>
     )
 }
@@ -264,7 +313,7 @@ async function marquerMessageLu(workers, uuid_transaction) {
 
 function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb, supportMedia } = props
+    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb, supportMedia, setAfficherVideo } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -290,9 +339,21 @@ function AfficherAttachments(props) {
             let fuuid = [...selection].pop()
             // console.debug("Show preview cb : %O", fuuid)
             await setFuuidSelectionne(fuuid)
-            setShowPreview(true)
+            // setShowPreview(true)
+
+            const fileItem = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
+            const mimetype = fileItem.mimetype || ''
+            console.debug("Afficher fuuid %s (mimetype: %s), fileItem %O", fuuid, mimetype, fileItem)
+            if(mimetype.startsWith('video/')) {
+                // Page Video
+                setAfficherVideo(fuuid)
+            } else {
+                // Preview/carousel
+                setShowPreview(true)
+            }
+
         }
-    }, [selection, setShowPreview, setFuuidSelectionne])
+    }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo])
 
     // useEffect(()=>detecterSupport(setSupport), [setSupport])
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
