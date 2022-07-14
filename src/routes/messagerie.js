@@ -4,7 +4,8 @@ const express = require('express')
 const fichiersBackingStore = require('@dugrema/millegrilles.nodejs/src/fichiersTransfertBackingstore')
 
 const poster = require('./messageriePoster')
-const routeMessagerieFichiers = require('./messagerieFichiers.js')
+const routeMessagerieFichiers = require('./messagerieFichiers')
+const routeMessagerieStreams = require('./messagerieStreams')
 
 const EXPIRATION_RATE_REDIS = 120  // en secondes
 const HIT_RATE_REDIS = 1000  // Hits max par periode
@@ -33,9 +34,12 @@ function app(amqpdao, opts) {
     route.use((req, _res, next)=>{debug("Route messagerie, url %s", req.url); next()})
 
     const routeMessagerieFichiersHandler = routeMessagerieFichiers(amqpdao, fichiersBackingStore, opts)
+    const routeMessagerieStreamsHandler = routeMessagerieStreams(amqpdao, opts)
 
     route.get('/info.json', routeInfo)
+    route.get('/initSession', initSession)
     route.get('/fichiers/verifier', verifierAutorisationFichier)
+    route.get('/streams/verifier', routeMessagerieStreamsHandler)
     route.all('/fichiers/*', verifierAuthentification, routeMessagerieFichiersHandler)
     route.all('/upload/*', verifierAuthentification, routeMessagerieFichiersHandler)
     route.use('/poster', verifierAuthentificationPoster, poster(amqpdao, fichiersBackingStore, opts))
@@ -46,7 +50,11 @@ function app(amqpdao, opts) {
     // Retourner dictionnaire avec route pour server.js
     return route
 }
-  
+
+function initSession(req, res) {
+    return res.sendStatus(200)
+}
+
 function ajouterStaticRoute(route) {
     // Route utilisee pour transmettre fichiers react de la messagerie en production
     var folderStatic =
@@ -164,9 +172,46 @@ async function appliquerRateLimit(req, typeRate, opts) {
 }
 
 function verifierAutorisationFichier(req, res) {
-    // TODO : valider acces de l'usager au fichier
-    // console.debug("REQ Params, sec : %O", req)
-    return res.sendStatus(200)
+    debug("verifierAutorisationFichier Headers %O", req.headers)
+    //debug("verifierAutorisationFichier Session %O", req.session)
+
+    const uriVideo = req.headers['x-original-uri']
+    const reFuuid = /\/messagerie\/fichiers\/([A-Za-z0-9]+)(\/.*)?/
+    const matches = reFuuid.exec(uriVideo)
+    debug("Matches : %O", matches)
+
+    if(!matches || matches.length < 1) {
+        debug("verifierAutorisationFichier Mauvais url : %s", req.url)
+        return res.sendStatus(400)
+    }
+
+    const fuuid = matches[1]
+    const userId = req.session.userId
+
+    if(!userId) {
+        console.error("Erreur session, userId manquant sur %s", req.url)
+        return res.sendStatus(400)
+    }
+
+    debug("Fuuid a charger pour usager %s : %s", userId, fuuid)
+
+    const mq = req.amqpdao
+    const requete = { user_id: userId, fuuids: [fuuid] }
+    mq.transmettreRequete('GrosFichiers', requete, {action: 'verifierAccesFuuids', exchange: '2.prive', attacherCertificat: true})
+        .then(resultat=>{
+            if(resultat.acces_tous === true) {
+                debug("verifierAutorisationFichier Acces stream OK")
+                return res.sendStatus(200)
+            } else {
+                debug("verifierAutorisationFichier Acces stream refuse")
+                return res.sendStatus(403)
+            }
+        })
+        .catch(err=>{
+            debug("verifierAutorisationFichier Erreur verification acces stream : %O", err)
+            return res.sendStatus(500)
+        })
 }
+
 
 module.exports = app

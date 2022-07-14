@@ -175,7 +175,7 @@ function ContenuMessage(props) {
         setAfficherVideo,
     } = props
 
-    const fichiers = attachments.fichiers
+    const fichiers = attachments?attachments.fichiers:{} || {}
 
     const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
 
