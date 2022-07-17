@@ -20,8 +20,12 @@ async function verifierAutorisationStream(req, res) {
 
         const uriVideo = req.headers['x-original-uri']
         const urlVideo = new URL('https://localhost/' + uriVideo)
-        const fuuid = urlVideo.pathname.split('/').pop()
         const tokenVideo = urlVideo.searchParams.get('token')
+
+        const reFuuid = /\/messagerie\/streams\/([A-Za-z0-9]+)(\/.*)?/
+        const matches = reFuuid.exec(urlVideo.pathname)
+        debug("Matches : %O", matches)
+        const fuuid = matches[1]
         debug("Fuuid : %s, token : %s", fuuid, tokenVideo)
 
         if(!fuuid || !tokenVideo) return res.sendStatus(400)

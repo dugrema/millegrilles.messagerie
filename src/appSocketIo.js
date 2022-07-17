@@ -38,6 +38,7 @@ function configurerEvenements(socket) {
       { eventName: 'marquerLu', callback: (params, cb) => traiter(socket, mqdao.marquerLu, {params, cb}) },
       { eventName: 'supprimerMessages', callback: (params, cb) => traiter(socket, mqdao.supprimerMessages, {params, cb}) },
       { eventName: 'supprimerContacts', callback: (params, cb) => traiter(socket, mqdao.supprimerContacts, {params, cb}) },
+      { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
 
       // GrosFichiers pour attachements
       { eventName: 'getCollection', callback: (params, cb) => traiter(socket, mqdao.getCollection, {params, cb}) },

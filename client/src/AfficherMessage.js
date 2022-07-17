@@ -185,6 +185,7 @@ function ContenuMessage(props) {
         console.debug("Fichier selectionne : %O", fileItem)
         return (
             <AfficherVideo
+                workers={workers}
                 support={supportMedia}
                 fichier={fileItem}
                 fermer={fermerAfficherVideo} />

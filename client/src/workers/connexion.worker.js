@@ -146,6 +146,10 @@ function supprimerContacts(uuidContacts) {
   return ConnexionClient.emitBlocking('supprimerContacts', commande, {domaine: 'Messagerie', action: 'supprimerContacts', ajouterCertificat: true})
 }
 
+function creerTokenStream(commande) {
+  return ConnexionClient.emitBlocking('creerTokenStream', commande, {domaine: CONST_DOMAINE_MAITREDESCLES, action: 'verifierPreuve', ajouterCertificat: true})
+}
+
 async function enregistrerCallbackEvenementContact(params, cb) { 
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
@@ -183,7 +187,7 @@ expose({
     copierFichierTiers, getCollectionUpload,
     supprimerMessages, supprimerContacts,
 
-    initialiserProfil,
+    initialiserProfil, creerTokenStream,
 
     // GrosFichiers pour attachements
     getClesFichiers, getCollection, getDocuments, getDocumentsParFuuid, getFavoris,

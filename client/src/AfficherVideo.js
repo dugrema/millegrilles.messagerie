@@ -16,7 +16,7 @@ function AfficherVideo(props) {
 
     // console.debug("AfficherVideo PROPPIES : %O", props)
 
-    const { support } = props,
+    const { workers, support } = props,
           fichier = props.fichier || {},
           nomFichier = fichier.nom || '',
           version_courante = fichier.version_courante || fichier || {},
@@ -69,17 +69,26 @@ function AfficherVideo(props) {
     useEffect(()=>{
         if(!selecteur) return setSrcVideo('')
         console.debug("!!! Fichier selectionne (support: %O): %O", support, fichier)
-        const videoLoader = videoResourceLoader(null, fichier.video, {supporteWebm: support.webm, baseUrl: '/messagerie/streams'})
-        console.debug("Video loader : %O", videoLoader)
+
+        // Creer token de streaming
+        const connexion = workers.connexion
+
+        const creerToken = async fuuid => {
+            const reponse = await connexion.creerTokenStream({fuuid})
+            return reponse.token
+        }
+
+        const videoLoader = videoResourceLoader(null, fichier.video, {supporteWebm: support.webm, baseUrl: '/messagerie/streams', creerToken})
+        // console.debug("Video loader : %O", videoLoader)
         videoLoader.load(selecteur)
-            .then(src=>{
+            .then(async src=>{
                 console.debug("Source video : %O", src)
                 setSrcVideo(src)
             })
             .catch(err=>{
                 console.error("AfficherVideo erreur chargement video : %O", err)
             })
-    }, [fichier, selecteur, support, setSrcVideo])
+    }, [workers, fichier, selecteur, support, setSrcVideo])
 
     if(!srcVideo) return (
         <>

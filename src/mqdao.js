@@ -1,6 +1,8 @@
 const { MilleGrillesAmqpDAO } = require('@dugrema/millegrilles.nodejs')
 const { pki: pkiForge } = require('@dugrema/node-forge')
 const { extraireExtensionsMillegrille } = require('@dugrema/millegrilles.utiljs/src/forgecommon')
+const { getRandom } = require('@dugrema/millegrilles.utiljs/src/random')
+const { hacher } = require('@dugrema/millegrilles.nodejs/src/hachage')
 
 const debug = require('debug')('mqdao')
 
@@ -153,6 +155,21 @@ async function getDomainesMessagerie(socket, params) {
 
 async function initialiserProfil(socket, params) {
     return transmettreCommande(socket, params, 'initialiserProfil')
+}
+
+async function creerTokenStream(socket, params, cb) {
+    const fuuid = params.fuuid
+
+    const randomBytes = getRandom(32)
+    const token = (await hacher(randomBytes, {hashingCode: 'blake2s-256', encoding: 'base58btc'})).slice(1)
+
+    const cleStream = `streamtoken:${fuuid}:${token}`
+    const timeoutStream = 2 * 60 * 60
+
+    const redisClient = socket.redisClient
+    await redisClient.set(cleStream, 'ok', {NX: true, EX: timeoutStream})
+
+    return {token}
 }
 
 
@@ -329,6 +346,7 @@ module.exports = {
     
     getDomainesMessagerie,
     initialiserProfil,
+    creerTokenStream,
 
     // GrosFichiers
     getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles, copierFichierTiers,
