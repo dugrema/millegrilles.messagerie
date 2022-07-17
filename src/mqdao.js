@@ -165,7 +165,7 @@ async function creerTokenStream(socket, params) {
         {domaine: CONST_DOMAINE_MAITREDESCLES, partition: params.partition, noformat: true})
 
     debug("Reponse preuve : %O", reponse)
-    if(reponse.verification[fuuid] === true) {
+    if(reponse.verification && reponse.verification[fuuid] === true) {
         // Creer un token random pour le stream
         const randomBytes = getRandom(32)
         const token = (await hacher(randomBytes, {hashingCode: 'blake2s-256', encoding: 'base58btc'})).slice(1)
