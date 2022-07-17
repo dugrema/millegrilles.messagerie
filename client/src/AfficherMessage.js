@@ -76,7 +76,8 @@ function AfficherMessage(props) {
                 transfererCb={transfererCb}
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
-                setAfficherVideo={setAfficherVideo} />
+                setAfficherVideo={setAfficherVideo} 
+                certificatMaitreDesCles={certificatMaitreDesCles} />
 
             <ModalSelectionnerCollection 
                 show={showChoisirCollection} 
@@ -107,7 +108,7 @@ function RenderMessage(props) {
     // console.debug("RenderMessage : %O", props)
     const { 
         workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, 
-        afficherVideo, supportMedia, setAfficherVideo, 
+        afficherVideo, supportMedia, setAfficherVideo, certificatMaitreDesCles, 
     } = props
     const message = props.message || {}
     const infoMessage = props.infoMessage || {}
@@ -162,7 +163,8 @@ function RenderMessage(props) {
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
-                setAfficherVideo={setAfficherVideo} />
+                setAfficherVideo={setAfficherVideo} 
+                certificatMaitreDesCles={certificatMaitreDesCles} />
 
         </>
     )
@@ -172,7 +174,7 @@ function ContenuMessage(props) {
     const { 
         workers, etatConnexion, downloadAction, content, afficherVideo, 
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
-        setAfficherVideo,
+        setAfficherVideo, certificatMaitreDesCles,
     } = props
 
     const fichiers = attachments?attachments.fichiers:{} || {}
@@ -188,6 +190,7 @@ function ContenuMessage(props) {
                 workers={workers}
                 support={supportMedia}
                 fichier={fileItem}
+                certificatMaitreDesCles={certificatMaitreDesCles}
                 fermer={fermerAfficherVideo} />
         )
     }

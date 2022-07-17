@@ -157,19 +157,29 @@ async function initialiserProfil(socket, params) {
     return transmettreCommande(socket, params, 'initialiserProfil')
 }
 
-async function creerTokenStream(socket, params, cb) {
+async function creerTokenStream(socket, params) {
     const fuuid = params.fuuid
 
-    const randomBytes = getRandom(32)
-    const token = (await hacher(randomBytes, {hashingCode: 'blake2s-256', encoding: 'base58btc'})).slice(1)
+    // Verifier l'autorisation d'acces au stream
+    const reponse = await transmettreRequete(socket, params, 'verifierPreuve', 
+        {domaine: CONST_DOMAINE_MAITREDESCLES, partition: params.partition, noformat: true})
 
-    const cleStream = `streamtoken:${fuuid}:${token}`
-    const timeoutStream = 2 * 60 * 60
+    debug("Reponse preuve : %O", reponse)
+    if(reponse.verification[fuuid] === true) {
+        // Creer un token random pour le stream
+        const randomBytes = getRandom(32)
+        const token = (await hacher(randomBytes, {hashingCode: 'blake2s-256', encoding: 'base58btc'})).slice(1)
+        const cleStream = `streamtoken:${fuuid}:${token}`
+        const timeoutStream = 2 * 60 * 60
 
-    const redisClient = socket.redisClient
-    await redisClient.set(cleStream, 'ok', {NX: true, EX: timeoutStream})
+        // Conserver token dans Redis
+        const redisClient = socket.redisClient
+        await redisClient.set(cleStream, 'ok', {NX: true, EX: timeoutStream})
 
-    return {token}
+        return {token}
+    } else {
+        return {ok: false, err: "Cle refusee ou inconnue"}
+    }
 }
 
 
@@ -295,12 +305,13 @@ async function transmettreRequete(socket, params, action, opts) {
     opts = opts || {}
     const domaine = opts.domaine || DOMAINE_MESSAGERIE
     const exchange = opts.exchange || L2Prive
+    const partition = opts.partition
     try {
         verifierMessage(params, domaine, action)
         return await socket.amqpdao.transmettreRequete(
             domaine, 
             params, 
-            {action, exchange, noformat: true, decoder: true}
+            {action, partition, exchange, noformat: true, decoder: true}
         )
     } catch(err) {
         console.error("mqdao.transmettreRequete ERROR : %O", err)

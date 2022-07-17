@@ -5,7 +5,7 @@ import Col from 'react-bootstrap/Col'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 
-import { VideoViewer } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, VideoViewer } from '@dugrema/millegrilles.reactjs'
 
 import {videoResourceLoader} from '@dugrema/millegrilles.reactjs/src/imageLoading'
 import {trierLabelsVideos} from '@dugrema/millegrilles.reactjs/src/labelsRessources'
@@ -16,7 +16,7 @@ function AfficherVideo(props) {
 
     // console.debug("AfficherVideo PROPPIES : %O", props)
 
-    const { workers, support } = props,
+    const { workers, support, certificatMaitreDesCles, } = props,
           fichier = props.fichier || {},
           nomFichier = fichier.nom || '',
           version_courante = fichier.version_courante || fichier || {},
@@ -71,10 +71,16 @@ function AfficherVideo(props) {
         console.debug("!!! Fichier selectionne (support: %O): %O", support, fichier)
 
         // Creer token de streaming
-        const connexion = workers.connexion
+        const { connexion, chiffrage } = workers
 
         const creerToken = async fuuid => {
-            const reponse = await connexion.creerTokenStream({fuuid})
+            const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
+            const dictCle = {[fuuid]: Buffer.from(cleDechiffree.cleSecrete)}
+            const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
+            const preuveAcces = { fuuid, cles: clesChiffrees.cles, partition: clesChiffrees.partition, domaine: 'GrosFichiers' }
+            console.debug("Preuve acces : %O", preuveAcces)
+        
+            const reponse = await connexion.creerTokenStream(preuveAcces)
             return reponse.token
         }
 
