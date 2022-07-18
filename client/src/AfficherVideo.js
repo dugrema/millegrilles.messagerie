@@ -68,7 +68,7 @@ function AfficherVideo(props) {
 
     useEffect(()=>{
         if(!selecteur) return setSrcVideo('')
-        console.debug("!!! Fichier selectionne (support: %O): %O", support, fichier)
+        // console.debug("!!! Fichier selectionne (support: %O): %O", support, fichier)
 
         // Creer token de streaming
         const { connexion, chiffrage } = workers
