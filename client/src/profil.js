@@ -9,7 +9,7 @@ export async function chargerProfilUsager(workers, infoUsager, opts) {
     if(profil.ok === false && profil.code === 404) {
         console.info("Profil inexistant, on en initialize un nouveau pour usager %O", usager)
 
-        const adresse = `@${usager.nomUsager}/${dnsMessagerie}`
+        const adresse = `@${usager.nomUsager}:${dnsMessagerie}`
 
         profil = await connexion.initialiserProfil(adresse)
     }

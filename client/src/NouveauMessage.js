@@ -132,7 +132,7 @@ function NouveauMessage(props) {
     }, [workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
 
     useEffect(()=>{
-        const from = `@${usager.nomUsager}/${dnsMessagerie}`
+        const from = `@${usager.nomUsager}:${dnsMessagerie}`
         setFrom(from)
 
         chargerProfilUsager(workers, {usager, dnsMessagerie})
