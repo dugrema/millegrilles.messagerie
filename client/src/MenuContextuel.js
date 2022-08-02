@@ -118,6 +118,7 @@ export function MenuContextuelListeContacts(props) {
 
 function retirerAttacher(listeIds, fichiers, setFichiers) {
     console.debug("Retirer attachments %O de %O", listeIds, fichiers)
+    if(!fichiers || !fichiers.filter) return
     const fichiersMaj = fichiers.filter(item=>!listeIds.includes(item.fileId))
     setFichiers(fichiersMaj)
 }

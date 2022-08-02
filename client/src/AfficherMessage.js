@@ -178,11 +178,13 @@ function ContenuMessage(props) {
         setAfficherVideo, certificatMaitreDesCles,
     } = props
 
-    const fichiers = attachments?attachments.fichiers:{} || {}
+    const fichiers = attachments?attachments.fichiers:null
 
     const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
 
     const attachmentMappe = useMemo(()=>{
+        if(!fichiers) return
+
         const fileItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
 
         let attachmentMappe = null
@@ -531,7 +533,7 @@ function MenuContextuel(props) {
     if( selection && selection.length > 1 ) {
         return ''
         // return <MenuContextuelAttacherMultiselect {...props} />
-    } else if(selection.length>0) {
+    } else if(selection.length>0 && attachments.fichiers) {
         const fuuid = selection[0]
         const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
         const attachmentListDetail = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
