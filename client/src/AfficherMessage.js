@@ -5,11 +5,12 @@ import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import ReactQuill from 'react-quill'
+import multibase from 'multibase'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
-import { mapper } from './mapperFichier'
+import { mapper, mapperRowAttachment } from './mapperFichier'
 // import { detecterSupport } from './fonctionsFichiers'
 
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
@@ -181,15 +182,40 @@ function ContenuMessage(props) {
 
     const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
 
-    if(afficherVideo) {
-        console.debug("ContenuMessage PROPPIES : %O", props)
+    const attachmentMappe = useMemo(()=>{
         const fileItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
-        console.debug("Fichier selectionne : %O", fileItem)
+
+        let attachmentMappe = null
+        if(fileItem) {
+
+            const creerToken = async fuuid => {
+                console.debug("Creer token video fuuid : %s (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+                const {chiffrage, connexion} = workers
+                const cleDechiffree = attachments.cles[fuuid]
+                // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
+                const dictCle = {[fuuid]: multibase.decode(cleDechiffree.cleSecrete)}
+                const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
+                const preuveAcces = { fuuid, cles: clesChiffrees.cles, partition: clesChiffrees.partition, domaine: 'GrosFichiers' }
+                console.debug("Preuve acces : %O", preuveAcces)
+            
+                const reponse = await connexion.creerTokenStream(preuveAcces)
+                console.debug("Reponse preuve acces : %O", reponse)
+                return reponse.token
+            }
+
+            attachmentMappe = mapperRowAttachment(fileItem, workers, {genererToken: true, creerToken})
+        }
+
+        return attachmentMappe
+    }, [afficherVideo, fichiers])
+
+    if(afficherVideo && attachmentMappe) {
+        console.debug("ContenuMessage PROPPIES : %O", props)
         return (
             <AfficherVideo
                 workers={workers}
                 support={supportMedia}
-                fichier={fileItem}
+                fichier={attachmentMappe}
                 certificatMaitreDesCles={certificatMaitreDesCles}
                 fermer={fermerAfficherVideo} />
         )
