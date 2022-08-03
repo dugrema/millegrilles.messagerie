@@ -202,7 +202,10 @@ function App() {
         .catch(err=>console.error("Erreur chargement idmg local : %O", err))
 
       workers.connexion.getClesChiffrage()
-        .then(cles=>setCertificatMaitreDesCles(cles.certificat))
+        .then(cles=>{
+          console.debug("Cles chiffrage : %O", cles)
+          setCertificatMaitreDesCles(cles.certificat)
+        })
         .catch(err=>console.error("Erreur chargement cles chiffrage : %O", err))
 
       workers.connexion.getDomainesMessagerie()

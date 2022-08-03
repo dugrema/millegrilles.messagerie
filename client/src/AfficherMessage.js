@@ -106,7 +106,7 @@ function BreadcrumbMessage(props) {
 }
 
 function RenderMessage(props) {
-    // console.debug("RenderMessage : %O", props)
+    console.debug("RenderMessage : %O", props)
     const { 
         workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, 
         afficherVideo, supportMedia, setAfficherVideo, certificatMaitreDesCles, 
@@ -197,7 +197,18 @@ function ContenuMessage(props) {
                 // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
                 const dictCle = {[fuuid]: multibase.decode(cleDechiffree.cleSecrete)}
                 const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
-                const preuveAcces = { fuuid, cles: clesChiffrees.cles, partition: clesChiffrees.partition, domaine: 'GrosFichiers' }
+                const cleChiffree = {...cleDechiffree}
+                delete cleChiffree.cleSecrete
+                const listeCles = [
+                    {...cleChiffree, cle: clesChiffrees.cles[fuuid]}
+                ]
+                const preuveAcces = { 
+                    fuuid, 
+                    // cles: clesChiffrees.cles, 
+                    cles: listeCles,
+                    partition: clesChiffrees.partition, 
+                    // domaine: 'GrosFichiers' 
+                }
                 console.debug("Preuve acces : %O", preuveAcces)
             
                 const reponse = await connexion.creerTokenStream(preuveAcces)
@@ -209,7 +220,7 @@ function ContenuMessage(props) {
         }
 
         return attachmentMappe
-    }, [afficherVideo, fichiers])
+    }, [afficherVideo, certificatMaitreDesCles, fichiers])
 
     if(afficherVideo && attachmentMappe) {
         console.debug("ContenuMessage PROPPIES : %O", props)
