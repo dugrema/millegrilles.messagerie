@@ -153,7 +153,11 @@ function NouveauMessage(props) {
             // Conserver information draft
             let attachmentsMapping = null
             if(attachments) {
-                const fieldsConserver = ['duree', 'fileId', 'fuuid', 'mimetype', 'nom', 'pret', 'taille', 'version_courante']
+                const fieldsConserver = [
+                    'fileId', 'fuuid', 
+                    'duration', 'mimetype', 'width', 'height', 'anime', 'nom', 'taille', 
+                    'pret', 'version_courante'
+                ]
                 attachmentsMapping = attachments.map(item=>{
                     const attach = {}
                     fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
@@ -362,6 +366,8 @@ function mapperAttachments(attachments) {
                 })
             }
         }
+
+        console.debug("mapperAttachments Attachment %O", mapping)
 
         attachmentsMapping[fuuid] = mapping
     })
@@ -702,8 +708,7 @@ function preparerRowAttachment(workers, fichier) {
             if(images && video) {
                 pret = images && images.thumb
                 const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
-                const webm = Object.keys(video).filter(item=>item.startsWith('video/webm')).pop()
-                pret = !! (images && images.thumb && mp4 && webm)
+                pret = !! (images && images.thumb && mp4)
             }
         }
     }

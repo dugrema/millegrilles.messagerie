@@ -58,6 +58,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
 
     let fuuidsCles = fuuids
     if(attachments) {
+        console.debug("signerMessage Message attachments : %O", attachments)
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
         if(fuuidsCleSeulement) {
             fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]

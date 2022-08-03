@@ -191,7 +191,8 @@ function ContenuMessage(props) {
         if(fileItem) {
 
             const creerToken = async fuuid => {
-                console.debug("Creer token video fuuid : %s (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+                if(Array.isArray(fuuid)) fuuid = fuuid.pop()
+                console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
                 const {chiffrage, connexion} = workers
                 const cleDechiffree = attachments.cles[fuuid]
                 // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
@@ -200,7 +201,14 @@ function ContenuMessage(props) {
                 const cleChiffree = {...cleDechiffree}
                 delete cleChiffree.cleSecrete
                 const listeCles = [
-                    {...cleChiffree, cle: clesChiffrees.cles[fuuid]}
+                    {
+                        // Default
+                        identificateurs_document: {fuuid}, 
+                        // Valeurs recues
+                        ...cleChiffree,
+                        // Overrides
+                        domaine: 'GrosFichiers', cle: clesChiffrees.cles[fuuid]
+                    }
                 ]
                 const preuveAcces = { 
                     fuuid, 
@@ -574,7 +582,7 @@ function MenuContextuel(props) {
 // }
 
 async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles) {
-    // console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
+    console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
     const {connexion, chiffrage} = workers
     const {fuuid, version_courante} = attachment
 
@@ -587,17 +595,36 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
     // Chiffrer la cle secrete pour le certificat de maitre des cles
     // Va servir de preuve d'acces au fichier
     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
-    // console.debug("Cles chiffrees : %O", clesChiffrees)
+    console.debug("Cles rechiffrees : %O, info originale : %O", clesChiffrees, cles)
     // const clesRechiffrees = clesChiffrees.reduce((acc, cle, idx)=>{
     //     const fuuid = listeClesSecrete[idx].fuuid
     //     acc[fuuid] = cle
     //     return acc
     // }, {})
 
-    const preuveAcces = { cles: clesChiffrees.cles, partition: clesChiffrees.partition }
+    const clesRechiffrees = Object.keys(clesChiffrees.cles).map(fuuid=>{
+        const cleRechiffree = clesChiffrees.cles[fuuid]
+        const infoCle = {
+            // Default
+            identificateurs_document: {fuuid}, 
+            // Valeurs recues
+            ...cles[fuuid], 
+            // Overrides
+            domaine: 'GrosFichiers', cle: cleRechiffree
+        }
+        
+        delete infoCle.cleSecrete
+        return infoCle
+    })
+
+    const preuveAcces = { 
+        // cles: clesChiffrees.cles, 
+        preuve: {cles: clesRechiffrees},
+        partition: clesChiffrees.partition 
+    }
     const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
     delete preuveAccesSignee['_certificat']
-    // console.debug("Preuve acces : %O", preuveAccesSignee)
+    console.debug("Preuve acces : %O", preuveAccesSignee)
 
     // Transaction associerFuuids pour GrosFichiers
     const fichier = {
@@ -608,10 +635,8 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
         dateFichier: attachment.dateFichier,
         ...version_courante,
     }
-    const champsOptionnels = ['width', 'height']
-    for(let champ in champsOptionnels) {
-        if(attachment[champ]) fichier[champ] = attachment[champ]
-    }
+    const champsOptionnels = ['width', 'height', 'duration', 'anime', 'videoCodec']
+    champsOptionnels.forEach(champ=>{if(attachment[champ]) fichier[champ] = attachment[champ]})
     const transactionCopierVersTiersSignee = await connexion.formatterMessage(fichier, 'GrosFichiers', {action: 'copierFichierTiers'})
     delete transactionCopierVersTiersSignee['_certificat']
 
