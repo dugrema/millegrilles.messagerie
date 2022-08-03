@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
+import Dropdown from 'react-bootstrap/Dropdown'
 
 import ReactQuill from 'react-quill'
 import { useDropzone } from 'react-dropzone'
@@ -44,6 +45,7 @@ function NouveauMessage(props) {
     const [erreur, setErreur] = useState('')
     const [idDraft, setIdDraft] = useState('')
     const [drafts, setDrafts] = useState('')
+    const [optionVideo, setOptionVideo] = useState('faible')
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
@@ -60,7 +62,7 @@ function NouveauMessage(props) {
     }, [setAfficherNouveauMessage, supprimerDraftCb, idDraft])
 
     const envoyerCb = useCallback(()=>{
-        const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles}
+        const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
         envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
             .then(()=>{
                 showConfirmation("Message envoye")
@@ -73,7 +75,7 @@ function NouveauMessage(props) {
             })
     }, [
         workers, showConfirmation, certificatMaitreDesCles, 
-        from, to, replyTo, content, uuidThread, attachments, attachmentsCles,
+        from, to, replyTo, content, uuidThread, attachments, attachmentsCles, optionVideo,
         fermer, supprimerDraftCb, idDraft, erreurCb,
     ])
 
@@ -226,6 +228,8 @@ function NouveauMessage(props) {
                 evenementUpload={evenementUpload} 
                 setAttachmentsPrets={setAttachmentsPrets}
                 supportMedia={supportMedia}
+                optionVideo={optionVideo}
+                setOptionVideo={setOptionVideo}
                 erreurCb={erreurCb} />
 
             <br className="clear"/>
@@ -311,7 +315,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
 
     if(opts.attachments) {
         // Mapper data attachments
-        const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments])
+        const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments], opts)
 
         // Ajouter attachments et fuuids aux opts
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
@@ -321,7 +325,9 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
     if(resultat.err) throw resultat.err
 }
 
-function mapperAttachments(attachments) {
+function mapperAttachments(attachments, opts) {
+    opts = opts || {}
+    const optionVideo = opts.optionVideo || 'original'
     // Mapper data attachments
     let attachmentsMapping = {}
     let fuuids = []
@@ -356,13 +362,50 @@ function mapperAttachments(attachments) {
                 })
             }
             if(version_courante.video) {
-                const videos = version_courante.video
-                // mapping.video = {...videos}
-                Object.values(videos).forEach(video=>{
-                    // console.debug("Attache video : %O", video)
-                    if(video.fuuid_video) {
-                        fuuids.push(video.fuuid_video)
+                let videos = {...version_courante.video}
+                let remplacant = null
+                // Filtrer la liste de videos pour retirer les formats indesirables
+                if(optionVideo === 'original') {
+                    // Retirer tous les formats sauf le basse resolution
+                    videos = Object.keys(videos).reduce((acc, videoKey)=>{
+                        const video = videos[videoKey]
+                        const resolution = calculerResolution(video),
+                              codec = video.codec
+                        if(codec === 'h264' && resolution === 270) acc[videoKey] = video
+                        return acc
+                    }, {})
+                } else {
+                    // Remplacer le video 'original' par le format selectionne
+                    // Valeurs a remplacer : fuuid, taille, videoCodec, mimetype, height, width
+                    if(optionVideo === 'faible') {
+                        videos = Object.keys(videos).reduce((acc, videoKey)=>{
+                            if(remplacant) return acc  // Rien a faire, deja trouve
+                            const video = videos[videoKey]
+                            const resolution = calculerResolution(video),
+                                  codec = video.codec
+                            if(codec === 'h264' && resolution < 360) {
+                                acc[videoKey] = video
+                                remplacant = video
+                            }
+                            return acc
+                        }, {})
                     }
+                }
+
+                // Remplacer .video dans version_courante
+                version_courante.video = videos
+
+                if(remplacant) {
+                    mapping.fuuid = remplacant.fuuid_video
+                    mapping.height = remplacant.height
+                    mapping.width = remplacant.width
+                    mapping.mimetype = remplacant.mimetype
+                    mapping.videoCodec = remplacant.codec
+                    mapping.taille = remplacant.taille_fichier
+                }
+
+                Object.values(videos).forEach(video=>{
+                    if(video.fuuid_video) fuuids.push(video.fuuid_video)
                 })
             }
         }
@@ -373,6 +416,17 @@ function mapperAttachments(attachments) {
     })
 
     return {attachmentsMapping, fuuids, fuuidsCleSeulement}
+}
+
+function calculerResolution(video) {
+    const height = video.height,
+          width = video.width
+    let resolution = video.resolution
+    if(!resolution) {
+        const resolutionCalculee = Math.min(width, height)
+        if(resolutionCalculee)  resolution = resolutionCalculee
+    }
+    return resolution
 }
 
 async function preparerUploaderFichiers(workers, acceptedFiles) {
@@ -394,6 +448,7 @@ function AfficherAttachments(props) {
     const { 
         workers, etatConnexion, evenementUpload, erreurCb,
         attachments, setAttachments, setAttachmentsPrets, attachmentsCles, setAttachmentsCles, 
+        optionVideo, setOptionVideo,
     } = props
 
     const [colonnes, setColonnes] = useState('')
@@ -527,9 +582,18 @@ function AfficherAttachments(props) {
                         </Button>
                     </span>
                     <Button variant="secondary" onClick={choisirFichiersAttaches}>
-                    <i className="fa fa-folder" />
-                        {' '}Collections
+                        <i className="fa fa-folder" />
+                            {' '}Collections
                     </Button>
+                    <Dropdown onSelect={event=>setOptionVideo(event)}>
+                        <Dropdown.Toggle variant="secondary" id="dropdown-option-video">
+                            {optionVideo}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            <Dropdown.Item eventKey="faible">Video basse resolution</Dropdown.Item>
+                            <Dropdown.Item eventKey="original">Video original</Dropdown.Item>
+                        </Dropdown.Menu>
+                    </Dropdown>
                 </Col>
             </Row>
 
