@@ -494,6 +494,9 @@ function AfficherAttachments(props) {
         const liste = []
         if(attachments) attachments.forEach(item=>liste.push({...item, pret: true}))
         if(attachmentsPending) attachmentsPending.forEach(item=>liste.push({...item, pret: false}))
+
+        console.debug("Maj liste Attachments combinee : %O (attachments : %O, attachmentsPending: %O)", liste, attachments, attachmentsPending)
+
         return liste
     }, [attachments, attachmentsPending])
 
@@ -509,7 +512,8 @@ function AfficherAttachments(props) {
             } else {
                 attachmentsMaj = selection
             }
-            setAttachmentsPending(attachmentsMaj)
+            console.debug("Maj attachments pending pour selection : %O", attachmentsMaj)
+            setAttachmentsPending([...attachmentsMaj])
             tuuidsAttachmentHandler(null, attachmentsMaj)
         } else {
             // Fichier existant, provient d'une collection de l'usager
@@ -561,10 +565,10 @@ function AfficherAttachments(props) {
     // Traiter evenement upload
     useEffect(()=>{
         if(!evenementUpload1) return  // Rien a faire
+        addEvenementUpload1('')  // Eviter cycle
 
         console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
         if(attachmentsPending) {
-            addEvenementUpload1('')  // Eviter cycle
             const routingKey = evenementUpload1.routingKey
             if(routingKey) {
                 const message = evenementUpload1.message
@@ -575,9 +579,9 @@ function AfficherAttachments(props) {
                 let complete = false
                 if(version_courante) {
                     if(baseType === 'video') {
-                        const videos = version_courante.videos || {},
+                        const videos = version_courante.video || {},
                               images = version_courante.images || {}
-                        complete = images.thumb && Object.values(videos).filter(item=>item.mimetype === 'video/mp4').pop()
+                        complete = images.thumb && Object.values(videos).filter(item=>item.codec === 'h264').pop()
                     } else if(baseType === 'image') {
                         const images = version_courante.images || {}
                         complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
@@ -598,7 +602,10 @@ function AfficherAttachments(props) {
                             const row = preparerRowAttachment(workers, fichier)
                             acc.push(row)
                         }
+                    } else {
+                        acc.push(item)  // Conserver
                     }
+
                     return acc
                 }, [])
 
@@ -609,6 +616,8 @@ function AfficherAttachments(props) {
                 }
             } else {
                 const { complete, transaction } = evenementUpload1
+                // TODO Fix race condition sur setAttachmentsPending / liste pending
+                if(!complete) return  // Rien a faire, evite race condition sur selection
 
                 // const nouvelUpload = { correlation: complete, ...transaction }
                 let majListeners = false
@@ -621,6 +630,8 @@ function AfficherAttachments(props) {
                             const tuuid = entete.uuid_transaction
                             const attachmentMaj = {fileId: tuuid, tuuid, ...transaction}
                             acc.push(attachmentMaj)
+                        } else {
+                            acc.push(item)  // Toujours actif
                         }
                     } else {
                         acc.push(item)  // Toujours actif
@@ -630,22 +641,6 @@ function AfficherAttachments(props) {
                 }, [])
                 setAttachmentsPending(attachmentsPendingMaj)
                 if(majListeners) tuuidsAttachmentHandler(null, attachmentsPendingMaj)
-
-                // // Mettre a jour la selection
-                // if(complete && transaction) {
-                //     const entete = transaction['en-tete']
-                //     const tuuid = entete.uuid_transaction
-                //     const attachmentMaj = {fileId: tuuid, ...transaction, tuuid}
-
-                //     // Verifier si c'est un fichier de media
-                //     if(!isTypeMedia) {
-                //         console.debug("Re-insere fichier suite a la fin de l'upload : %O", transaction)
-                //         selectionner([attachmentMaj])
-                //     } else {
-                //         // Type media, on attend l'arrivee des images/videos
-                //     }
-                // }
-                // //setAttachments(attachmentsMaj)
             }
         }
     }, [workers, evenementUpload1, selectionner, attachmentsPending, setAttachmentsPending, addEvenementUpload1])
@@ -726,7 +721,7 @@ function AfficherAttachments(props) {
                 workers={workers}
                 contextuel={contextuel} 
                 fermerContextuel={fermerContextuel}
-                attachments={attachments}
+                attachments={listeAttachments}
                 setAttachments={setAttachments}
                 selection={selection}
                 // showPreview={showPreviewAction}
