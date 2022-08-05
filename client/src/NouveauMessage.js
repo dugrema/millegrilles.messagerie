@@ -477,8 +477,9 @@ function AfficherAttachments(props) {
             const attachmentsFuuids = attachments.map(item=>item.fuuid)
             selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
         }
-        const fuuidsMaj = [...attachments, ...selection]
-        setAttachments(fuuidsMaj)
+        const attachmentsMaj = [...attachments, ...selection]
+        console.debug("Attachments maj : %O", attachmentsMaj)
+        setAttachments(attachmentsMaj)
 
         // Extraire la liste complete des fuuids de la selection
         const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
@@ -494,7 +495,7 @@ function AfficherAttachments(props) {
     const onDrop = useCallback(acceptedFiles=>{
         preparerUploaderFichiers(workers, acceptedFiles)
             .then(info=>{
-                // console.debug("Preparer uploads info : %O", info)
+                console.debug("Preparer uploads info : %O", info)
                 const { infoUploads } = info
                 const listeSelection = infoUploads.map(item=>{
                     const { correlation, transaction } = item

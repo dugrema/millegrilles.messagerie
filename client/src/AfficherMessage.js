@@ -427,6 +427,7 @@ function AfficherAttachments(props) {
                 const fuuid = attachment.fuuid
                 const version_courante = {
                     mimetype: attachment.mimetype || 'application/bytes',
+                    taille: attachment.taille,
                 }
                 if(attachment.images) {
                     version_courante.images = {...attachment.images}
@@ -447,7 +448,7 @@ function AfficherAttachments(props) {
 
             const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
             const listeMappee = liste.map(item=>mapper(item, workers, {cles, supportMedia}))
-            // console.debug("Liste mappee : %O", listeMappee)
+            console.debug("Liste mappee : %O", listeMappee)
 
             setAttachmentsList(listeMappee)
         }
