@@ -515,7 +515,7 @@ function AfficherAttachments(props) {
     useEffect(()=>{
         if(evenementUpload1 && attachments) {
             addEvenementUpload1('')  // Eviter cycle
-            // console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
+            console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
             if(evenementUpload1.routingKey) {
                 const { tuuid } = evenementUpload1.message
                 const attachmentsMaj = attachments.map(item=>{
@@ -755,18 +755,11 @@ function preparerRowAttachment(workers, fichier) {
         const { images, video } = version_courante
         const baseType = mimetype.toLowerCase().split('/').shift()
         if(mimetype === 'application/pdf') {
-            if(images) {
-                pret = !! (images && images.thumb)
-            }
+            pret = false
+            if(images) pret = !! (images && images.thumb)
         } else if (baseType === 'image') {
             pret = false
-            if(images) {
-                // Attendre webp et jpg
-                const webp = Object.keys(images).filter(item=>item.startsWith('image/webp')).pop()
-                const jpg = Object.keys(images).filter(item=>item.startsWith('image/jpeg')).pop()
-                // console.debug("Webp: %O, jpg: %O", webp, jpg)
-                pret = !! (webp && jpg)
-            }
+            if(images) pret = !! (images && images.thumb)
         } else if (baseType === 'video') {
             pret = false
             if(images && video) {
