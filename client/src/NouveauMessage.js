@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, version } from 'react'
 import { proxy } from 'comlink'
 
 import Row from 'react-bootstrap/Row'
@@ -40,12 +40,17 @@ function NouveauMessage(props) {
     const [uuidThread, setUuidThread] = useState('')
     const [showContacts, setShowContacts] = useState(false)
     const [attachments, setAttachments] = useState('')
+    const [attachmentsPending, setAttachmentsPending] = useState('')
     const [attachmentsCles, setAttachmentsCles] = useState({})
-    const [attachmentsPrets, setAttachmentsPrets] = useState('')
+    // const [attachmentsPrets, setAttachmentsPrets] = useState('')
     const [erreur, setErreur] = useState('')
     const [idDraft, setIdDraft] = useState('')
     const [drafts, setDrafts] = useState('')
     const [optionVideo, setOptionVideo] = useState('faible')
+
+    const attachmentsPrets = useMemo(()=>{
+        return !attachmentsPending || attachmentsPending.length === 0
+    }, [attachmentsPending])
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
@@ -223,10 +228,11 @@ function NouveauMessage(props) {
                 etatConnexion={etatConnexion} 
                 attachments={attachments} 
                 setAttachments={setAttachments} 
+                attachmentsPending={attachmentsPending}
+                setAttachmentsPending={setAttachmentsPending}
                 attachmentsCles={attachmentsCles}
                 setAttachmentsCles={setAttachmentsCles}
                 evenementUpload={evenementUpload} 
-                setAttachmentsPrets={setAttachmentsPrets}
                 supportMedia={supportMedia}
                 optionVideo={optionVideo}
                 setOptionVideo={setOptionVideo}
@@ -334,7 +340,8 @@ function mapperAttachments(attachments, opts) {
     let fuuidsCleSeulement = []
 
     attachments.forEach( attachment => {
-        const { fuuid, version_courante } = attachment
+        const { version_courante } = attachment
+        const fuuid = attachment.fuuid_v_courante || attachment.fuuid
         fuuids.push(fuuid)
 
         const mapping = {
@@ -447,7 +454,9 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
 function AfficherAttachments(props) {
     const { 
         workers, etatConnexion, evenementUpload, erreurCb,
-        attachments, setAttachments, setAttachmentsPrets, attachmentsCles, setAttachmentsCles, 
+        attachments, setAttachments, attachmentsPending, setAttachmentsPending,
+        // setAttachmentsPrets, 
+        attachmentsCles, setAttachmentsCles, 
         optionVideo, setOptionVideo,
     } = props
 
@@ -457,6 +466,7 @@ function AfficherAttachments(props) {
     const [selection, setSelection] = useState('')
     const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
     const [evenementUpload1, addEvenementUpload1] = useState('')
+    const [tuuidsAttachments, setTuuidsAttachments] = useState('')
     
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
@@ -464,33 +474,69 @@ function AfficherAttachments(props) {
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
 
     const addEvenementUpload1Proxy = useMemo(()=>proxy(addEvenementUpload1), [addEvenementUpload1])
-    const tuuidsAttachments = useMemo(()=>{
-        if(attachments) {
-            return attachments.filter(item=>(item.tuuid||item.fileId)).map(item=>(item.tuuid||item.fileId))
-        }
-        return []
-    }, [attachments])
+    
+    const tuuidsAttachmentHandler = useCallback((attachmentsMaj, attachmentsPendingMaj)=>{
+        console.debug("tuuidsAttachmentHandler attachments: %O, attachmentsPending : %O", attachmentsMaj, attachmentsPendingMaj)
 
-    const selectionner = useCallback( selection => {
-        if(attachments) {
-            // Retirer fuuids deja selectionnes
-            const attachmentsFuuids = attachments.map(item=>item.fuuid)
-            selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
-        }
-        const attachmentsMaj = [...attachments, ...selection]
-        console.debug("Attachments maj : %O", attachmentsMaj)
-        setAttachments(attachmentsMaj)
+        let tuuids = []
+        attachmentsMaj = attachmentsMaj || attachments || []
+        attachmentsPendingMaj = attachmentsPendingMaj || attachmentsPending || []
 
-        // Extraire la liste complete des fuuids de la selection
-        const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
-        const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
-        getClesFormattees(workers, listeFuuidsCles)
-            .then(cles=>{
-                const clesMaj = {...attachmentsCles, ...cles}
-                setAttachmentsCles(clesMaj)
-            })
-            .catch(err=>console.error("Erreur chargement cles fuuids %s : %O", listeFuuidsCles, err))
-    }, [workers, attachments, attachmentsCles, setAttachments, setAttachmentsCles])
+        const liste = [...attachmentsMaj, ...attachmentsPendingMaj]
+
+        tuuids = liste.map(item=>(item.tuuid||item.fileId)).filter(item=>item)
+        console.debug("Tuuids listener : %O", tuuids)
+
+        setTuuidsAttachments(tuuids)
+    }, [setTuuidsAttachments, attachments, attachmentsPending])
+
+    const listeAttachments = useMemo(()=>{
+        const liste = []
+        if(attachments) attachments.forEach(item=>liste.push({...item, pret: true}))
+        if(attachmentsPending) attachmentsPending.forEach(item=>liste.push({...item, pret: false}))
+        return liste
+    }, [attachments, attachmentsPending])
+
+    const selectionner = useCallback( (selection, opts) => {
+        opts = opts || {}
+        const upload = opts.upload
+
+        if(upload) {
+            console.debug("Upload nouvel attachment : %O", selection)
+            let attachmentsMaj = null
+            if(attachmentsPending) {
+                attachmentsMaj = [...attachmentsPending, ...selection]
+            } else {
+                attachmentsMaj = selection
+            }
+            setAttachmentsPending(attachmentsMaj)
+            tuuidsAttachmentHandler(null, attachmentsMaj)
+        } else {
+            // Fichier existant, provient d'une collection de l'usager
+            if(attachments) {
+                // Retirer fuuids deja selectionnes
+                const attachmentsFuuids = attachments.map(item=>item.fuuid)
+                selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
+            }
+            const attachmentsMaj = [...attachments, ...selection]
+            console.debug("Attachments maj : %O", attachmentsMaj)
+            setAttachments(attachmentsMaj)
+            tuuidsAttachmentHandler(attachmentsMaj)
+
+            // Extraire la liste complete des fuuids de la selection
+            const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
+            const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
+            getClesFormattees(workers, listeFuuidsCles, {delaiInitial: 500, tentatives: 2})
+                .then(cles=>{
+                    const clesMaj = {...attachmentsCles, ...cles}
+                    setAttachmentsCles(clesMaj)
+                })
+                .catch(err=>{
+                    console.error("Erreur chargement cles fuuids %s (tentative 1): %O", listeFuuidsCles, err)
+                })
+        }
+
+    }, [workers, attachments, attachmentsPending, attachmentsCles, setAttachments, setAttachmentsPending, setAttachmentsCles, tuuidsAttachmentHandler])
 
     const onDrop = useCallback(acceptedFiles=>{
         preparerUploaderFichiers(workers, acceptedFiles)
@@ -501,7 +547,7 @@ function AfficherAttachments(props) {
                     const { correlation, transaction } = item
                     return { fileId: correlation, correlation, ...transaction }
                 })
-                selectionner(listeSelection)
+                selectionner(listeSelection, {upload: true})
             })
             .catch(erreurCb)
     }, [workers, selectionner, erreurCb])
@@ -514,59 +560,118 @@ function AfficherAttachments(props) {
     useEffect(()=>addEvenementUpload1(evenementUpload), [evenementUpload, addEvenementUpload1])
     // Traiter evenement upload
     useEffect(()=>{
-        if(evenementUpload1 && attachments) {
+        if(!evenementUpload1) return  // Rien a faire
+
+        console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
+        if(attachmentsPending) {
             addEvenementUpload1('')  // Eviter cycle
-            console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
-            if(evenementUpload1.routingKey) {
-                const { tuuid } = evenementUpload1.message
-                const attachmentsMaj = attachments.map(item=>{
+            const routingKey = evenementUpload1.routingKey
+            if(routingKey) {
+                const message = evenementUpload1.message
+                const { tuuid, version_courante } = message
+                const mimetype = (version_courante?version_courante.mimetype:null) || ''
+                const baseType = mimetype.split('/').shift()
+
+                let complete = false
+                if(version_courante) {
+                    if(baseType === 'video') {
+                        const videos = version_courante.videos || {},
+                              images = version_courante.images || {}
+                        complete = images.thumb && Object.values(videos).filter(item=>item.mimetype === 'video/mp4').pop()
+                    } else if(baseType === 'image') {
+                        const images = version_courante.images || {}
+                        complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
+                    } else if(mimetype === 'application/pdf') {
+                        const images = version_courante.images || {}
+                        complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
+                    } else {
+                        complete = true  // Version courante, aucune autre information requise
+                    }
+                }
+
+                const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
                     const fileId = item.fileId || item.tuuid
                     if(fileId === tuuid) { // Remplacer
                         const fichier = {fileId, ...evenementUpload1.message}
                         // Determiner si l'attachment est pret
-                        return preparerRowAttachment(workers, fichier)
+                        if(!complete) {
+                            const row = preparerRowAttachment(workers, fichier)
+                            acc.push(row)
+                        }
                     }
-                    return item
-                })
-                setAttachments(attachmentsMaj)
+                    return acc
+                }, [])
+
+                setAttachmentsPending(attachmentsPendingMaj)
+                if(complete) {
+                    const rowAttachment = preparerRowAttachment(workers, message)
+                    selectionner([rowAttachment])
+                }
             } else {
                 const { complete, transaction } = evenementUpload1
+
                 // const nouvelUpload = { correlation: complete, ...transaction }
-                const attachmentsMaj = attachments.map(item=>{
-                    if(transaction && item.correlation === complete) { // Remplacer
-                        const entete = transaction['en-tete']
-                        const tuuid = entete.uuid_transaction
-                        return {fileId: tuuid, tuuid, ...transaction, pret: false}
+                let majListeners = false
+                const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
+                    if(transaction) {
+                        majListeners = true
+                        if(item.correlation === complete) {
+                            // Conserver identificateur tuuid (override correlation)
+                            const entete = transaction['en-tete']
+                            const tuuid = entete.uuid_transaction
+                            const attachmentMaj = {fileId: tuuid, tuuid, ...transaction}
+                            acc.push(attachmentMaj)
+                        }
+                    } else {
+                        acc.push(item)  // Toujours actif
                     }
-                    return item
-                })
-                setAttachments(attachmentsMaj)
+                    
+                    return acc
+                }, [])
+                setAttachmentsPending(attachmentsPendingMaj)
+                if(majListeners) tuuidsAttachmentHandler(null, attachmentsPendingMaj)
+
+                // // Mettre a jour la selection
+                // if(complete && transaction) {
+                //     const entete = transaction['en-tete']
+                //     const tuuid = entete.uuid_transaction
+                //     const attachmentMaj = {fileId: tuuid, ...transaction, tuuid}
+
+                //     // Verifier si c'est un fichier de media
+                //     if(!isTypeMedia) {
+                //         console.debug("Re-insere fichier suite a la fin de l'upload : %O", transaction)
+                //         selectionner([attachmentMaj])
+                //     } else {
+                //         // Type media, on attend l'arrivee des images/videos
+                //     }
+                // }
+                // //setAttachments(attachmentsMaj)
             }
         }
-    }, [workers, evenementUpload1, attachments, setAttachments, addEvenementUpload1])
+    }, [workers, evenementUpload1, selectionner, attachmentsPending, setAttachmentsPending, addEvenementUpload1])
 
     // Enregistrer evenements ecoute maj fichiers (attachments)
     useEffect(()=>{
         const { connexion } = workers
         if(tuuidsAttachments && tuuidsAttachments.length > 0) {
             const params = {tuuids: tuuidsAttachments}
-            // console.debug("Ajouter listener fichiers %O", params)
+            console.debug("Ajouter listener fichiers %O", params)
             connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
             return () => {
-                // console.debug("Retirer listener fichiers %O", params)
+                console.debug("Retirer listener fichiers %O", params)
                 connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
             }
         }
     }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
 
-    useEffect(()=>{
-        if(attachments) {
-            const pret = attachments.reduce((acc, item)=>acc&&item.pret, true)
-            setAttachmentsPrets(pret)
-        } else {
-            setAttachmentsPrets(true)
-        }
-    }, [attachments, setAttachmentsPrets])
+    // useEffect(()=>{
+    //     if(attachments) {
+    //         const pret = attachments.reduce((acc, item)=>acc&&item.pret, true)
+    //         setAttachmentsPrets(pret)
+    //     } else {
+    //         setAttachmentsPrets(true)
+    //     }
+    // }, [attachments, setAttachmentsPrets])
 
     // if(!attachments || attachments.length === 0) return ''
 
@@ -607,7 +712,7 @@ function AfficherAttachments(props) {
             <ListeFichiers 
                 modeView={modeView}
                 colonnes={colonnes}
-                rows={attachments} 
+                rows={listeAttachments} 
                 // onClick={...pas utilise...} 
                 // onDoubleClick={... pas utilise...}
                 onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
@@ -689,8 +794,8 @@ function preparerColonnes() {
     const params = {
         ordreColonnes: ['nom', 'taille', 'mimetype', 'pret', 'boutonDetail'],
         paramsColonnes: {
-            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 7},
-            'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
+            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 6},
+            'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 2},
             'mimetype': {'label': 'Type', className: 'details', xs: 6, lg: 2},
             'pret': {'label': 'Etat', formatteur: PretFormatteur, className: 'details', xs: 2, lg: 1},
             'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},

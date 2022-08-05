@@ -130,8 +130,35 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
     return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles, fuuids }
 }
 
-export async function getClesFormattees(workers, fuuidsCles) {
-    const cles = await getClesAttachments(workers, fuuidsCles)
+export async function getClesFormattees(workers, fuuidsCles, opts) {
+    opts = opts || {}
+    let tentatives = opts.tentatives || 1,
+        delai = opts.delai || 5000,
+        delaiInitial = opts.delaiInitial
+    
+    if(delaiInitial) {
+        // Introduire un delai initial (e.g. attendre traitement des cles d'un nouveau fichier)
+        await new Promise(resolve=>setTimeout(resolve, delaiInitial))
+    }
+
+    let cles = null, promise = getClesAttachments(workers, fuuidsCles)
+    for(let i=0; i<tentatives; i++) {
+        try {
+            cles = await promise
+            console.debug("Reponse cles : %O", cles)
+            if(cles.ok !== false) break
+        } catch(err) {
+            if(i<tentatives-1) {
+                console.info("Erreur chargement cles, on ressaie dans %d ms", delai)
+                promise = new Promise(async resolve=>{
+                    await new Promise(resolve=>setTimeout(resolve, delai))
+                    resolve(getClesAttachments(workers, fuuidsCles))
+                })
+            } else {
+                throw err
+            }
+        }
+    }
 
     // Encoder les cles secretes en base64
     for(let hachage_bytes in cles) {
