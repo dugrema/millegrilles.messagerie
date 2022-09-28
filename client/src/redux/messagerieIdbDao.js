@@ -1,4 +1,5 @@
-import { openDB } from 'idb'
+// import { openDB } from 'idb'
+import { ouvrirDB } from './idbMessagerie'
 
 const DB_NAME = 'messagerie',
       STORE_DOWNLOADS = 'downloads',
@@ -9,56 +10,56 @@ const DB_NAME = 'messagerie',
       VERSION_COURANTE = 1
     //   MAX_AGE_DEFAUT = 6 * 60 * 60  // 6h en secondes
 
-export function ouvrirDB(opts) {
-    opts = opts || {}
+// export function ouvrirDB(opts) {
+//     opts = opts || {}
 
-    if(opts.upgrade) {
-        return openDB(DB_NAME, VERSION_COURANTE, {
-            upgrade(db, oldVersion) {
-                createObjectStores(db, oldVersion)
-            },
-            blocked() {
-                console.error("OpenDB %s blocked", DB_NAME)
-            },
-            blocking() {
-                console.warn("OpenDB, blocking")
-            }
-        })
-    } else {
-        // console.debug("Ouverture DB sans upgrade usager : %s", DB_NAME)
-        return openDB(DB_NAME)
-    }
-}
+//     if(opts.upgrade) {
+//         return openDB(DB_NAME, VERSION_COURANTE, {
+//             upgrade(db, oldVersion) {
+//                 createObjectStores(db, oldVersion)
+//             },
+//             blocked() {
+//                 console.error("OpenDB %s blocked", DB_NAME)
+//             },
+//             blocking() {
+//                 console.warn("OpenDB, blocking")
+//             }
+//         })
+//     } else {
+//         // console.debug("Ouverture DB sans upgrade usager : %s", DB_NAME)
+//         return openDB(DB_NAME)
+//     }
+// }
 
-function createObjectStores(db, oldVersion) {
-    // console.debug("dbUsagers upgrade, DB object (version %s): %O", oldVersion, db)
-    let messageStore, contactStore
+// function createObjectStores(db, oldVersion) {
+//     // console.debug("dbUsagers upgrade, DB object (version %s): %O", oldVersion, db)
+//     let messageStore, contactStore
 
-    /*eslint no-fallthrough: "off"*/
-    switch(oldVersion) {
-        case 0:
-            db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'hachage_bytes'})
-            messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['uuid_transaction', 'user_id']})
-            contactStore = db.createObjectStore(STORE_CONTACTS, {keyPath: 'uuid_contact'})
-            db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
+//     /*eslint no-fallthrough: "off"*/
+//     switch(oldVersion) {
+//         case 0:
+//             db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'hachage_bytes'})
+//             messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['uuid_transaction', 'user_id']})
+//             contactStore = db.createObjectStore(STORE_CONTACTS, {keyPath: 'uuid_contact'})
+//             db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
             
-            // Index messages
-            messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
-            messageStore.createIndex('date_reception', ['user_id', 'date_reception'])
-            messageStore.createIndex('date_envoi', ['user_id', 'date_envoi'])
-            messageStore.createIndex('from', ['user_id', 'from', 'date_reception'])
-            messageStore.createIndex('subject', ['user_id', 'subject', 'date_reception'])
+//             // Index messages
+//             messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
+//             messageStore.createIndex('date_reception', ['user_id', 'date_reception'])
+//             messageStore.createIndex('date_envoi', ['user_id', 'date_envoi'])
+//             messageStore.createIndex('from', ['user_id', 'from', 'date_reception'])
+//             messageStore.createIndex('subject', ['user_id', 'subject', 'date_reception'])
 
-            // Index contacts
-            contactStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
-            contactStore.createIndex('nom', ['user_id', 'nom'])
+//             // Index contacts
+//             contactStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
+//             contactStore.createIndex('nom', ['user_id', 'nom'])
 
-        case 1: // Plus recent, rien a faire
-            break
-        default:
-            console.warn("createObjectStores Default..., version %O", oldVersion)
-    }
-}
+//         case 1: // Plus recent, rien a faire
+//             break
+//         default:
+//             console.warn("createObjectStores Default..., version %O", oldVersion)
+//     }
+// }
 
 export async function getMessage(uuid_transaction) {
     const db = await ouvrirDB({upgrade: true})

@@ -8,7 +8,7 @@ import Container from 'react-bootstrap/Container'
 import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
-import * as MessageDao from './messageDao'
+// import * as MessageDao from './redux/messageDao'
 
 const PAGE_LIMIT = 200
 
@@ -51,12 +51,13 @@ function ModalContacts(props) {
     const getContactsSuivants = useCallback(()=>{
         if(colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
-            MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
-                .then(liste=>{
-                    const listeMaj = [...contacts, ...liste]
-                    return formatterContactsCb(listeMaj)
-                })
-                .catch(erreurCb)
+            throw new Error("fix me - redux")
+            // MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
+            //     .then(liste=>{
+            //         const listeMaj = [...contacts, ...liste]
+            //         return formatterContactsCb(listeMaj)
+            //     })
+            //     .catch(erreurCb)
         }
     }, [colonnes, contacts, formatterContactsCb, userId, erreurCb])
 
@@ -81,9 +82,10 @@ function ModalContacts(props) {
     useEffect(()=>{
         if(show && colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
-            MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-                .then(formatterContactsCb)
-                .catch(erreurCb)
+            throw new Error("fix me - redux")
+            // MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
+            //     .then(formatterContactsCb)
+            //     .catch(erreurCb)
         }
     }, [workers, show, colonnes, userId, formatterContactsCb, erreurCb])
     
@@ -197,9 +199,10 @@ function formatterContacts(contacts, colonnes, userId, setContacts, setCompteCon
 
     setContacts(contactsTries)
 
-    MessageDao.countContacts(userId)
-        .then(setCompteContacts)
-        .catch(erreurCb)
+    throw new Error("fix me - redux")
+    // MessageDao.countContacts(userId)
+    //     .then(setCompteContacts)
+    //     .catch(erreurCb)
 }
 
 function trierNoms(a, b) {

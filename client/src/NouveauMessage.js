@@ -23,7 +23,7 @@ import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
 import { mapper } from './mapperFichier'
-import * as MessageDao from './messageDao'
+// import * as MessageDao from './redux/messageDao'
 
 function NouveauMessage(props) {
 
@@ -56,9 +56,10 @@ function NouveauMessage(props) {
 
     const supprimerDraftCb = useCallback(idDraft=>{
         idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
-        MessageDao.supprimerDraft(idDraft).catch(erreurCb)
-        const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
-        setDrafts(draftsMaj)
+        throw new Error("fix me - redux")
+        // MessageDao.supprimerDraft(idDraft).catch(erreurCb)
+        // const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
+        // setDrafts(draftsMaj)
     }, [drafts, setDrafts, erreurCb])
 
     const fermer = useCallback( supprimerDraft => {
@@ -97,38 +98,40 @@ function NouveauMessage(props) {
     }, [to, setTo])
 
     const chargerDraft = useCallback(idDraft=>{
-        MessageDao.getDraft(idDraft)
-            .then(draft=>{
-                const {from, to, replyTo, content, attachments, attachmentsCles} = draft
-                setIdDraft(draft.idDraft)
-                setFrom(from)
-                setTo(to)
-                setReplyTo(replyTo)
-                setContent(content)
-                if(attachments) {
-                    const attachmentsMappes = Object.values(attachments).map(fichier=>{
-                        const fuuid = fichier.fuuid
-                        const row = preparerRowAttachment(workers, fichier)
-                        const fichierMappe = {...row, ...fichier, fuuid}
-                        return fichierMappe
-                    })
-                    setAttachments(attachmentsMappes)
-                    setAttachmentsCles(attachmentsCles)
-                } else {
-                    setAttachments('')
-                    setAttachmentsCles({})
-                }
-            })
-            .catch(erreurCb)
+        throw new Error("fix me - redux")
+        // MessageDao.getDraft(idDraft)
+        //     .then(draft=>{
+        //         const {from, to, replyTo, content, attachments, attachmentsCles} = draft
+        //         setIdDraft(draft.idDraft)
+        //         setFrom(from)
+        //         setTo(to)
+        //         setReplyTo(replyTo)
+        //         setContent(content)
+        //         if(attachments) {
+        //             const attachmentsMappes = Object.values(attachments).map(fichier=>{
+        //                 const fuuid = fichier.fuuid
+        //                 const row = preparerRowAttachment(workers, fichier)
+        //                 const fichierMappe = {...row, ...fichier, fuuid}
+        //                 return fichierMappe
+        //             })
+        //             setAttachments(attachmentsMappes)
+        //             setAttachmentsCles(attachmentsCles)
+        //         } else {
+        //             setAttachments('')
+        //             setAttachmentsCles({})
+        //         }
+        //     })
+        //     .catch(erreurCb)
     }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, setAttachmentsCles, erreurCb])
 
     useEffect(()=>{
-        MessageDao.getListeDrafts()
-            .then(drafts=>{
-                // console.debug("Drafts : %O", drafts)
-                setDrafts(drafts)
-            })
-            .catch(erreurCb)
+        throw new Error("fix me - redux")
+        // MessageDao.getListeDrafts()
+        //     .then(drafts=>{
+        //         // console.debug("Drafts : %O", drafts)
+        //         setDrafts(drafts)
+        //     })
+        //     .catch(erreurCb)
     }, [setDrafts, erreurCb])
 
     useEffect(()=>{
@@ -154,7 +157,8 @@ function NouveauMessage(props) {
         if(!idDraft) {
             if(to || content || attachments) {  // Champs modifiables par l'usager
                 // Creer un nouveau draft
-                MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
+                throw new Error("fix me - redux")
+                // MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
             }
         } else {
             // Conserver information draft
@@ -172,7 +176,8 @@ function NouveauMessage(props) {
                     return attach
                 })
             }
-            MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
+            throw new Error("fix me - redux")
+            // MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
         }
     }, [idDraft, from, to, replyTo, content, attachments, attachmentsCles, setIdDraft, erreurCb])
 

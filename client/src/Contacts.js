@@ -9,7 +9,7 @@ import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
-import * as MessageDao from './messageDao'
+// import * as MessageDao from './redux/messageDao'
 
 import EditerContact from './EditerContact'
 import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
@@ -58,12 +58,13 @@ function Contacts(props) {
     const getContactsSuivants = useCallback(()=>{
         if(colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
-            MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
-                .then(liste=>{
-                    const listeMaj = [...contacts, ...liste]
-                    return formatterContactsCb(listeMaj)
-                })
-                .catch(erreurCb)
+            throw new Error("fix me - redux")
+            // MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
+            //     .then(liste=>{
+            //         const listeMaj = [...contacts, ...liste]
+            //         return formatterContactsCb(listeMaj)
+            //     })
+            //     .catch(erreurCb)
         }
     }, [colonnes, contacts, formatterContactsCb, userId, erreurCb])
 
@@ -95,9 +96,10 @@ function Contacts(props) {
     useEffect(()=>{
         if(colonnes && userId) {
             const { colonne, ordre } = colonnes.tri
-            MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-                .then(formatterContactsCb)
-                .catch(erreurCb)
+            throw new Error("fix me - redux")
+            // MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
+            //     .then(formatterContactsCb)
+            //     .catch(erreurCb)
         }
     }, [workers, colonnes, userId, formatterContactsCb, erreurCb])
 
@@ -105,17 +107,18 @@ function Contacts(props) {
     useEffect(()=>{
         if(colonnes && userId && etatConnexion && etatAuthentifie) {
             const { colonne, ordre } = colonnes.tri
-            workers.connexion.getReferenceContacts({limit: SYNC_LIMIT})
-                .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
-                .then(()=>chargerContenuContacts(workers, userId))
-                .then(async uuidsCharges => {
-                    if(uuidsCharges && uuidsCharges.length > 0) {
-                        // Rafraichir ecran
-                        const liste = await MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-                        formatterContactsCb(liste)
-                    }
-                })
-                .catch(err=>erreurCb(err, "Erreur chargement contacts"))
+            throw new Error("fix me - redux")
+            // workers.connexion.getReferenceContacts({limit: SYNC_LIMIT})
+            //     .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
+            //     .then(()=>chargerContenuContacts(workers, userId))
+            //     .then(async uuidsCharges => {
+            //         if(uuidsCharges && uuidsCharges.length > 0) {
+            //             // Rafraichir ecran
+            //             const liste = await MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
+            //             formatterContactsCb(liste)
+            //         }
+            //     })
+            //     .catch(err=>erreurCb(err, "Erreur chargement contacts"))
         }
     }, [workers, etatConnexion, etatAuthentifie, colonnes, userId, formatterContactsCb, erreurCb])
 
@@ -152,8 +155,9 @@ function Contacts(props) {
                 delete contactMaj['_certificat']
                 delete contactMaj['_signature']
 
-                MessageDao.updateContact(contactMaj)
-                    .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
+                throw new Error("fix me - redux")
+                // MessageDao.updateContact(contactMaj)
+                //     .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
 
                 const { uuid_contact } = message
                 let trouve = false
@@ -168,12 +172,13 @@ function Contacts(props) {
                 formatterContactsCb(contactsMaj)
             } else if(action === 'contactsSupprimes') {
                 const uuid_contacts = message.uuid_contacts
-                MessageDao.supprimerContacts(uuid_contacts)
-                    .then(()=>{
-                        const contactsMaj = contacts.filter(item=>!uuid_contacts.includes(item.uuid_contact))
-                        formatterContactsCb(contactsMaj)
-                    })
-                    .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
+                throw new Error("fix me - redux")
+                // MessageDao.supprimerContacts(uuid_contacts)
+                //     .then(()=>{
+                //         const contactsMaj = contacts.filter(item=>!uuid_contacts.includes(item.uuid_contact))
+                //         formatterContactsCb(contactsMaj)
+                //     })
+                //     .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
             } else {
                 console.error("Recu message contact de type inconnu : %O", evenementContact)
             }
@@ -379,9 +384,10 @@ function formatterContacts(contacts, colonnes, userId, setContacts, setCompteCon
 
     setContacts(contactsTries)
 
-    MessageDao.countContacts(userId)
-        .then(setCompteContacts)
-        .catch(erreurCb)
+    throw new Error("fix me - redux")
+    // MessageDao.countContacts(userId)
+    //     .then(setCompteContacts)
+    //     .catch(erreurCb)
 }
 
 function trierNoms(a, b) {
@@ -397,11 +403,12 @@ export async function chargerContenuContacts(workers, userId) {
     // console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
     let listeUuids = []
     {
-        const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
-        const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
-        // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
+        throw new Error("fix me - redux")
+        // const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
+        // const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
+        // // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
 
-        listeUuids = [...uuidNouveau, ...uuidStale]
+        // listeUuids = [...uuidNouveau, ...uuidStale]
     }
 
     const BATCH_SIZE = 2
@@ -427,7 +434,8 @@ async function chargerBatchContacts(workers, userId, batchUuids) {
         const contacts = reponse.contacts
         // console.debug("Contacts recus : %O", contacts)
         for await (let contact of contacts) {
-            await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
+            throw new Error("fix me - redux")
+            // await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
         }
     } else {
         throw reponse.err
