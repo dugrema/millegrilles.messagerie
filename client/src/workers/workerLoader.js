@@ -2,9 +2,10 @@ import { wrap, releaseProxy } from 'comlink'
 
 import { usagerDao } from '@dugrema/millegrilles.reactjs'
 // import * as collectionsDao from '../redux/collectionsIdbDao'
-// import * as uploadFichiersDao from '../redux/uploaderIdbDao'
-// import * as downloadFichiersDao from '../redux/downloaderIdbDao'
-// import clesDao from './clesDao'
+import * as messagerieDao from '../redux/messagerieIdbDao'
+import * as uploadFichiersDao from '../redux/uploaderIdbDao'
+import * as downloadFichiersDao from '../redux/downloaderIdbDao'
+import clesDao from './clesDao'
 import setupTraitementFichiers from './traitementFichiers'
 
 let _block = false
@@ -27,12 +28,12 @@ export function setupWorkers() {
 
     // Pseudo-worker
     workers.x509 = chiffrage.proxy
-    // workers.collectionsDao = collectionsDao         // IDB collections
+    workers.messagerieDao = messagerieDao           // IDB messagerie
     workers.usagerDao = usagerDao                   // IDB usager
     workers.traitementFichiers = setupTraitementFichiers(workers) // Upload et download
-    // workers.clesDao = clesDao(workers)              // Cles asymetriques
-    // workers.uploadFichiersDao = uploadFichiersDao   // IDB upload fichiers
-    // workers.downloadFichiersDao = downloadFichiersDao  // IDB download fichiers
+    workers.clesDao = clesDao(workers)              // Cles asymetriques
+    workers.uploadFichiersDao = uploadFichiersDao   // IDB upload fichiers
+    workers.downloadFichiersDao = downloadFichiersDao  // IDB download fichiers
 
     const ready = wireWorkers(workers)
 
