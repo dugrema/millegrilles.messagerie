@@ -26,6 +26,7 @@ export function setupWorkers() {
       }, {})
 
     // Pseudo-worker
+    workers.x509 = chiffrage.proxy
     // workers.collectionsDao = collectionsDao         // IDB collections
     workers.usagerDao = usagerDao                   // IDB usager
     workers.traitementFichiers = setupTraitementFichiers(workers) // Upload et download

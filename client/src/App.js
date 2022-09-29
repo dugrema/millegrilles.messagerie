@@ -22,6 +22,7 @@ import storeSetup from './redux/store'
 import { LayoutMillegrilles, ModalErreur, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 // import fichiersActions from './redux/fichiersSlice'
+import messagerieActions from './redux/messagerieSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
@@ -32,7 +33,7 @@ import { detecterSupport } from './fonctionsFichiers'
 import setWorkersTraitementFichiers from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
 
-// import './i18n'
+import './i18n'
 
 // Importer JS global
 import 'react-bootstrap/dist/react-bootstrap.min.js'
@@ -642,46 +643,46 @@ function InitialisationDownload(props) {
     return usager.extensions.userId
   }, [usager])
 
-  useEffect(()=>{
-    dispatch(setUserIdDownload(userId))
-  }, [userId])
+  // useEffect(()=>{
+  //   dispatch(setUserIdDownload(userId))
+  // }, [userId])
 
-  useEffect(()=>{
-    if(!downloadFichiersDao || !userId) return
-    // console.debug("Initialiser uploader")
-    downloadFichiersDao.chargerDownloads(userId)
-        .then(async downloads=>{
-            // console.debug("Download trouves : %O", downloads)
+  // useEffect(()=>{
+  //   if(!downloadFichiersDao || !userId) return
+  //   // console.debug("Initialiser uploader")
+  //   downloadFichiersDao.chargerDownloads(userId)
+  //       .then(async downloads=>{
+  //           // console.debug("Download trouves : %O", downloads)
 
-            const completExpire = new Date().getTime() - CONST_DOWNLOAD_COMPLET_EXPIRE
+  //           const completExpire = new Date().getTime() - CONST_DOWNLOAD_COMPLET_EXPIRE
 
-            downloads = downloads.filter(download=>{
-                const { fuuid, etat } = download
-                if([CONST_ETATS_DOWNLOAD.ETAT_SUCCES].includes(etat)) {
-                    // Cleanup
-                    if(download.derniereModification <= completExpire) {
-                        // Complet et expire, on va retirer l'upload
-                        downloadFichiersDao.supprimerFichier(fuuid)
-                            .catch(err=>console.error("Erreur supprimer fichier ", err))
-                        return false
-                    }
-                }
-                return true
-            })
+  //           downloads = downloads.filter(download=>{
+  //               const { fuuid, etat } = download
+  //               if([CONST_ETATS_DOWNLOAD.ETAT_SUCCES].includes(etat)) {
+  //                   // Cleanup
+  //                   if(download.derniereModification <= completExpire) {
+  //                       // Complet et expire, on va retirer l'upload
+  //                       downloadFichiersDao.supprimerFichier(fuuid)
+  //                           .catch(err=>console.error("Erreur supprimer fichier ", err))
+  //                       return false
+  //                   }
+  //               }
+  //               return true
+  //           })
 
-            for await (const download of downloads) {
-                const { etat } = download
-                if([CONST_ETATS_DOWNLOAD.ETAT_PRET, CONST_ETATS_DOWNLOAD.ETAT_EN_COURS].includes(etat)) {
-                  download.etat = CONST_ETATS_DOWNLOAD.ETAT_ECHEC
-                    download.tailleCompletee = 0
-                    await downloadFichiersDao.updateFichierDownload(download)
-                }
-            }
+  //           for await (const download of downloads) {
+  //               const { etat } = download
+  //               if([CONST_ETATS_DOWNLOAD.ETAT_PRET, CONST_ETATS_DOWNLOAD.ETAT_EN_COURS].includes(etat)) {
+  //                 download.etat = CONST_ETATS_DOWNLOAD.ETAT_ECHEC
+  //                   download.tailleCompletee = 0
+  //                   await downloadFichiersDao.updateFichierDownload(download)
+  //               }
+  //           }
 
-            dispatch(setDownloads(downloads))
-        })
-        .catch(err=>console.error("Erreur initialisation uploader ", err))
-  }, [downloadFichiersDao, userId])      
+  //           dispatch(setDownloads(downloads))
+  //       })
+  //       .catch(err=>console.error("Erreur initialisation uploader ", err))
+  // }, [downloadFichiersDao, userId])      
 
   return ''
 }
@@ -699,66 +700,65 @@ function InitialisationUpload(props) {
       return usager.extensions.userId
   }, [usager])
 
-  useEffect(()=>{
-    // dispatch(fichiersActions.setUserId(userId))
-    throw new Error("Fix me - setUserId")
-    dispatch(setUserIdUpload(userId))
-  }, [userId])
+  // useEffect(()=>{
+  //   dispatch(messagerieActions.setUserId(userId))
+  //   dispatch(setUserIdUpload(userId))
+  // }, [userId])
 
-  useEffect(()=>{
-      if(!uploadFichiersDao || !userId) return
-      // console.debug("Initialiser uploader")
-      uploadFichiersDao.chargerUploads(userId)
-          .then(async uploads=>{
-              // console.debug("Uploads trouves : %O", uploads)
-              // uploads.sort(trierListeUpload)
-              // Reset etat uploads en cours (incomplets)
+  // useEffect(()=>{
+  //     if(!uploadFichiersDao || !userId) return
+  //     // console.debug("Initialiser uploader")
+  //     uploadFichiersDao.chargerUploads(userId)
+  //         .then(async uploads=>{
+  //             // console.debug("Uploads trouves : %O", uploads)
+  //             // uploads.sort(trierListeUpload)
+  //             // Reset etat uploads en cours (incomplets)
 
-              const completExpire = new Date().getTime() - CONST_UPLOAD_COMPLET_EXPIRE
+  //             const completExpire = new Date().getTime() - CONST_UPLOAD_COMPLET_EXPIRE
 
-              uploads = uploads.filter(upload=>{
-                  const { correlation, etat } = upload
-                  if([ETAT_COMPLETE, ETAT_CONFIRME].includes(etat)) {
-                      // Cleanup
-                      if(upload.derniereModification <= completExpire) {
-                          // Complet et expire, on va retirer l'upload
-                          // console.debug("Cleanup upload complete ", upload)
-                          uploadFichiersDao.supprimerFichier(correlation)
-                              .catch(err=>console.error("Erreur supprimer fichier ", err))
-                          return false
-                      }
-                  } else if(ETAT_PREPARATION === etat) {
-                      // Cleanup
-                      console.warn("Cleanup upload avec preparation incomplete ", upload)
-                      uploadFichiersDao.supprimerFichier(correlation)
-                          .catch(err=>console.error("Erreur supprimer fichier ", err))
-                      return false
-                  }
-                  return true
-              })
+  //             uploads = uploads.filter(upload=>{
+  //                 const { correlation, etat } = upload
+  //                 if([ETAT_COMPLETE, ETAT_CONFIRME].includes(etat)) {
+  //                     // Cleanup
+  //                     if(upload.derniereModification <= completExpire) {
+  //                         // Complet et expire, on va retirer l'upload
+  //                         // console.debug("Cleanup upload complete ", upload)
+  //                         uploadFichiersDao.supprimerFichier(correlation)
+  //                             .catch(err=>console.error("Erreur supprimer fichier ", err))
+  //                         return false
+  //                     }
+  //                 } else if(ETAT_PREPARATION === etat) {
+  //                     // Cleanup
+  //                     console.warn("Cleanup upload avec preparation incomplete ", upload)
+  //                     uploadFichiersDao.supprimerFichier(correlation)
+  //                         .catch(err=>console.error("Erreur supprimer fichier ", err))
+  //                     return false
+  //                 }
+  //                 return true
+  //             })
 
-              for await (const upload of uploads) {
-                  const { correlation, etat } = upload
-                  if([ETAT_PRET, ETAT_UPLOADING].includes(etat)) {
-                      upload.etat = ETAT_UPLOAD_INCOMPLET
+  //             for await (const upload of uploads) {
+  //                 const { correlation, etat } = upload
+  //                 if([ETAT_PRET, ETAT_UPLOADING].includes(etat)) {
+  //                     upload.etat = ETAT_UPLOAD_INCOMPLET
 
-                      const parts = await uploadFichiersDao.getPartsFichier(correlation)
-                      const positionsCompletees = upload.positionsCompletees
-                      const tailleCompletee = parts.reduce((acc, item)=>{
-                          const position = item.position
-                          if(positionsCompletees.includes(position)) acc += item.taille
-                          return acc
-                      }, 0)
+  //                     const parts = await uploadFichiersDao.getPartsFichier(correlation)
+  //                     const positionsCompletees = upload.positionsCompletees
+  //                     const tailleCompletee = parts.reduce((acc, item)=>{
+  //                         const position = item.position
+  //                         if(positionsCompletees.includes(position)) acc += item.taille
+  //                         return acc
+  //                     }, 0)
 
-                      upload.tailleCompletee = tailleCompletee
-                      await uploadFichiersDao.updateFichierUpload(upload)
-                  }
-              }
+  //                     upload.tailleCompletee = tailleCompletee
+  //                     await uploadFichiersDao.updateFichierUpload(upload)
+  //                 }
+  //             }
 
-              dispatch(setUploads(uploads))
-          })
-          .catch(err=>console.error("Erreur initialisation uploader ", err))
-  }, [uploadFichiersDao, userId])    
+  //             dispatch(setUploads(uploads))
+  //         })
+  //         .catch(err=>console.error("Erreur initialisation uploader ", err))
+  // }, [uploadFichiersDao, userId])    
 
   // Rien a afficher
   return ''

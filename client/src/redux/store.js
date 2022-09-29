@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
-//import { reducer as fichiers, setup as setupFichiers } from './fichiersSlice'
+import { reducer as messagerie, setup as setupMessagerie } from './messagerieSlice'
 import { reducer as navigationSecondaire, setup as setupNavigationSecondaire } from './navigationSecondaireSlice'
 import uploader, { uploaderMiddlewareSetup } from './uploaderSlice'
 import downloader, { downloaderMiddlewareSetup } from './downloaderSlice'
@@ -10,7 +10,7 @@ function storeSetup(workers) {
   const store = configureStore({
 
     reducer: { 
-      // fichiers, 
+      messagerie,
       navigationSecondaire,  // Utilise pour modal de navigation (copier, deplacer)
       uploader, 
       downloader,
@@ -18,14 +18,15 @@ function storeSetup(workers) {
 
     middleware: (getDefaultMiddleware) => {
       
-      // const { dechiffrageMiddleware } = setupFichiers(workers)
+      // const { dechiffrageMiddleware } = setupMessages(workers)
+      const { dechiffrageMiddleware: dechiffrageMiddlewareMessages } = setupMessagerie(workers)
       const { dechiffrageMiddleware: dechiffrageNavigationSecondaire } = setupNavigationSecondaire(workers)
       const uploaderMiddleware = uploaderMiddlewareSetup(workers)
       const downloaderMiddleware = downloaderMiddlewareSetup(workers)
 
       // Prepend, evite le serializability check
       return getDefaultMiddleware()
-        // .prepend(dechiffrageMiddleware.middleware)
+        .prepend(dechiffrageMiddlewareMessages.middleware)
         .prepend(dechiffrageNavigationSecondaire.middleware)
         .prepend(uploaderMiddleware.middleware)
         .prepend(downloaderMiddleware.middleware)
