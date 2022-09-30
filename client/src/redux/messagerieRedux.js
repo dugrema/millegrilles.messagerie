@@ -144,9 +144,9 @@ export function creerThunks(actions, nomSlice) {
     const { 
         setUserId, 
         // setCuuid, 
-        setCollectionInfo, pushMessages, clearMessages, mergeMessagesData,
+        pushMessages, clearMessages, mergeMessagesData,
         breadcrumbPush, breadcrumbSlice, 
-        setSortKeys, setSource, setIntervalle,
+        setSortKeys, setSourceMessages, setIntervalle,
         pushMessagesChiffres, clearMessagesChiffres, selectionMessages,
         setMessagesChiffres,
         // supprimer, 
@@ -155,7 +155,76 @@ export function creerThunks(actions, nomSlice) {
     console.error("creerThunks Not implemented")
 
     // Async actions
+    function changerDossier(workers, sourceMessages, uuidDossier) {
+        return (dispatch, getState) => traiterChangerDossier(workers, sourceMessages, uuidDossier, dispatch, getState)
+    }
+    
+    async function traiterChangerDossier(workers, sourceMessages, uuidDossier, dispatch, getState) {
+        const state = getState()[nomSlice]
+        const sourcePrecedente = state.source,
+              uuidPrecedent = state.uuidDossier
+        // console.debug("Cuuid precedent : %O, nouveau : %O", cuuidPrecedent, cuuid)
+    
+        if(sourcePrecedente === sourceMessages && uuidPrecedent === uuidDossier) return  // Rien a faire, meme source/dossier
+    
+        dispatch(setSourceMessages(sourceMessages, uuidDossier))
+    
+        return traiterRafraichirMessages(workers, dispatch, getState)
+    }
+
+    async function traiterRafraichirMessages(workers, dispatch, getState, promisesPreparationDossier) {
+        // console.debug('traiterRafraichirCollection')
+        const { collectionsDao } = workers
+    
+        const state = getState()[nomSlice]
+        const { userId, cuuid } = state
+    
+        // console.debug("Rafraichir '%s' pour userId", cuuid, userId)
+    
+        // Nettoyer la liste
+        dispatch(clearMessages())
+    
+        console.error("todo")
+
+        // // Charger le contenu de la collection deja connu
+        // promisesPreparationDossier = promisesPreparationDossier || []
+        // promisesPreparationDossier.push(collectionsDao.getParCollection(cuuid, userId))
+    
+        // // Attendre que les listeners soient prets, recuperer contenu idb
+        // const contenuIdb = (await Promise.all(promisesPreparationDossier)).pop()
+    
+        // // Pre-charger le contenu de la liste de fichiers avec ce qu'on a deja dans idb
+        // // console.debug("Contenu idb : %O", contenuIdb)
+        // if(contenuIdb) {
+        //     const { documents, collection } = contenuIdb
+        //     // console.debug("Push documents provenance idb : %O", documents)
+        //     dispatch(setCollectionInfo(collection))
+        //     dispatch(push({liste: documents}))
+    
+        //     // Detecter les documents connus qui sont dirty ou pas encore dechiffres
+        //     const tuuids = documents.filter(item=>item.dirty||!item.dechiffre).map(item=>item.tuuid)
+        //     if(tuuids.length > 0) {
+        //         dispatch(chargerTuuids(workers, tuuids))
+        //             .catch(err=>console.error("Erreur traitement tuuids %O : %O", tuuids, err))
+        //     }
+        // }
+    
+        // let compteur = 0
+        // for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
+        //     let resultatSync = await syncCollection(dispatch, workers, cuuid, CONST_SYNC_BATCH_SIZE, compteur)
+        //     // console.debug("Sync collection (cycle %d) : %O", cycle, resultatSync)
+        //     if( ! resultatSync || ! resultatSync.liste ) break
+        //     compteur += resultatSync.liste.length
+        //     if( resultatSync.complete ) break
+        // }
+        // if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
+    
+        // On marque la fin du chargement/sync
+        dispatch(pushMessages({liste: []}))
+    }
+
     const thunks = { 
+        changerDossier,
     }
 
     return thunks

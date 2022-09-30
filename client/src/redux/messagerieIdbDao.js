@@ -6,6 +6,10 @@ const DB_NAME = 'messagerie',
       STORE_DRAFTS = 'drafts'
 // const MAX_AGE_DEFAUT = 6 * 60 * 60  // 6h en secondes
 
+export function init() {
+    return ouvrirDB()
+}
+
 export async function getMessage(uuid_transaction) {
     const db = await ouvrirDB({upgrade: true})
     const store = db.transaction(STORE_MESSAGES, 'readonly').objectStore(STORE_MESSAGES)

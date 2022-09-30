@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react'
 import { setupWorkers, cleanupWorkers } from './workers/workerLoader'
-import { init as initFichiersIdb } from './redux/fichiersIdbDao'
+import { init as initFichiersIdb } from './redux/messagerieIdbDao'
 
 const Context = createContext()
 
 const { workerInstances, workers: _workers, ready } = setupWorkers()
+console.warn("Workers : ", _workers)
 
 // Hooks
 function useWorkers() {

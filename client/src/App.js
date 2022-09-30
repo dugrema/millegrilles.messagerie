@@ -17,7 +17,7 @@ import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUp
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
 
-import Contacts, {chargerContenuContacts} from './Contacts'
+// import Contacts, {chargerContenuContacts} from './Contacts'
 
 import { detecterSupport } from './fonctionsFichiers'
 import setWorkersTraitementFichiers from './workers/traitementFichiers'
@@ -60,6 +60,7 @@ const CONST_ETATS_DOWNLOAD = {
 
 const AfficherMessages = lazy(() => import('./AfficherMessages'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
+const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
 const PAGE_LIMIT = 40,
@@ -105,7 +106,12 @@ function LayoutMain() {
   const dispatch = useDispatch()
 
   const [showTransfertModal, setShowTransfertModal] = useState(false)
-  const [page, setPage] = useState('')
+
+  // Selecteurs de page
+  const [afficherContacts, setAfficherContacts] = useState(false)
+  const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
+  const [uuidMessage, setUuidMessage] = useState('')
+  const [dossier, setDossier] = useState('')
   
   const [erreur, setErreur] = useState('')
   const erreurCb = useCallback((err, message)=>{
@@ -133,12 +139,16 @@ function LayoutMain() {
   }, [workers])
 
   const handlerSelect = useCallback(eventKey => {
-    console.warn("handlerSelect TODO %O", eventKey)
     switch(eventKey) {
+      case 'contacts':
+        console.debug("Afficher contacts")
+        setAfficherContacts(true)
+        break
+      case '':
       default:
-        setPage('')
+        setAfficherContacts(false)
     }
-  }, [setPage])
+  }, [setAfficherContacts])
 
   const menu = (
     <Menu 
@@ -156,7 +166,9 @@ function LayoutMain() {
       <Container className="contenu">
         <Suspense fallback={<Attente />}>
           <Contenu 
-              page={page}
+              afficherNouveauMessage={afficherNouveauMessage}
+              afficherContacts={afficherContacts}
+              uuidMessage={uuidMessage}
               erreurCb={erreurCb}
             />
         </Suspense>
@@ -182,7 +194,9 @@ function LayoutMain() {
 }
 
 function Contenu(props) {
-  if(!props.workers) return <Attente />
+  const workers = useWorkers()
+
+  if(!workers) return <Attente />
 
   const { afficherNouveauMessage, afficherContacts, uuidMessage } = props
 
@@ -200,7 +214,9 @@ function Contenu(props) {
 
   return (
       <ErrorBoundary erreurCb={props.erreurCb}>
-          <Page {...props}/>
+          <Suspense fallback={<Attente />}>
+            <Page {...props}/>
+          </Suspense>
 
           <br/><br/>
           

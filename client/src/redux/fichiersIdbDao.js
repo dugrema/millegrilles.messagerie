@@ -2,10 +2,6 @@ import { ouvrirDB } from './idbMessagerie'
 
 const STORE_FICHIERS = 'fichiers'
 
-export function init() {
-    return ouvrirDB()
-}
-
 // Met dirty a true et dechiffre a false si mismatch derniere_modification
 export async function syncDocuments(docs) {
     if(!docs) return []

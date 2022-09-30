@@ -10,63 +10,66 @@ import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
 
 function ListeMessages(props) {
 
-    const { 
-        workers, etatConnexion, etatAuthentifie, 
-        messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage, setDossier,
-        isListeComplete, getMessagesSuivants,
-        supprimerMessagesCb, setAfficherNouveauMessage,
-    } = props
+    console.error("Not implemented")
+    return ''
 
-    const [filtreMessage, setFiltreMessage] = useState('actifs')
+    // const { 
+    //     workers, etatConnexion, etatAuthentifie, 
+    //     messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage, setDossier,
+    //     isListeComplete, getMessagesSuivants,
+    //     supprimerMessagesCb, setAfficherNouveauMessage,
+    // } = props
 
-    const afficherNouveauMessageCb = useCallback(() => setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
+    // const [filtreMessage, setFiltreMessage] = useState('actifs')
 
-    useEffect(()=>{
-        if(filtreMessage === 'supprimes') setDossier('supprimes')
-        else if (filtreMessage === 'envoyes') setDossier('envoyes')
-        else setDossier('')
-    }, [filtreMessage, setDossier])
+    // const afficherNouveauMessageCb = useCallback(() => setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
 
-    if(!messages) return <p>Aucun message disponible.</p>
+    // useEffect(()=>{
+    //     if(filtreMessage === 'supprimes') setDossier('supprimes')
+    //     else if (filtreMessage === 'envoyes') setDossier('envoyes')
+    //     else setDossier('')
+    // }, [filtreMessage, setDossier])
+
+    // if(!messages) return <p>Aucun message disponible.</p>
     
-    return (
-        <div>
-            <h3>Messages</h3>
+    // return (
+    //     <div>
+    //         <h3>Messages</h3>
 
-            <Row>
-                <Col xs={12} md={3} className="buttonbar-left">
-                    <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
-                </Col>
-                <Col xs={12} md={6} className="buttonbar-left">
-                    <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
-                        <Nav.Item>
-                            <Nav.Link eventKey="actifs">Reception</Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
-                        </Nav.Item>
-                    </Nav>
-                </Col>
-                <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
-            </Row>
+    //         <Row>
+    //             <Col xs={12} md={3} className="buttonbar-left">
+    //                 <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
+    //             </Col>
+    //             <Col xs={12} md={6} className="buttonbar-left">
+    //                 <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
+    //                     <Nav.Item>
+    //                         <Nav.Link eventKey="actifs">Reception</Nav.Link>
+    //                     </Nav.Item>
+    //                     <Nav.Item>
+    //                         <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
+    //                     </Nav.Item>
+    //                     <Nav.Item>
+    //                         <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
+    //                     </Nav.Item>
+    //                 </Nav>
+    //             </Col>
+    //             <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+    //         </Row>
 
-            <AfficherListeMessages 
-                workers={workers}
-                colonnes={colonnes}
-                messages={messages} 
-                setUuidMessage={setUuidMessage} 
-                getMessagesSuivants={getMessagesSuivants}
-                isListeComplete={isListeComplete} 
-                enteteOnClickCb={enteteOnClickCb}
-                etatConnexion={etatConnexion}
-                etatAuthentifie={etatAuthentifie}
-                supprimerMessagesCb={supprimerMessagesCb}
-            />
-        </div>
-    )
+    //         <AfficherListeMessages 
+    //             workers={workers}
+    //             colonnes={colonnes}
+    //             messages={messages} 
+    //             setUuidMessage={setUuidMessage} 
+    //             getMessagesSuivants={getMessagesSuivants}
+    //             isListeComplete={isListeComplete} 
+    //             enteteOnClickCb={enteteOnClickCb}
+    //             etatConnexion={etatConnexion}
+    //             etatAuthentifie={etatAuthentifie}
+    //             supprimerMessagesCb={supprimerMessagesCb}
+    //         />
+    //     </div>
+    // )
 
 }
 
