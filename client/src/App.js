@@ -1,35 +1,25 @@
 import React, { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
-// import { base64 } from "multiformats/bases/base64"
-// import { proxy } from 'comlink'
 
 import Container from 'react-bootstrap/Container'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
-// import Alert from 'react-bootstrap/Alert'
 import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
 
-import { pki } from '@dugrema/node-forge'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 
 import ErrorBoundary from './ErrorBoundary'
 import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
 import storeSetup from './redux/store'
 
-// import { 
-//   LayoutApplication, HeaderApplication, FooterApplication, TransfertModal, FormatterDate, AlertTimeout 
-// } from '@dugrema/millegrilles.reactjs'
 import { LayoutMillegrilles, ModalErreur, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-// import fichiersActions from './redux/fichiersSlice'
 import messagerieActions from './redux/messagerieSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
+
 import Contacts, {chargerContenuContacts} from './Contacts'
 
 import { detecterSupport } from './fonctionsFichiers'
-// import * as MessageDao from './redux/messageDao'
 import setWorkersTraitementFichiers from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
 
@@ -44,8 +34,6 @@ import 'font-awesome/css/font-awesome.min.css'
 import '@dugrema/millegrilles.reactjs/dist/index.css'
 
 import manifest from './manifest.build'
-
-// import stylesCommuns from '@dugrema/millegrilles.reactjs/dist/index.css'
 
 import './index.scss'
 import './App.css'
@@ -70,7 +58,7 @@ const CONST_ETATS_DOWNLOAD = {
   ETAT_ECHEC: 4
 }
 
-const Accueil = lazy(() => import('./Accueil'))
+const AfficherMessages = lazy(() => import('./AfficherMessages'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
 
@@ -145,12 +133,8 @@ function LayoutMain() {
   }, [workers])
 
   const handlerSelect = useCallback(eventKey => {
-    console.debug("handlerSelect %O", eventKey)
+    console.warn("handlerSelect TODO %O", eventKey)
     switch(eventKey) {
-      case 'recents': 
-      case 'corbeille': 
-        setPage(eventKey)
-        break
       default:
         setPage('')
     }
@@ -189,10 +173,38 @@ function LayoutMain() {
           continuerDownloads={handlerContinuerDownloads}
         />
 
+      <InitialiserMessagerie />
       <InitialisationDownload />
       <InitialisationUpload />
 
     </LayoutMillegrilles>
+  )
+}
+
+function Contenu(props) {
+  if(!props.workers) return <Attente />
+
+  const { afficherNouveauMessage, afficherContacts, uuidMessage } = props
+
+  // Selection de la page a afficher
+  let Page
+  if(afficherContacts) {
+    Page = Contacts
+  } else if(afficherNouveauMessage) {
+    Page = NouveauMessage
+  } else if(uuidMessage) {
+    Page = AfficherMessage
+  } else {
+    Page = AfficherMessages
+  }
+
+  return (
+      <ErrorBoundary erreurCb={props.erreurCb}>
+          <Page {...props}/>
+
+          <br/><br/>
+          
+      </ErrorBoundary>
   )
 }
 
@@ -573,17 +585,6 @@ function Modals(props) {
   )
 }
 
-async function importerWorkers(setWorkers) {
-  const { chargerWorkers } = await import('./workers/workerLoader')
-  const workers = chargerWorkers()
-  setWorkers(workers)
-}
-
-async function connecter(workers, ...setters) {
-  const { connecter: connecterWorker } = await import('./workers/connecter')
-  return connecterWorker(workers, ...setters)
-}
-
 function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
   console.info("Info domaines messagerie : %O", infoDns)
   const listeMessagerie = infoDns.filter(item=>item.application==='messagerie_web')
@@ -601,33 +602,22 @@ function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
   }
 }
 
-function Contenu(props) {
-  if(!props.workers) return <Attente />
+// Initialisation du profil usager
+function InitialiserMessagerie(props) {
 
-  const { afficherNouveauMessage, afficherContacts, uuidMessage } = props
+  const workers = useWorkers()
+  const usager = useUsager()
+  const dispatch = useDispatch()
 
-  // Selection de la page a afficher
-  let Page
-  if(afficherContacts) {
-    Page = Contacts
-  } else if(afficherNouveauMessage) {
-    Page = NouveauMessage
-  } else if(uuidMessage) {
-    Page = AfficherMessage
-  } else {
-    Page = Accueil
-  }
+  const userId = useMemo(()=>{
+    if(!usager || !usager.extensions) return
+    return usager.extensions.userId
+  }, [usager])
 
-  return <ErrorBoundary><Page {...props}/></ErrorBoundary>
-}
+  useEffect(()=>{
+    dispatch(messagerieActions.setUserId(userId))
+  }, [userId])
 
-function Footer(props) {
-  return (
-    <div className='centre'>
-      <Row><Col>{props.idmg}</Col></Row>
-      <Row><Col>Collections de MilleGrilles</Col></Row>
-    </div>
-  )
 }
 
 function InitialisationDownload(props) {
@@ -643,46 +633,44 @@ function InitialisationDownload(props) {
     return usager.extensions.userId
   }, [usager])
 
-  // useEffect(()=>{
-  //   dispatch(setUserIdDownload(userId))
-  // }, [userId])
+  useEffect(()=>{ dispatch(setUserIdDownload(userId)) }, [userId])
 
-  // useEffect(()=>{
-  //   if(!downloadFichiersDao || !userId) return
-  //   // console.debug("Initialiser uploader")
-  //   downloadFichiersDao.chargerDownloads(userId)
-  //       .then(async downloads=>{
-  //           // console.debug("Download trouves : %O", downloads)
+  useEffect(()=>{
+    if(!downloadFichiersDao || !userId) return
+    // console.debug("Initialiser uploader")
+    downloadFichiersDao.chargerDownloads(userId)
+        .then(async downloads=>{
+            // console.debug("Download trouves : %O", downloads)
 
-  //           const completExpire = new Date().getTime() - CONST_DOWNLOAD_COMPLET_EXPIRE
+            const completExpire = new Date().getTime() - CONST_DOWNLOAD_COMPLET_EXPIRE
 
-  //           downloads = downloads.filter(download=>{
-  //               const { fuuid, etat } = download
-  //               if([CONST_ETATS_DOWNLOAD.ETAT_SUCCES].includes(etat)) {
-  //                   // Cleanup
-  //                   if(download.derniereModification <= completExpire) {
-  //                       // Complet et expire, on va retirer l'upload
-  //                       downloadFichiersDao.supprimerFichier(fuuid)
-  //                           .catch(err=>console.error("Erreur supprimer fichier ", err))
-  //                       return false
-  //                   }
-  //               }
-  //               return true
-  //           })
+            downloads = downloads.filter(download=>{
+                const { fuuid, etat } = download
+                if([CONST_ETATS_DOWNLOAD.ETAT_SUCCES].includes(etat)) {
+                    // Cleanup
+                    if(download.derniereModification <= completExpire) {
+                        // Complet et expire, on va retirer l'upload
+                        downloadFichiersDao.supprimerFichier(fuuid)
+                            .catch(err=>console.error("Erreur supprimer fichier ", err))
+                        return false
+                    }
+                }
+                return true
+            })
 
-  //           for await (const download of downloads) {
-  //               const { etat } = download
-  //               if([CONST_ETATS_DOWNLOAD.ETAT_PRET, CONST_ETATS_DOWNLOAD.ETAT_EN_COURS].includes(etat)) {
-  //                 download.etat = CONST_ETATS_DOWNLOAD.ETAT_ECHEC
-  //                   download.tailleCompletee = 0
-  //                   await downloadFichiersDao.updateFichierDownload(download)
-  //               }
-  //           }
+            for await (const download of downloads) {
+                const { etat } = download
+                if([CONST_ETATS_DOWNLOAD.ETAT_PRET, CONST_ETATS_DOWNLOAD.ETAT_EN_COURS].includes(etat)) {
+                  download.etat = CONST_ETATS_DOWNLOAD.ETAT_ECHEC
+                    download.tailleCompletee = 0
+                    await downloadFichiersDao.updateFichierDownload(download)
+                }
+            }
 
-  //           dispatch(setDownloads(downloads))
-  //       })
-  //       .catch(err=>console.error("Erreur initialisation uploader ", err))
-  // }, [downloadFichiersDao, userId])      
+            dispatch(setDownloads(downloads))
+        })
+        .catch(err=>console.error("Erreur initialisation uploader ", err))
+  }, [downloadFichiersDao, userId])      
 
   return ''
 }
@@ -700,65 +688,64 @@ function InitialisationUpload(props) {
       return usager.extensions.userId
   }, [usager])
 
-  // useEffect(()=>{
-  //   dispatch(messagerieActions.setUserId(userId))
-  //   dispatch(setUserIdUpload(userId))
-  // }, [userId])
+  useEffect(()=>{
+    dispatch(setUserIdUpload(userId))
+  }, [userId])
 
-  // useEffect(()=>{
-  //     if(!uploadFichiersDao || !userId) return
-  //     // console.debug("Initialiser uploader")
-  //     uploadFichiersDao.chargerUploads(userId)
-  //         .then(async uploads=>{
-  //             // console.debug("Uploads trouves : %O", uploads)
-  //             // uploads.sort(trierListeUpload)
-  //             // Reset etat uploads en cours (incomplets)
+  useEffect(()=>{
+      if(!uploadFichiersDao || !userId) return
+      // console.debug("Initialiser uploader")
+      uploadFichiersDao.chargerUploads(userId)
+          .then(async uploads=>{
+              // console.debug("Uploads trouves : %O", uploads)
+              // uploads.sort(trierListeUpload)
+              // Reset etat uploads en cours (incomplets)
 
-  //             const completExpire = new Date().getTime() - CONST_UPLOAD_COMPLET_EXPIRE
+              const completExpire = new Date().getTime() - CONST_UPLOAD_COMPLET_EXPIRE
 
-  //             uploads = uploads.filter(upload=>{
-  //                 const { correlation, etat } = upload
-  //                 if([ETAT_COMPLETE, ETAT_CONFIRME].includes(etat)) {
-  //                     // Cleanup
-  //                     if(upload.derniereModification <= completExpire) {
-  //                         // Complet et expire, on va retirer l'upload
-  //                         // console.debug("Cleanup upload complete ", upload)
-  //                         uploadFichiersDao.supprimerFichier(correlation)
-  //                             .catch(err=>console.error("Erreur supprimer fichier ", err))
-  //                         return false
-  //                     }
-  //                 } else if(ETAT_PREPARATION === etat) {
-  //                     // Cleanup
-  //                     console.warn("Cleanup upload avec preparation incomplete ", upload)
-  //                     uploadFichiersDao.supprimerFichier(correlation)
-  //                         .catch(err=>console.error("Erreur supprimer fichier ", err))
-  //                     return false
-  //                 }
-  //                 return true
-  //             })
+              uploads = uploads.filter(upload=>{
+                  const { correlation, etat } = upload
+                  if([ETAT_COMPLETE, ETAT_CONFIRME].includes(etat)) {
+                      // Cleanup
+                      if(upload.derniereModification <= completExpire) {
+                          // Complet et expire, on va retirer l'upload
+                          // console.debug("Cleanup upload complete ", upload)
+                          uploadFichiersDao.supprimerFichier(correlation)
+                              .catch(err=>console.error("Erreur supprimer fichier ", err))
+                          return false
+                      }
+                  } else if(ETAT_PREPARATION === etat) {
+                      // Cleanup
+                      console.warn("Cleanup upload avec preparation incomplete ", upload)
+                      uploadFichiersDao.supprimerFichier(correlation)
+                          .catch(err=>console.error("Erreur supprimer fichier ", err))
+                      return false
+                  }
+                  return true
+              })
 
-  //             for await (const upload of uploads) {
-  //                 const { correlation, etat } = upload
-  //                 if([ETAT_PRET, ETAT_UPLOADING].includes(etat)) {
-  //                     upload.etat = ETAT_UPLOAD_INCOMPLET
+              for await (const upload of uploads) {
+                  const { correlation, etat } = upload
+                  if([ETAT_PRET, ETAT_UPLOADING].includes(etat)) {
+                      upload.etat = ETAT_UPLOAD_INCOMPLET
 
-  //                     const parts = await uploadFichiersDao.getPartsFichier(correlation)
-  //                     const positionsCompletees = upload.positionsCompletees
-  //                     const tailleCompletee = parts.reduce((acc, item)=>{
-  //                         const position = item.position
-  //                         if(positionsCompletees.includes(position)) acc += item.taille
-  //                         return acc
-  //                     }, 0)
+                      const parts = await uploadFichiersDao.getPartsFichier(correlation)
+                      const positionsCompletees = upload.positionsCompletees
+                      const tailleCompletee = parts.reduce((acc, item)=>{
+                          const position = item.position
+                          if(positionsCompletees.includes(position)) acc += item.taille
+                          return acc
+                      }, 0)
 
-  //                     upload.tailleCompletee = tailleCompletee
-  //                     await uploadFichiersDao.updateFichierUpload(upload)
-  //                 }
-  //             }
+                      upload.tailleCompletee = tailleCompletee
+                      await uploadFichiersDao.updateFichierUpload(upload)
+                  }
+              }
 
-  //             dispatch(setUploads(uploads))
-  //         })
-  //         .catch(err=>console.error("Erreur initialisation uploader ", err))
-  // }, [uploadFichiersDao, userId])    
+              dispatch(setUploads(uploads))
+          })
+          .catch(err=>console.error("Erreur initialisation uploader ", err))
+  }, [uploadFichiersDao, userId])    
 
   // Rien a afficher
   return ''
@@ -1004,7 +991,6 @@ function trierFrom(a, b) {
 // }
 
 function supprimerUploads(workers, dispatch, params, erreurCb) {
-  // console.debug("!!! supprimerUploaders ", params)
   const { correlation, succes, echecs } = params
   if(correlation) {
     dispatch(annulerUpload(workers, correlation))

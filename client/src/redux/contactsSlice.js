@@ -1,6 +1,6 @@
-import { creerSlice, creerThunks, creerMiddleware } from './messagerieRedux'
+import { creerSlice, creerThunks, creerMiddleware } from './contactsRedux'
 
-const NOM_SLICE = 'messagerie'
+const NOM_SLICE = 'contacts'
 
 const slice = creerSlice(NOM_SLICE)
 export const { reducer } = slice

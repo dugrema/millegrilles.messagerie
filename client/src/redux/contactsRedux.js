@@ -1,9 +1,4 @@
-import { base64 } from 'multiformats/bases/base64'
 import { createSlice, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
-
-const SOURCE_INBOX = 'inbox',
-      SOURCE_OUTBOX = 'outbox',
-      SOURCE_CORBEILLE = 'corbeille'
 
 const SAFEGUARD_BATCH_MAX = 1000,
       CONST_SYNC_BATCH_SIZE = 250
@@ -11,15 +6,11 @@ const SAFEGUARD_BATCH_MAX = 1000,
 const initialState = {
     // Usager
     userId: '',                 // UserId courant, permet de stocker plusieurs users localement
-    adresseUsager: '',          // Adresse du serveur local, utilise comme source du message
 
     // Liste a l'ecran
-    source: SOURCE_INBOX,       // Source de la requete - inbox, corbeille, outbox, custom
     sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
-    breadcrumb: [],             // Breadcrumb du path de la source affichee
-    intervalle: null,           // Intervalle de temps des donnees (filtre)
-    selection: null,            // Messages selectionnes
+    selection: null,            // Contacts selectionnes
 
     // Travail background
     listeDechiffrage: [],       // Liste de messages a dechiffrer
@@ -38,18 +29,7 @@ function setSortKeysAction(state, action) {
     if(state.liste) state.liste.sort(genererTriListe(sortKeys))
 }
 
-function setSourceAction(state, action) {
-    state.source = action.payload
-    state.intervalle = null
-    state.breadcrumb = []
-    state.liste = null
-}
-
-function setIntervalleAction(state, action) {
-    state.intervalle = action.payload
-}
-
-function pushMessagesAction(state, action) {
+function pushContactsAction(state, action) {
     const mergeVersion = state.mergeVersion
     state.mergeVersion++
 
@@ -59,27 +39,23 @@ function pushMessagesAction(state, action) {
     let liste = state.liste || []
     if( Array.isArray(payload) ) {
         const ajouts = payload.map(item=>{return {...item, '_mergeVersion': mergeVersion}})
-        // console.debug("pushAction ajouter ", ajouts)
         liste = liste.concat(ajouts)
     } else {
         const ajout = {...payload, '_mergeVersion': mergeVersion}
-        // console.debug("pushAction ajouter ", ajout)
         liste.push(ajout)
     }
 
     // Trier
     liste.sort(genererTriListe(state.sortKeys))
-    // console.debug("pushAction liste triee : %O", liste)
 
     state.liste = liste
 }
 
-function clearMessagesAction(state) {
+function clearContactsAction(state) {
     state.liste = null
 }
 
-// payload {tuuid, data, images, video}
-function mergeMessagesDataAction(state, action) {
+function mergeContactsDataAction(state, action) {
     const mergeVersion = state.mergeVersion
     state.mergeVersion++
 
@@ -88,28 +64,31 @@ function mergeMessagesDataAction(state, action) {
         payload = [payload]
     }
 
-    console.error("mergeMessagesDataAction Not implemented")
-    
+    for (const payloadMessage of payload) {
+        console.debug("mergeContactsDataAction action: %O, cuuid courant: %O", action, state.cuuid)
+        throw new Error("fix me")
+    }
+
     // Trier
     state.liste.sort(genererTriListe(state.sortKeys))
 }
 
-// Ajouter des messages a la liste a dechiffrer
-function pushMessagesChiffresAction(state, action) {
-    const fichiers = action.payload
-    state.listeDechiffrage = [...state.listeDechiffrage, ...fichiers]
+// Ajouter des contacts a la liste a dechiffrer
+function pushContactsChiffresAction(state, action) {
+    const items = action.payload
+    state.listeDechiffrage = [...state.listeDechiffrage, ...items]
 }
 
-function setMessagesChiffresAction(state, action) {
+function setContactsChiffresAction(state, action) {
     state.listeDechiffrage = action.payload
 }
 
 // Retourne un fichier de la liste a dechiffrer
-function clearMessagesChiffresAction(state) {
+function clearContactsChiffresAction(state) {
     state.listeDechiffrage = []
 }
 
-function selectionMessagesAction(state, action) {
+function selectionContactsAction(state, action) {
     state.selection = action.payload
 }
 
@@ -122,38 +101,22 @@ export function creerSlice(name) {
         initialState,
         reducers: {
             setUserId: setUserIdAction,
-            pushMessages: pushMessagesAction, 
+            pushContacts: pushContactsAction, 
             // supprimer: supprimerAction,
-            clearMessages: clearMessagesAction,
-            mergeMessagesData: mergeMessagesDataAction,
+            clearContacts: clearContactsAction,
+            mergeContactsData: mergeContactsDataAction,
             setSortKeys: setSortKeysAction,
-            setSource: setSourceAction,
-            setIntervalle: setIntervalleAction,
-            pushMessagesChiffres: pushMessagesChiffresAction,
-            clearMessagesChiffres: clearMessagesChiffresAction,
-            selectionMessages: selectionMessagesAction,
-            setMessagesChiffres: setMessagesChiffresAction,
+            pushContactsChiffres: pushContactsChiffresAction,
+            clearContactsChiffres: clearContactsChiffresAction,
+            selectionContacts: selectionContactsAction,
+            setContactsChiffres: setContactsChiffresAction,
         }
     })
 
 }
 
 export function creerThunks(actions, nomSlice) {
-
-    // Action creators are generated for each case reducer function
-    const { 
-        setUserId, 
-        // setCuuid, 
-        setCollectionInfo, pushMessages, clearMessages, mergeMessagesData,
-        breadcrumbPush, breadcrumbSlice, 
-        setSortKeys, setSource, setIntervalle,
-        pushMessagesChiffres, clearMessagesChiffres, selectionMessages,
-        setMessagesChiffres,
-        // supprimer, 
-    } = actions
-
     console.error("creerThunks Not implemented")
-
     // Async actions
     const thunks = { 
     }
@@ -166,7 +129,7 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
     const dechiffrageMiddleware = createListenerMiddleware()
 
     dechiffrageMiddleware.startListening({
-        matcher: isAnyOf(actions.pushMessagesChiffres),
+        matcher: isAnyOf(actions.pushContactsChiffres),
         effect: (action, listenerApi) => dechiffrageMiddlewareListener(workers, actions, thunks, nomSlice, action, listenerApi)
     }) 
     
@@ -175,15 +138,7 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
     console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
-    const getState = () => listenerApi.getState()[nomSlice]
-
-    const { clesDao, chiffrage, collectionsDao } = workers
-    await listenerApi.unsubscribe()
-    try {
-        console.error("dechiffrageMiddlewareListener Not implemented")
-    } finally {
-        await listenerApi.subscribe()
-    }
+    console.error("dechiffrageMiddlewareListener Not Implemented")
 }
 
 function genererTriListe(sortKeys) {

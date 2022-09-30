@@ -8,7 +8,7 @@ const DB_NAME = 'messagerie',
       STORE_CONTACTS = 'contacts',
       STORE_DRAFTS = 'drafts',
       STORE_FICHIERS = 'fichiers',
-      VERSION_COURANTE = 1
+      VERSION_COURANTE = 2
 
 export function ouvrirDB(opts) {
     opts = opts || {}
@@ -34,7 +34,7 @@ function createObjectStores(db, oldVersion) {
     try {
         switch(oldVersion) {
             case 0:
-                db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'hachage_bytes'})
+            case 1:
                 messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['uuid_transaction', 'user_id']})
                 contactStore = db.createObjectStore(STORE_CONTACTS, {keyPath: 'uuid_contact'})
                 db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
@@ -60,7 +60,7 @@ function createObjectStores(db, oldVersion) {
                 fichierStore.createIndex('cuuids', 'cuuids', {unique: false, multiEntry: true})
                 fichierStore.createIndex('userFavoris', ['user_id', 'favorisIdx'], {unique: false, multiEntry: false})
 
-            case 1: // Plus recent, rien a faire
+            case 2: // Plus recent, rien a faire
                 break
             default:
             console.warn("createObjectStores Default..., version %O", oldVersion)
