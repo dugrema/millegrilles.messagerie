@@ -19,6 +19,12 @@ function build(workers) {
                     }, CONST_TIMEOUT_CERTIFICAT)
                     return reponse
                   })
+        },
+        traiterReponseCles(reponseCles) {
+            return traiterReponseCles(workers, reponseCles)
+        },
+        getCleLocale(hachage_bytes) {
+            return getCleLocale(workers, hachage_bytes)
         }
     }
 }
@@ -29,7 +35,7 @@ async function getCles(workers, liste_hachage_bytes) {
 
     if(typeof(liste_hachage_bytes) === 'string') liste_hachage_bytes = [liste_hachage_bytes]
 
-    const { connexion, chiffrage, usagerDao } = workers
+    const { connexion, usagerDao } = workers
 
     const clesManquantes = [],
           clesDechiffrees = {}
@@ -48,22 +54,24 @@ async function getCles(workers, liste_hachage_bytes) {
     if(clesManquantes.length > 0) {
         // Recuperer les cles du serveur
         const reponseClesChiffrees = await connexion.getClesFichiers(liste_hachage_bytes)
-        console.debug("getCles reponseClesChiffrees ", reponseClesChiffrees)
-        for await(const cleHachage_bytes of Object.keys(reponseClesChiffrees.cles)) {
-            const infoCle = reponseClesChiffrees.cles[cleHachage_bytes]
-            const cleSecrete = await chiffrage.dechiffrerCleSecrete(infoCle.cle)
+        const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
+        Object.assign(clesDechiffrees, cles)
+        // console.debug("getCles reponseClesChiffrees ", reponseClesChiffrees)
+        // for await(const cleHachage_bytes of Object.keys(reponseClesChiffrees.cles)) {
+        //     const infoCle = reponseClesChiffrees.cles[cleHachage_bytes]
+        //     const cleSecrete = await chiffrage.dechiffrerCleSecrete(infoCle.cle)
 
-            infoCle.cleSecrete = cleSecrete
-            delete infoCle.cle  // Supprimer cle chiffree
+        //     infoCle.cleSecrete = cleSecrete
+        //     delete infoCle.cle  // Supprimer cle chiffree
 
-            // Sauvegarder la cle pour reutilisation
-            usagerDao.saveCleDechiffree(cleHachage_bytes, cleSecrete, infoCle)
-                .catch(err=>{
-                    console.warn("clesDao.getCles Erreur sauvegarde cle dechiffree %s dans la db locale", err)
-                })
+        //     // Sauvegarder la cle pour reutilisation
+        //     usagerDao.saveCleDechiffree(cleHachage_bytes, cleSecrete, infoCle)
+        //         .catch(err=>{
+        //             console.warn("clesDao.getCles Erreur sauvegarde cle dechiffree %s dans la db locale", err)
+        //         })
         
-            clesDechiffrees[cleHachage_bytes] = infoCle
-        }
+        //     clesDechiffrees[cleHachage_bytes] = infoCle
+        // }
     }
 
     return clesDechiffrees
@@ -72,4 +80,30 @@ async function getCles(workers, liste_hachage_bytes) {
 async function getCertificatsMaitredescles(workers) {
     const { connexion } = workers
     return connexion.getCertificatsMaitredescles()
+}
+
+async function traiterReponseCles(workers, reponseCles) {
+    const { chiffrage, usagerDao } = workers
+    const clesDechiffrees = {}
+    for await(const cleHachage_bytes of Object.keys(reponseCles)) {
+        const infoCle = {...reponseCles[cleHachage_bytes]}
+        const cleSecrete = await chiffrage.dechiffrerCleSecrete(infoCle.cle)
+
+        infoCle.cleSecrete = cleSecrete
+        delete infoCle.cle  // Supprimer cle chiffree
+
+        // Sauvegarder la cle pour reutilisation
+        usagerDao.saveCleDechiffree(cleHachage_bytes, cleSecrete, infoCle)
+            .catch(err=>{
+                console.warn("clesDao.getCles Erreur sauvegarde cle dechiffree %s dans la db locale", err)
+            })
+    
+        clesDechiffrees[cleHachage_bytes] = infoCle
+    }
+    return clesDechiffrees
+}
+
+async function getCleLocale(workers, hachage_bytes) {
+    const { usagerDao } = workers
+    return await usagerDao.getCleDechiffree(hachage_bytes)
 }

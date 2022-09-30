@@ -157,12 +157,22 @@ export function creerThunks(actions, nomSlice) {
             console.info("Profil inexistant, on en initialize un nouveau pour usager ", nomUsager)
             profil = await connexion.initialiserProfil(adresse)
         }
+
         console.debug("Profil charge : ", profil)
         dispatch(setProfil(profil))
 
         const cle_hachage_bytes = profil.cle_ref_hachage_bytes
-        const cleProfil = await clesDao.getCles([cle_hachage_bytes])
-        console.debug("Cle profil : ", cleProfil)
+        let cleSecrete = await clesDao.getCleLocale(cle_hachage_bytes)
+        if(cleSecrete) {
+            cleSecrete = cleSecrete.cleSecrete
+        } else {
+            // Dechiffrer la cle de profil. Conserve dans la DB locale.
+            console.debug("Dechiffrer cle recue dans le profil")
+            const cles = profil.cles.cles
+            let clesSecretes = await clesDao.traiterReponseCles(cles)
+            cleSecrete = clesSecretes[cle_hachage_bytes].cleSecrete
+        }
+        // console.debug("Cle secrete : ", cleSecrete)
     }
     
     function chargerContacts(workers) {
