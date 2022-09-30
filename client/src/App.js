@@ -13,6 +13,7 @@ import storeSetup from './redux/store'
 import { LayoutMillegrilles, ModalErreur, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import messagerieActions from './redux/messagerieSlice'
+import contactsActions, {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
@@ -625,14 +626,21 @@ function InitialiserMessagerie(props) {
   const usager = useUsager()
   const dispatch = useDispatch()
 
-  const userId = useMemo(()=>{
-    if(!usager || !usager.extensions) return
-    return usager.extensions.userId
+  const {userId, nomUsager} = useMemo(()=>{
+    if(!usager || !usager.extensions) return {}
+    return {
+      userId: usager.extensions.userId,
+      nomUsager: usager.nomUsager
+    }
   }, [usager])
 
+  // Init messagerie et contacts
   useEffect(()=>{
+    if(!userId) return  // Rien a faire
+    // dispatch(contactsActions.setUserId(userId))
     dispatch(messagerieActions.setUserId(userId))
-  }, [userId])
+    dispatch(contactsThunks.chargerProfil(workers, userId, nomUsager, window.location))
+  }, [workers, userId, nomUsager])
 
 }
 

@@ -5,7 +5,9 @@ const SAFEGUARD_BATCH_MAX = 1000,
 
 const initialState = {
     // Usager
-    userId: '',                 // UserId courant, permet de stocker plusieurs users localement
+    userId: null,               // UserId courant, permet de stocker plusieurs users localement
+    profil: null,               // Profil de l'usager
+    cleSecreteProfil: null,     // Cle secrete pour chiffrer/dechiffrer contenu du profil et contacts
 
     // Liste a l'ecran
     sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
@@ -22,6 +24,14 @@ const initialState = {
 
 function setUserIdAction(state, action) {
     state.userId = action.payload
+}
+
+function setProfilAction(state, action) {
+    state.profil = action.payload
+}
+
+function setCleSecreteProfilAction(state, action) {
+    state.cleSecreteProfil = action.payload
 }
 
 function setSortKeysAction(state, action) {
@@ -106,6 +116,8 @@ export function creerSlice(name) {
         initialState,
         reducers: {
             setUserId: setUserIdAction,
+            setProfil: setProfilAction,
+            setCleSecreteProfil: setCleSecreteProfilAction,
             pushContacts: pushContactsAction, 
             // supprimer: supprimerAction,
             clearContacts: clearContactsAction,
@@ -122,11 +134,37 @@ export function creerSlice(name) {
 }
 
 export function creerThunks(actions, nomSlice) {
-    console.error("creerThunks Not implemented")
-
-    const { pushContacts, clearContacts } = actions
+    const { setUserId, setProfil, setCleSecreteProfil, pushContacts, clearContacts } = actions
     
     // Async actions
+    function chargerProfil(workers, userId, nomUsager, locationUrl) {
+        return (dispatch, getState) => traiterChargerProfil(workers, userId, nomUsager, locationUrl, dispatch, getState)
+    }
+
+    async function traiterChargerProfil(workers, userId, nomUsager, locationUrl, dispatch, getState) {
+        const { connexion, clesDao } = workers
+
+        dispatch(setUserId(userId))
+        const hostname = locationUrl.hostname
+        const adresse = `@${nomUsager}:${hostname}`
+        console.debug("traiterRafraichirContacts userId: %s, adresse : '%s' ", userId, adresse)
+
+        const state = getState()[nomSlice]
+
+        let profil = await connexion.getProfil()
+        console.debug("Profil charge : %O", profil)
+        if(profil.ok === false && profil.code === 404) {
+            console.info("Profil inexistant, on en initialize un nouveau pour usager ", nomUsager)
+            profil = await connexion.initialiserProfil(adresse)
+        }
+        console.debug("Profil charge : ", profil)
+        dispatch(setProfil(profil))
+
+        const cle_hachage_bytes = profil.cle_ref_hachage_bytes
+        const cleProfil = await clesDao.getCles([cle_hachage_bytes])
+        console.debug("Cle profil : ", cleProfil)
+    }
+    
     function chargerContacts(workers) {
         return (dispatch, getState) => traiterChargerContacts(workers, dispatch, getState)
     }
@@ -207,6 +245,7 @@ export function creerThunks(actions, nomSlice) {
     }
 
     const thunks = { 
+        chargerProfil,
         chargerContacts,
     }
 

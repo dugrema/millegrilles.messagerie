@@ -10,8 +10,8 @@ import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
 // import * as MessageDao from './redux/messageDao'
-import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
-import { thunks as contactsThunks } from './redux/contactsSlice'
+import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
+import contactsAction, { thunks as contactsThunks } from './redux/contactsSlice'
 
 import EditerContact from './EditerContact'
 import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
@@ -24,7 +24,7 @@ function Contacts(props) {
     const { setAfficherContacts, erreurCb } = props
 
     const workers = useWorkers()
-    const etatAuthentifie = useEtatAuthentifie()
+    const etatPret = useEtatPret()
     const dispatch = useDispatch()
 
     const contacts = useSelector(state=>state.contacts.liste)
@@ -34,11 +34,14 @@ function Contacts(props) {
     const [colonnes, setColonnes] = useState(preparerColonnes())
 
     const nouveauContact = useCallback(()=>{
-        throw new Error("todo")
-        // setUuidContactSelectionne(true)
+        dispatch(contactsAction.setContactActif(''))
+        setEditerContact(true)
     }, [])
     const retour = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
-    const retourContacts = useCallback(()=>setEditerContact(false), [setEditerContact])
+    const retourContacts = useCallback(()=>{
+        dispatch(contactsAction.setContactActif(null))
+        setEditerContact(false)
+    }, [setEditerContact])
     
     const supprimerContactsCb = useCallback(uuidContacts=>{
         // console.debug("Supprimer contacts %O", uuidContacts)
@@ -67,10 +70,16 @@ function Contacts(props) {
         setColonnes(colonnesCourant)
     }, [colonnes, setColonnes])
 
+    // Charger contacts
+    useEffect(()=>{
+        dispatch(contactsThunks.chargerContacts(workers))
+    }, [workers])
+
     // Contacts listener
     useEffect(()=>{
         const { connexion } = workers
-        if(connexion && etatAuthentifie) {
+        if(etatPret) {
+            console.error("!TODO! Enregistrer evenements contacts")
             // const cb = proxy(addEvenementContact)
             // const params = {}
             // connexion.enregistrerCallbackEvenementContact(params, cb)
@@ -78,7 +87,7 @@ function Contacts(props) {
             // return () => connexion.retirerCallbackEvenementContact(params, cb)
             //     .catch(err=>console.debug("Erreur retrait evenements contacts : %O", err))
         }
-    }, [])
+    }, [workers, etatPret])
 
     // Event handling
     // useEffect(()=>{
@@ -135,24 +144,19 @@ function Contacts(props) {
     return (
         <>
             <BreadcrumbContacts 
-                uuidContact={uuidContactActif} 
-                contacts={contacts}
                 retourMessages={retour} 
                 retourContacts={retourContacts} />
 
             <AfficherListeContacts 
-                show={uuidContactActif?false:true} 
+                show={editerContact?false:true} 
                 colonnes={colonnes}
-                contacts={contacts} 
                 nouveauContact={nouveauContact}
                 retour={retour} 
                 enteteOnClickCb={enteteOnClickCb} 
                 supprimerContacts={supprimerContactsCb} />
 
             <EditerContact 
-                show={uuidContactActif?true:false} 
-                workers={workers}
-                uuidContact={uuidContactActif} 
+                show={editerContact} 
                 supprimerContacts={supprimerContactsCb} />
 
         </>
@@ -163,13 +167,16 @@ export default Contacts
 
 function BreadcrumbContacts(props) {
 
-    const { contacts, uuidContactSelectionne, retourMessages, retourContacts } = props
+    const { retourMessages, retourContacts } = props
+
+    const contacts = useSelector(state=>state.contacts.liste),
+          uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
 
     const bc = [
         <Breadcrumb.Item key="messages" onClick={retourMessages}>Messages</Breadcrumb.Item>
     ]
 
-    if(!uuidContactSelectionne) {
+    if(!uuidContactActif) {
         return (
             <Breadcrumb>
                 {bc}
@@ -180,7 +187,7 @@ function BreadcrumbContacts(props) {
 
     bc.push(<Breadcrumb.Item key="contacts" onClick={retourContacts}>Contacts</Breadcrumb.Item>)
 
-    if(uuidContactSelectionne === true) {
+    if(uuidContactActif === true) {
         return (
             <Breadcrumb>
                 {bc}
@@ -188,7 +195,7 @@ function BreadcrumbContacts(props) {
             </Breadcrumb>
         )
     } else {
-        const contact = contacts.filter(item=>item.uuid_contact === uuidContactSelectionne).pop()
+        const contact = contacts.filter(item=>item.uuid_contact === uuidContactActif).pop()
         return (
             <Breadcrumb>
                 {bc}
@@ -212,11 +219,14 @@ function AfficherCompteContacts(props) {
 
 function AfficherListeContacts(props) {
     const { 
-        workers, etatConnexion, etatAuthentifie, 
-        nouveauContact, contacts, compteContacts, colonnes, show, 
-        setUuidContactSelectionne, getContactsSuivants, isListeComplete, 
-        enteteOnClickCb, supprimerContacts,
+        nouveauContact, colonnes, show, 
+        setUuidContactSelectionne, 
+        enteteOnClickCb, 
     } = props
+
+    const etatAuthentifie = useEtatAuthentifie()
+    const contacts = useSelector(state=>state.contacts.liste)
+    const compteContacts = contacts.length
 
     const [selection, setSelection] = useState('')
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
@@ -258,7 +268,6 @@ function AfficherListeContacts(props) {
                 onContextMenu={onContextMenuCb}
                 onSelection={onSelectionLignes}
                 onClickEntete={enteteOnClickCb}
-                suivantCb={isListeComplete?'':getContactsSuivants}
             />
 
             <MenuContextuelAfficherListeContacts 
