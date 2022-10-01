@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
 import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
-import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
 // import * as MessageDao from './redux/messageDao'
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
@@ -157,7 +157,8 @@ function Contacts(props) {
 
             <EditerContact 
                 show={editerContact} 
-                supprimerContacts={supprimerContactsCb} />
+                supprimerContacts={supprimerContactsCb} 
+                retour={retourContacts} />
 
         </>
     )

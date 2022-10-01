@@ -1,9 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import InputGroup from 'react-bootstrap/InputGroup'
+
+import useWorkers, {useEtatConnexion, useUsager} from './WorkerContext'
 
 const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?):(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/
 //const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)\/((?:(?!\d+\.|-)[a-zA-Z0-9_-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,}))$/
@@ -13,8 +17,17 @@ console.debug("VALIDATEUR_ADRESSE : %O", VALIDATEUR_ADRESSE)
 
 function EditerContact(props) {
 
-    const { workers, show, setUuidContactSelectionne, contact, supprimerContacts } = props
-    const uuid_contact = contact?contact.uuid_contact:''
+    const { show, retour, supprimerContacts } = props
+    // const uuid_contact = contact?contact.uuid_contact:''
+
+    const workers = useWorkers()
+
+    const contacts = useSelector(state=>state.contacts.liste),
+          uuid_contact = useSelector(state=>state.contacts.uuidContactActif),
+          contact = contacts.filter(item=>item.uuid_transaction===uuid_contact).pop(),
+          profil = useSelector(state=>state.contacts.profil)
+
+    // console.debug("EditerContact selectors contacts : %O, uuid_contact: %O, contact: %O", contacts, uuid_contact, contact)
 
     // Champs data
     const [nom, setNom] = useState('')
@@ -26,16 +39,21 @@ function EditerContact(props) {
     const [validated, setValidated] = useState(false)
 
     const data = useMemo(()=>{
-        return {uuid_contact, nom, adresses, blocked, trusted}
-    }, [uuid_contact, nom, adresses, blocked, trusted])
+        return {nom, adresses, blocked, trusted}
+    }, [nom, adresses, blocked, trusted])
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
-    const adresseEditChange = useCallback(event=>setAdresseEdit(event.currentTarget.value), [setAdresseEdit])
+    const adresseEditChange = useCallback(event=>{
+        setAdresseEdit(event.currentTarget.value)
+        setValidated(false)
+    }, [setAdresseEdit])
     const adresseEditCb = useCallback(event=>{
         const idxEdit = Number.parseInt(event.currentTarget.value)
         setAdresseEdit(adresses[idxEdit])
         setAdresseEditIdx(idxEdit)
+        setValidated(false)
     }, [adresses, setAdresseEdit, setAdresseEditIdx])
+    
     const adresseSave = useCallback(event=>{
         console.debug("Save adresse (idx: %O)", adresseEditIdx)
 
@@ -56,6 +74,7 @@ function EditerContact(props) {
         setAdresseEditIdx('')
         setAdresseEdit('')
     }, [adresses, setAdresses, adresseEditIdx, setAdresseEditIdx, adresseEdit, setAdresseEdit, setValidated])
+    
     const adresseSupprimer = useCallback(event=>{
         const idxSupprimer = Number.parseInt(event.currentTarget.value)
         const adressesMaj = [...adresses].filter((item,idx)=>idx!==idxSupprimer)
@@ -74,8 +93,6 @@ function EditerContact(props) {
         console.debug("TrustedChange valeur : %O", valeur)
         setTrusted(valeur)
     }, [setTrusted])
-
-    const retour = useCallback(()=>setUuidContactSelectionne(''), [setUuidContactSelectionne])
     
     const sauvegarderCb = useCallback(event=>{
         event.preventDefault()
@@ -86,11 +103,11 @@ function EditerContact(props) {
         const form = event.currentTarget;
         if (form.checkValidity() === true) {
             const opts = {adresseEdit, adresseEditIdx}
-            sauvegarder(workers, data, retour, opts)
+            sauvegarder(workers, profil, uuid_contact, data, retour, opts)
         }
 
         setValidated(true)
-    }, [workers, data, retour, adresseEdit, adresseEditIdx])
+    }, [workers, profil, uuid_contact, data, retour, adresseEdit, adresseEditIdx])
 
     const supprimerContactCb = useCallback(() => {
         supprimerContacts([uuid_contact])
@@ -229,9 +246,10 @@ function EditerContact(props) {
 
 export default EditerContact
 
-async function sauvegarder(workers, data, retour, opts) {
+async function sauvegarder(workers, profil, uuid_contact, data, retour, opts) {
     opts = opts || {}
-    console.debug("Sauvegarder %O, opts : %O", data, opts)
+    console.debug("Sauvegarder contact Profil %O, sauvegarder %O, opts : %O", profil, data, opts)
+    const { connexion, chiffrage, clesDao } = workers
     try {
         const { adresseEdit, adresseEditIdx } = opts
         const { adresses } = data
@@ -244,8 +262,20 @@ async function sauvegarder(workers, data, retour, opts) {
             // }
         }
 
-        const reponse = await workers.connexion.majContact(data)
-        console.debug("Reponse sauvegarder contact : %O", reponse)
+        // Recuperer cle de chiffrage
+        const ref_hachage_bytes = profil.cle_ref_hachage_bytes
+        const cle = await clesDao.getCleLocale(ref_hachage_bytes)
+        console.debug("Cle chiffrage : ", cle)
+        const cleSecrete = cle.cleSecrete
+
+        const champsChiffres = await chiffrage.chiffrage.updateChampsChiffres(data, cleSecrete)
+        const transaction = { uuid_contact, ref_hachage_bytes, ...champsChiffres}
+        if(uuid_contact) transaction.uuid_contact = uuid_contact
+
+        console.debug("sauvegarder Transaction chiffree ", transaction)
+
+        const reponse = await workers.connexion.majContact(transaction)
+        console.debug("sauvegarder Reponse sauvegarder contact : %O", reponse)
         retour()
     } catch(err) {
         console.error("Erreur maj contact : %O", err)
