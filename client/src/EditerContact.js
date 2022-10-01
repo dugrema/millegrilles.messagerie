@@ -37,16 +37,20 @@ function EditerContact(props) {
     const [blocked, setBlocked] = useState(false)
     const [trusted, setTrusted] = useState(false)
     const [validated, setValidated] = useState(false)
+    const [note, setNote] = useState('')
 
     const data = useMemo(()=>{
-        return {nom, adresses, blocked, trusted}
+        return {nom, adresses, blocked, trusted, note}
     }, [nom, adresses, blocked, trusted])
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
+    const noteHandler = useCallback(event=>setNote(event.currentTarget.value), [setNote])
+
     const adresseEditChange = useCallback(event=>{
         setAdresseEdit(event.currentTarget.value)
         setValidated(false)
     }, [setAdresseEdit])
+    
     const adresseEditCb = useCallback(event=>{
         const idxEdit = Number.parseInt(event.currentTarget.value)
         setAdresseEdit(adresses[idxEdit])
@@ -118,6 +122,7 @@ function EditerContact(props) {
         setValidated(false)
         if(contact) {
             setNom(contact.nom || '')
+            setNote(contact.note || '')
             setAdresseEdit('')
             setAdresseEditIdx('')
             setAdresses(contact.adresses || [])
@@ -126,6 +131,7 @@ function EditerContact(props) {
         } else {
             // Reset (nouveau contact)
             setNom('')
+            setNote('')
             setAdresseEdit('')
             setAdresseEditIdx('')
             setAdresses([])
@@ -219,6 +225,18 @@ function EditerContact(props) {
                     />
                 </Col>
             </Row>
+
+            <Form.Group controlId="note">
+                <Form.Label>Note</Form.Label>
+                <Form.Control
+                    as="textarea"
+                    name="note"
+                    rows="5"
+                    value={note}
+                    onChange={noteHandler}
+                    required
+                />
+            </Form.Group>
 
             <br/>
 
