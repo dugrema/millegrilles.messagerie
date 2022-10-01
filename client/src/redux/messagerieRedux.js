@@ -20,6 +20,7 @@ const initialState = {
     breadcrumb: [],             // Breadcrumb du path de la source affichee
     intervalle: null,           // Intervalle de temps des donnees (filtre)
     selection: null,            // Messages selectionnes
+    uuidMessageActif: null,     // Message actif
 
     // Travail background
     listeDechiffrage: [],       // Liste de messages a dechiffrer

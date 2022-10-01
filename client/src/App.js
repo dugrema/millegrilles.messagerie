@@ -121,6 +121,9 @@ function LayoutMain() {
   }, [setErreur])
   const handlerCloseErreur = useCallback(()=>setErreur(''), [setErreur])
 
+  const fermerContacts = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
+  const fermerNouveauMessage = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
+
   // Modal transfert et actions
   const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
   const showTransfertModalFermer = useCallback(()=>{ setShowTransfertModal(false) }, [setShowTransfertModal])
@@ -169,6 +172,8 @@ function LayoutMain() {
           <Contenu 
               afficherNouveauMessage={afficherNouveauMessage}
               afficherContacts={afficherContacts}
+              fermerContacts={fermerContacts}
+              fermerNouveauMessage={fermerNouveauMessage}
               uuidMessage={uuidMessage}
               erreurCb={erreurCb}
             />
@@ -196,19 +201,28 @@ function LayoutMain() {
 
 function Contenu(props) {
   const workers = useWorkers()
+  const dispatch = useDispatch()
+  const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
+
+  const fermerMessage = useCallback(()=>{
+    throw new Error("fixme, dispatch message actif uuid")
+  }, [dispatch])
 
   if(!workers) return <Attente />
 
-  const { afficherNouveauMessage, afficherContacts, uuidMessage } = props
+  const { afficherNouveauMessage, afficherContacts, fermerContacts, fermerNouveauMessage } = props
 
   // Selection de la page a afficher
-  let Page
+  let Page, retour = null
   if(afficherContacts) {
     Page = Contacts
+    retour = fermerContacts
   } else if(afficherNouveauMessage) {
     Page = NouveauMessage
+    retour = fermerNouveauMessage
   } else if(uuidMessage) {
     Page = AfficherMessage
+    retour = fermerMessage
   } else {
     Page = AfficherMessages
   }
@@ -216,7 +230,7 @@ function Contenu(props) {
   return (
       <ErrorBoundary erreurCb={props.erreurCb}>
           <Suspense fallback={<Attente />}>
-            <Page {...props}/>
+            <Page {...props} retour={retour} />
           </Suspense>
 
           <br/><br/>

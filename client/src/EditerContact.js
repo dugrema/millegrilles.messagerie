@@ -116,6 +116,7 @@ function EditerContact(props) {
     }, [uuid_contact, supprimerContacts, retour])
 
     useEffect(()=>{
+        if(!show) return
         setValidated(false)
         if(contact) {
             setNom(contact.nom || '')
@@ -135,7 +136,7 @@ function EditerContact(props) {
             setBlocked(false)
             setTrusted(false)
         }
-    }, [contact, setValidated])
+    }, [show, contact, setValidated])
 
     if(!show) return ''
 
@@ -231,7 +232,6 @@ function EditerContact(props) {
                     rows="5"
                     value={note}
                     onChange={noteHandler}
-                    required
                 />
             </Form.Group>
 
