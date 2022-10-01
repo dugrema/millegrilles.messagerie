@@ -174,7 +174,7 @@ export async function countMessages(userId, opts) {
 
 export async function mergeReferenceContacts(userId, contacts) {
     const db = await ouvrirDB({upgrade: true})
-    console.debug("mergeReferenceContacts contacts: %O", contacts)
+    // console.debug("mergeReferenceContacts contacts: %O", contacts)
 
     // Parcourir chaque message pour voir s'il existe deja
     const store = db.transaction(STORE_CONTACTS, 'readwrite').store
@@ -257,7 +257,6 @@ export async function getContacts(userId, opts) {
 
     while(curseur) {
         const value = curseur.value
-        console.debug("contact IDB curseur ", value)
         if(value.supprime !== true || inclure_supprime === true) {
             if(position++ >= skip) contacts.push(value)
         }
@@ -272,7 +271,7 @@ export async function countContacts(userId, opts) {
     opts = opts || {}
     const inclure_supprime = opts.inclure_supprime || false
 
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_CONTACTS, 'readwrite').store
 
     let compteur = 0
@@ -291,7 +290,7 @@ export async function countContacts(userId, opts) {
 }
 
 export async function supprimerContacts(uuidContacts) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_CONTACTS, 'readwrite').store
     const promises = uuidContacts.map(item=>store.delete(item))
     return Promise.all(promises)
@@ -300,19 +299,19 @@ export async function supprimerContacts(uuidContacts) {
 // Draft
 
 export async function ajouterDraft() {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     return store.add({})
 }
 
 export async function sauvegarderDraft(idDraft, message) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     return store.put(message, idDraft)
 }
 
 export async function getListeDrafts() {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     let cursor = await store.openCursor()
     const drafts = []
@@ -326,7 +325,7 @@ export async function getListeDrafts() {
 }
 
 export async function getDraft(idDraft) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     const draft = await store.get(idDraft)
     return {idDraft, ...draft}
@@ -334,7 +333,7 @@ export async function getDraft(idDraft) {
 
 export async function supprimerDraft(idDraft) {
     console.debug("Supprimer draft : %O", idDraft)
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     await store.delete(idDraft)
 }

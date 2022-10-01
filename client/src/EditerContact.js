@@ -23,10 +23,10 @@ function EditerContact(props) {
 
     const contacts = useSelector(state=>state.contacts.liste),
           uuid_contact = useSelector(state=>state.contacts.uuidContactActif),
-          contact = contacts.filter(item=>item.uuid_transaction===uuid_contact).pop(),
+          contact = contacts.filter(item=>item.uuid_contact===uuid_contact).pop(),
           profil = useSelector(state=>state.contacts.profil)
 
-    // console.debug("EditerContact selectors contacts : %O, uuid_contact: %O, contact: %O", contacts, uuid_contact, contact)
+    console.debug("EditerContact selectors contacts : %O, uuid_contact: %O, contact: %O", contacts, uuid_contact, contact)
 
     // Champs data
     const [nom, setNom] = useState('')
@@ -40,7 +40,7 @@ function EditerContact(props) {
 
     const data = useMemo(()=>{
         return {nom, adresses, blocked, trusted, note}
-    }, [nom, adresses, blocked, trusted])
+    }, [nom, adresses, blocked, trusted, note])
 
     const nomChange = useCallback(event=>setNom(event.currentTarget.value), [setNom])
     const noteHandler = useCallback(event=>setNote(event.currentTarget.value), [setNote])
@@ -264,12 +264,13 @@ export default EditerContact
 async function sauvegarder(workers, profil, uuid_contact, data, retour, opts) {
     opts = opts || {}
     console.debug("Sauvegarder contact Profil %O, sauvegarder %O, opts : %O", profil, data, opts)
-    const { connexion, chiffrage, clesDao } = workers
+    const { chiffrage, clesDao } = workers
     try {
         const { adresseEdit, adresseEditIdx } = opts
-        const { adresses } = data
+        const adresses = [...(data.adresses || [])]
         if(adresseEdit && adresseEditIdx==='') {
             adresses.push(adresseEdit)
+            data.adresses = adresses
         }
 
         // Recuperer cle de chiffrage

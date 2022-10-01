@@ -8,6 +8,5 @@ export default slice.actions
 export const thunks = creerThunks(slice.actions, NOM_SLICE)
 
 export function setup(workers) {
-    console.debug("setup -- slice ", slice)
     return creerMiddleware(workers, slice.actions, thunks, NOM_SLICE)
 }

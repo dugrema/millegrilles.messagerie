@@ -7,7 +7,7 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
-import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
+// import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
 // import * as MessageDao from './redux/messageDao'
@@ -32,6 +32,10 @@ function Contacts(props) {
 
     const nouveauContact = useCallback(()=>{
         dispatch(contactsAction.setContactActif(''))
+        setEditerContact(true)
+    }, [])
+    const editerContactHandler = useCallback(uuid_contact=>{
+        dispatch(contactsAction.setContactActif(uuid_contact))
         setEditerContact(true)
     }, [])
     const retourContacts = useCallback(()=>{
@@ -71,56 +75,6 @@ function Contacts(props) {
         dispatch(contactsThunks.chargerContacts(workers))
     }, [workers])
 
-    // Event handling
-    // useEffect(()=>{
-    //     if(evenementContact && userId) {
-    //         addEvenementContact('')  // Clear event pour eviter cycle d'update
-
-    //         // console.debug("Evenement contact : %O", evenementContact)
-
-    //         // Traiter message
-    //         const routing = evenementContact.routingKey,
-    //               action = routing.split('.').pop()
-    //         const message = evenementContact.message
-
-    //         if(action === 'majContact') {
-    //             // Conserver information de contact
-    //             const date_modification = message['en-tete'].estampille
-    //             const contactMaj = {...message, user_id: userId, date_modification}
-    //             delete contactMaj['en-tete']
-    //             delete contactMaj['_certificat']
-    //             delete contactMaj['_signature']
-
-    //             throw new Error("fix me - redux")
-    //             // MessageDao.updateContact(contactMaj)
-    //             //     .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
-
-    //             const { uuid_contact } = message
-    //             let trouve = false
-    //             const contactsMaj = contacts.map(item=>{
-    //                 if(item.uuid_contact === uuid_contact) {
-    //                     trouve = true
-    //                     return message  // Remplacer contact
-    //                 }
-    //                 return item
-    //             })
-    //             if(!trouve) contactsMaj.push(contactMaj)
-    //             formatterContactsCb(contactsMaj)
-    //         } else if(action === 'contactsSupprimes') {
-    //             const uuid_contacts = message.uuid_contacts
-    //             throw new Error("fix me - redux")
-    //             // MessageDao.supprimerContacts(uuid_contacts)
-    //             //     .then(()=>{
-    //             //         const contactsMaj = contacts.filter(item=>!uuid_contacts.includes(item.uuid_contact))
-    //             //         formatterContactsCb(contactsMaj)
-    //             //     })
-    //             //     .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
-    //         } else {
-    //             console.error("Recu message contact de type inconnu : %O", evenementContact)
-    //         }
-    //     }
-    // }, [evenementContact, contacts, userId, formatterContactsCb, addEvenementContact])
-
     if(!contacts) return 'Chargement des contacts en cours ...'
 
     return (
@@ -133,6 +87,7 @@ function Contacts(props) {
                 show={editerContact?false:true} 
                 colonnes={colonnes}
                 nouveauContact={nouveauContact}
+                editerContact={editerContactHandler}
                 retour={retour} 
                 enteteOnClickCb={enteteOnClickCb} 
                 supprimerContacts={supprimerContactsCb} />
@@ -240,7 +195,7 @@ function AfficherCompteContacts(props) {
 function AfficherListeContacts(props) {
     const { 
         nouveauContact, colonnes, show, 
-        setUuidContactSelectionne, 
+        editerContact, 
         enteteOnClickCb, 
     } = props
 
@@ -262,9 +217,10 @@ function AfficherListeContacts(props) {
         // console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length > 0) {
             const uuid_contact = selection[0]
-            setUuidContactSelectionne(uuid_contact)
+            console.debug("Ouvrir contact ", uuid_contact)
+            editerContact(uuid_contact)
         }
-    }, [selection, setUuidContactSelectionne])
+    }, [selection, editerContact])
 
     if( !contacts || !show ) return ''
 
@@ -352,90 +308,89 @@ function mapContact(contact, idx) {
         adresse = contact.adresses[0]
     }
     const item = {...contact, fileId, adresse}
-    console.debug("Contact mappe : %O", item)
     return item
 }
 
-function formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb) {
-    // console.debug("formatterContacts colonnes: %O", colonnes)
-    const {colonne, ordre} = colonnes.tri
-    // let contactsTries = [...contacts]
+// function formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb) {
+//     // console.debug("formatterContacts colonnes: %O", colonnes)
+//     const {colonne, ordre} = colonnes.tri
+//     // let contactsTries = [...contacts]
 
-    let contactsTries = contacts.map(item=>{
-        const fileId = item.uuid_contact
-        const adresse = item.adresses?item.adresses[0]:''
-        const nom = item.nom || 'Vide'
-        return {...item, fileId, nom, adresse}
-    })
+//     let contactsTries = contacts.map(item=>{
+//         const fileId = item.uuid_contact
+//         const adresse = item.adresses?item.adresses[0]:''
+//         const nom = item.nom || 'Vide'
+//         return {...item, fileId, nom, adresse}
+//     })
 
-    // console.debug("Contacts a trier : %O", contactsTries)
+//     // console.debug("Contacts a trier : %O", contactsTries)
 
-    switch(colonne) {
-        case 'adresse': contactsTries.sort(trierAdresses); break
-        default: contactsTries.sort(trierNoms)
-    }
+//     switch(colonne) {
+//         case 'adresse': contactsTries.sort(trierAdresses); break
+//         default: contactsTries.sort(trierNoms)
+//     }
 
-    if(ordre < 0) contactsTries = contactsTries.reverse()
+//     if(ordre < 0) contactsTries = contactsTries.reverse()
 
-    setContacts(contactsTries)
+//     setContacts(contactsTries)
 
-    throw new Error("fix me - redux")
-    // MessageDao.countContacts(userId)
-    //     .then(setCompteContacts)
-    //     .catch(erreurCb)
-}
+//     throw new Error("fix me - redux")
+//     // MessageDao.countContacts(userId)
+//     //     .then(setCompteContacts)
+//     //     .catch(erreurCb)
+// }
 
-function trierNoms(a, b) {
-    return trierString('nom', a, b)
-}
+// function trierNoms(a, b) {
+//     return trierString('nom', a, b)
+// }
 
-function trierAdresses(a, b) {
-    const chaine = trierNoms
-    return trierString('adresse', a, b, {chaine})
-}
+// function trierAdresses(a, b) {
+//     const chaine = trierNoms
+//     return trierString('adresse', a, b, {chaine})
+// }
 
-export async function chargerContenuContacts(workers, userId) {
-    // console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
-    let listeUuids = []
-    {
-        throw new Error("fix me - redux")
-        // const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
-        // const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
-        // // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
+// export async function chargerContenuContacts(workers, userId) {
+//     // console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
+//     let listeUuids = []
+//     {
+//         throw new Error("fix me - redux")
+//         // const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
+//         // const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
+//         // // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
 
-        // listeUuids = [...uuidNouveau, ...uuidStale]
-    }
+//         // listeUuids = [...uuidNouveau, ...uuidStale]
+//     }
 
-    const BATCH_SIZE = 2
-    let batchUuids = []
-    for await (let uuidContact of listeUuids) {
-        batchUuids.push(uuidContact)
+//     const BATCH_SIZE = 2
+//     let batchUuids = []
+//     for await (let uuidContact of listeUuids) {
+//         batchUuids.push(uuidContact)
 
-        if(batchUuids.length === BATCH_SIZE) {
-            await chargerBatchContacts(workers, userId, batchUuids)
-            batchUuids = []
-        }
-    }
-    // Derniere batch
-    if(batchUuids.length > 0) await chargerBatchContacts(workers, userId, batchUuids)
+//         if(batchUuids.length === BATCH_SIZE) {
+//             await chargerBatchContacts(workers, userId, batchUuids)
+//             batchUuids = []
+//         }
+//     }
+//     // Derniere batch
+//     if(batchUuids.length > 0) await chargerBatchContacts(workers, userId, batchUuids)
 
-    return listeUuids
-}
+//     return listeUuids
+// }
 
-async function chargerBatchContacts(workers, userId, batchUuids) {
-    // console.debug("Charger batch contacts %s : %O", userId, batchUuids)
-    const reponse = await workers.connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
-    if(!reponse.err) {
-        const contacts = reponse.contacts
-        // console.debug("Contacts recus : %O", contacts)
-        for await (let contact of contacts) {
-            throw new Error("fix me - redux")
-            // await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
-        }
-    } else {
-        throw reponse.err
-    }
-}
+// async function chargerBatchContacts(workers, userId, batchUuids) {
+//     // console.debug("Charger batch contacts %s : %O", userId, batchUuids)
+//     const reponse = await workers.connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
+//     if(!reponse.err) {
+//         const contacts = reponse.contacts
+//         // console.debug("Contacts recus : %O", contacts)
+//         for await (let contact of contacts) {
+//             throw new Error("fix me - redux")
+//             // await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
+//         }
+//     } else {
+//         throw reponse.err
+//     }
+// }
 
 function traiterContactEvenement(workers, dispatch, userId, evenementContact) {
     console.debug("traiterContactEvenement ", evenementContact)
@@ -466,12 +421,11 @@ function traiterContactEvenement(workers, dispatch, userId, evenementContact) {
     } else if(action === 'contactsSupprimes') {
         const uuid_contacts = message.uuid_contacts
         console.debug("traiterContactEvenement contactsSupprimes ", message)
-        // MessageDao.supprimerContacts(uuid_contacts)
-        //     .then(()=>{
-        //         const contactsMaj = contacts.filter(item=>!uuid_contacts.includes(item.uuid_contact))
-        //         formatterContactsCb(contactsMaj)
-        //     })
-        //     .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
+        messagerieDao.supprimerContacts(uuid_contacts)
+            .then(()=>{
+                dispatch(contactsAction.supprimerContacts(uuid_contacts))
+            })
+            .catch(err=>console.error("Erreur supprimer contact sur evenement : %O", err))
     } else {
         console.error("Recu message contact de type inconnu : %O", evenementContact)
     }

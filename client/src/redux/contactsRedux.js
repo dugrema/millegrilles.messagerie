@@ -9,7 +9,7 @@ const initialState = {
     profil: null,               // Profil de l'usager
 
     // Liste a l'ecran
-    sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
+    sortKeys: {key: 'nom', ordre: 1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
     selection: null,            // Contacts selectionnes
     uuidContactActif: null,     // Contact affiche/actif a l'ecran
@@ -70,10 +70,11 @@ function mergeContactsDataAction(state, action) {
         payload = [payload]
     }
 
+    let doitTrier = false
+
     for (const payloadMessage of payload) {
-        console.debug("mergeContactsDataAction action: %O, cuuid courant: %O", action, state.cuuid)
-        
         let { uuid_contact } = payloadMessage
+        console.debug("mergeContactsDataAction action: %O, uuid_contact : %O", action, payloadMessage.uuid_contact)
 
         // Ajout flag _mergeVersion pour rafraichissement ecran
         const data = {...payloadMessage}
@@ -91,12 +92,17 @@ function mergeContactsDataAction(state, action) {
             if(retirer) {
                 state.liste = liste.filter(item=>item.uuid_contact !== uuid_contact)
             } else {
-                liste.push(dataCourant)
-                state.liste = liste
+                dataCourant = {...dataCourant, ...data}
+                let listeModifiee = liste.map(item=>{
+                    if(item.uuid_contact !== uuid_contact) return item
+                    return dataCourant
+                })
+                state.liste = listeModifiee
             }
         } else if(peutAppend) {
             liste.push(data)
             state.liste = liste
+            doitTrier = true
         }
     }
 
@@ -127,6 +133,14 @@ function setContactActifAction(state, action) {
     state.uuidContactActif = action.payload
 }
 
+function supprimerContactsAction(state, action) {
+    let contacts = action.payload
+    if(!Array.isArray(contacts)) contacts = [contacts]
+    state.liste = state.liste.filter(item=>{
+        return ! contacts.includes(item.uuid_contact)
+    })
+}
+
 // Slice collection
 
 export function creerSlice(name) {
@@ -138,7 +152,7 @@ export function creerSlice(name) {
             setUserId: setUserIdAction,
             setProfil: setProfilAction,
             pushContacts: pushContactsAction, 
-            // supprimer: supprimerAction,
+            supprimerContacts: supprimerContactsAction,
             clearContacts: clearContactsAction,
             mergeContactsData: mergeContactsDataAction,
             setSortKeys: setSortKeysAction,
@@ -204,12 +218,9 @@ export function creerThunks(actions, nomSlice) {
     
         const state = getState()[nomSlice]
         const { userId } = state
-    
-        console.debug("Rafraichir contacts pour userId", userId)
 
         // Charger le contenu de la collection deja connu et dechiffre
         const contenuIdb = await messagerieDao.getContacts(userId)
-        console.debug("Contenu contacts IDB pour userId %O : %O", userId, contenuIdb)
         if(contenuIdb && contenuIdb.length > 0) {
             // Remplacer la liste de contacts
             dispatch(pushContacts({liste: contenuIdb, clear: true}))
@@ -254,7 +265,6 @@ export function creerThunks(actions, nomSlice) {
     }
 
     async function traiterChargerContactsParSyncid(workers, contacts, dispatch, getState) {
-        console.debug("traiterChargerContactsParSyncid contacts ", contacts)
         const state = getState()[nomSlice]
         const userId = state.userId
 
@@ -262,7 +272,6 @@ export function creerThunks(actions, nomSlice) {
         const batchUuids = contacts.map(item=>item.uuid_contact)
 
         const listeContacts = await chargerBatchContacts(workers, batchUuids)
-        console.debug("traiterChargerContactsParSyncid reponse ", listeContacts)
 
         await messagerieDao.mergeReferenceContacts(userId, listeContacts)
     }
@@ -355,21 +364,14 @@ function genererTriListe(sortKeys) {
         if(!b) return -1
 
         let valA = a[key], valB = b[key]
-        if(key === 'dateFichier') {
-            valA = a.dateFichier || a.derniere_modification || a.date_creation
-            valB = b.dateFichier || b.derniere_modification || b.date_creation
-        } else if(key === 'taille') {
-            const version_couranteA = a.version_courante || {},
-                  version_couranteB = b.version_courante || {}
-            valA = version_couranteA.taille || a.taille
-            valB = version_couranteB.taille || b.taille
-        }
 
         if(valA === valB) return 0
         if(!valA) return 1
         if(!valB) return -1
 
         if(typeof(valA) === 'string') {
+            valA = valA.toLocaleLowerCase()
+            valB = valB.toLocaleLowerCase()
             const diff = valA.localeCompare(valB)
             if(diff) return diff * ordre
         } else if(typeof(valA) === 'number') {
@@ -379,18 +381,10 @@ function genererTriListe(sortKeys) {
             throw new Error(`genererTriListe values ne peut pas etre compare ${''+valA} ? ${''+valB}`)
         }
 
-        // Fallback, nom/tuuid du fichier
-        const { tuuid: tuuidA, nom: nomA } = a,
-              { tuuid: tuuidB, nom: nomB } = b
-
-        const labelA = nomA || tuuidA,
-              labelB = nomB || tuuidB
-        
-        const compLabel = labelA.localeCompare(labelB)
-        if(compLabel) return compLabel * ordre
-
-        // Fallback, tuuid (doit toujours etre different)
-        return tuuidA.localeCompare(tuuidB) * ordre
+        const uuid_contactA = a.uuid_contact,
+              uuid_contactB = b.uuid_contact
+        // Fallback, uuid_contact (doit toujours etre different)
+        return uuid_contactA.localeCompare(uuid_contactB) * ordre
     }
 }
 
@@ -414,7 +408,6 @@ async function chargerBatchContacts(workers, batchUuids) {
     const reponse = await connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
     if(!reponse.err) {
         const contacts = reponse.contacts
-        console.debug("Contacts recus : %O", contacts)
         return contacts
     } else {
         throw reponse.err
