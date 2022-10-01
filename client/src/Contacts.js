@@ -197,6 +197,7 @@ function AfficherListeContacts(props) {
         nouveauContact, colonnes, show, 
         editerContact, 
         enteteOnClickCb, 
+        supprimerContacts,
     } = props
 
     const etatAuthentifie = useEtatAuthentifie()
@@ -254,6 +255,7 @@ function AfficherListeContacts(props) {
                 fermerContextuel={fermerContextuel}
                 selection={selection}
                 etatAuthentifie={etatAuthentifie}
+                supprimerContacts={supprimerContacts}
             />
         </div>     
     )
@@ -261,15 +263,15 @@ function AfficherListeContacts(props) {
 }
 
 function MenuContextuelAfficherListeContacts(props) {
-    const { contextuel } = props
+    const { contextuel, selection, supprimerContacts } = props
 
     const workers = useWorkers(),
           etatConnexion = useEtatConnexion(),
           etatAuthentifie = useEtatAuthentifie()
 
-    const supprimerContactCb = useCallback(event=>{
-        throw new Error("supprimerContactCb Todo")
-    }, [])
+    const supprimerContactsHandler = useCallback(()=>{
+        supprimerContacts(selection)
+    }, [selection])
 
     if(!contextuel.show) return ''
 
@@ -278,7 +280,7 @@ function MenuContextuelAfficherListeContacts(props) {
             workers={workers} 
             etatConnexion={etatConnexion} 
             etatAuthentifie={etatAuthentifie}
-            supprimerContactCb={supprimerContactCb} />
+            supprimerContacts={supprimerContactsHandler} />
     )
 }
 

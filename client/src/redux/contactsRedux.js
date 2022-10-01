@@ -182,8 +182,6 @@ export function creerThunks(actions, nomSlice) {
         const adresse = `@${nomUsager}:${hostname}`
         console.debug("traiterRafraichirContacts userId: %s, adresse : '%s' ", userId, adresse)
 
-        const state = getState()[nomSlice]
-
         let profil = await connexion.getProfil()
         console.debug("Profil charge : %O", profil)
         if(profil.ok === false && profil.code === 404) {
@@ -228,21 +226,6 @@ export function creerThunks(actions, nomSlice) {
             // Nettoyer la liste
             dispatch(clearContacts())
         }
-    
-        // // Pre-charger le contenu de la liste de fichiers avec ce qu'on a deja dans idb
-        // // console.debug("Contenu idb : %O", contenuIdb)
-        // if(contenuIdb) {
-        //     const { documents, collection } = contenuIdb
-        //     // console.debug("Push documents provenance idb : %O", documents)
-        //     dispatch(setCollectionInfo(collection))
-        //     dispatch(push({liste: documents}))
-        //     // Detecter les documents connus qui sont dirty ou pas encore dechiffres
-        //     const tuuids = documents.filter(item=>item.dirty||!item.dechiffre).map(item=>item.tuuid)
-        //     if(tuuids.length > 0) {
-        //         dispatch(chargerTuuids(workers, tuuids))
-        //             .catch(err=>console.error("Erreur traitement tuuids %O : %O", tuuids, err))
-        //     }
-        // }
     
         const cbChargerContacts = contacts => dispatch(chargerContactsParSyncid(workers, contacts))
 
