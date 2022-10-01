@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import Button from 'react-bootstrap/Button'
@@ -10,7 +10,7 @@ import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 
 // import * as MessageDao from './redux/messageDao'
-import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
+import useWorkers, {useEtatConnexion, useEtatAuthentifie, useEtatPret} from './WorkerContext'
 import contactsAction, { thunks as contactsThunks } from './redux/contactsSlice'
 
 import EditerContact from './EditerContact'
@@ -28,7 +28,6 @@ function Contacts(props) {
     const dispatch = useDispatch()
 
     const contacts = useSelector(state=>state.contacts.liste)
-    const uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
 
     const [editerContact, setEditerContact] = useState(false)
     const [colonnes, setColonnes] = useState(preparerColonnes())
@@ -139,7 +138,7 @@ function Contacts(props) {
     //     }
     // }, [evenementContact, contacts, userId, formatterContactsCb, addEvenementContact])
 
-    if(!contacts) return 'todo fix chargement contacts'
+    if(!contacts) return 'Chargement des contacts en cours ...'
 
     return (
         <>
@@ -260,16 +259,19 @@ function AfficherListeContacts(props) {
                 <Col xs={12} md={4} className='buttonbar-right'><AfficherCompteContacts value={compteContacts} /></Col>
             </Row>
 
-            <ListeFichiers 
-                modeView='liste'
-                colonnes={colonnes}
-                rows={contacts} 
-                // onClick={onClick} 
-                onDoubleClick={ouvrir}
-                onContextMenu={onContextMenuCb}
-                onSelection={onSelectionLignes}
-                onClickEntete={enteteOnClickCb}
-            />
+            {contacts.length > 0?
+                <ListeFichiers 
+                    modeView='liste'
+                    colonnes={colonnes}
+                    rows={contacts} 
+                    // onClick={onClick} 
+                    onDoubleClick={ouvrir}
+                    onContextMenu={onContextMenuCb}
+                    onSelection={onSelectionLignes}
+                    onClickEntete={enteteOnClickCb}
+                />
+                :''
+            }
 
             <MenuContextuelAfficherListeContacts 
                 contextuel={contextuel} 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
@@ -7,7 +7,7 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import InputGroup from 'react-bootstrap/InputGroup'
 
-import useWorkers, {useEtatConnexion, useUsager} from './WorkerContext'
+import useWorkers from './WorkerContext'
 
 const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?):(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/
 //const VALIDATEUR_ADRESSE = /^(@[a-zA-Z][0-9a-zA-z_.-]*[a-zA-Z-0-9]?)\/((?:(?!\d+\.|-)[a-zA-Z0-9_-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,}))$/
@@ -18,7 +18,6 @@ console.debug("VALIDATEUR_ADRESSE : %O", VALIDATEUR_ADRESSE)
 function EditerContact(props) {
 
     const { show, retour, supprimerContacts } = props
-    // const uuid_contact = contact?contact.uuid_contact:''
 
     const workers = useWorkers()
 
@@ -87,14 +86,12 @@ function EditerContact(props) {
 
     const blockedChange = useCallback(event=>{
         const valeur = event.currentTarget.checked
-        console.debug("BlockedChange valeur : %O", valeur)
         setBlocked(valeur)
         if(valeur) setTrusted(false)
     }, [setBlocked, setTrusted])
 
     const trustedChange = useCallback(event=>{
         const valeur = event.currentTarget.checked
-        console.debug("TrustedChange valeur : %O", valeur)
         setTrusted(valeur)
     }, [setTrusted])
     
@@ -272,25 +269,17 @@ async function sauvegarder(workers, profil, uuid_contact, data, retour, opts) {
         const { adresseEdit, adresseEditIdx } = opts
         const { adresses } = data
         if(adresseEdit && adresseEditIdx==='') {
-            // // Pousser l'adresse editee dans la liste des adresses
-            // if(adresseEditIdx!==undefined) {
-            //     adresses[adresseEditIdx] = adresseEdit
-            // } else {
-                adresses.push(adresseEdit)
-            // }
+            adresses.push(adresseEdit)
         }
 
         // Recuperer cle de chiffrage
         const ref_hachage_bytes = profil.cle_ref_hachage_bytes
         const cle = await clesDao.getCleLocale(ref_hachage_bytes)
-        console.debug("Cle chiffrage : ", cle)
         const cleSecrete = cle.cleSecrete
 
         const champsChiffres = await chiffrage.chiffrage.updateChampsChiffres(data, cleSecrete)
         const transaction = { uuid_contact, ref_hachage_bytes, ...champsChiffres}
         if(uuid_contact) transaction.uuid_contact = uuid_contact
-
-        console.debug("sauvegarder Transaction chiffree ", transaction)
 
         const reponse = await workers.connexion.majContact(transaction)
         console.debug("sauvegarder Reponse sauvegarder contact : %O", reponse)
