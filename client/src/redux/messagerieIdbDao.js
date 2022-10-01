@@ -190,13 +190,13 @@ export async function mergeReferenceContacts(userId, contacts) {
                 const date_modification_locale = contactExistant.date_modification
                 if(date_modification_locale < contact.date_modification) {
                     // Indiquer que le contact doit etre maj
-                    const contactStale = {...contactExistant, ...contact, '_etatChargement': 'stale'}
+                    const contactStale = {...contactExistant, ...contact}
                     console.debug("Contact doit etre maj : %O", contactStale)
                     await store.put(contactStale)
                 }
             } else {
                 console.debug("Conserver nouveau contact : %O", contact)
-                await store.put({user_id: userId, ...contact, '_etatChargement': 'nouveau'})
+                await store.put({user_id: userId, ...contact, dechiffre: 'false'})
             }
         }
     }
@@ -208,17 +208,34 @@ export async function getUuidContactsParEtatChargement(userId, etatChargement) {
     return await index.getAllKeys([userId, etatChargement])
 }
 
-export async function updateContact(contact, opts) {
+export async function updateContact(userId, contact, opts) {
     opts = opts || {}
-    const db = await ouvrirDB({upgrade: true})
+    const replace = opts.replace || false
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_CONTACTS, 'readwrite').store
-    if(opts.replace) {
-        await store.put(contact)
+    let contactDb = null
+    if(replace === true) {
+        contactDb = {user_id: userId}
     } else {
-        const contactOriginal = await store.get(contact.uuid_contact)
-        const contactMaj = {...contactOriginal, ...contact}
-        await store.put(contactMaj)
+        contactDb = (await store.get(contact.uuid_contact)) || {user_id: userId}
     }
+    Object.assign(contactDb, contact)
+    await store.put(contactDb)
+}
+
+export async function getContactsChiffres(userId, opts) {
+    const db = await ouvrirDB()
+    const index = db.transaction(STORE_CONTACTS, 'readwrite').store.index('dechiffre')
+    
+    const contacts = []
+    let curseur = await index.openCursor([userId, 'false'])
+    while(curseur) {
+        const value = curseur.value
+        if(value.supprime !== true) contacts.push(curseur.value)
+        curseur = await curseur.continue()
+    }
+
+    return contacts
 }
 
 export async function getContacts(userId, opts) {
@@ -230,18 +247,19 @@ export async function getContacts(userId, opts) {
     const direction = ordre<0?'prev':'next'
     const inclure_supprime = opts.inclure_supprime || false
 
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const index = db.transaction(STORE_CONTACTS, 'readwrite').store.index(colonne)
 
     let position = 0
     const contacts = []
-    let curseur = await index.openCursor(null, direction)
+    const keyRange = IDBKeyRange.lowerBound([userId, 'true'], false);
+    let curseur = await index.openCursor(keyRange, direction)
+
     while(curseur) {
         const value = curseur.value
-        if(value.user_id === userId) {  // Uniquement traiter usager
-            if(value.supprime !== true || inclure_supprime === true) {
-                if(position++ >= skip) contacts.push(curseur.value)
-            }
+        console.debug("contact IDB curseur ", value)
+        if(value.supprime !== true || inclure_supprime === true) {
+            if(position++ >= skip) contacts.push(value)
         }
         if(contacts.length === limit) break
         curseur = await curseur.continue()

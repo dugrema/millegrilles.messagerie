@@ -7,7 +7,6 @@ const initialState = {
     // Usager
     userId: null,               // UserId courant, permet de stocker plusieurs users localement
     profil: null,               // Profil de l'usager
-    cleSecreteProfil: null,     // Cle secrete pour chiffrer/dechiffrer contenu du profil et contacts
 
     // Liste a l'ecran
     sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
@@ -28,10 +27,6 @@ function setUserIdAction(state, action) {
 
 function setProfilAction(state, action) {
     state.profil = action.payload
-}
-
-function setCleSecreteProfilAction(state, action) {
-    state.cleSecreteProfil = action.payload
 }
 
 function setSortKeysAction(state, action) {
@@ -77,7 +72,32 @@ function mergeContactsDataAction(state, action) {
 
     for (const payloadMessage of payload) {
         console.debug("mergeContactsDataAction action: %O, cuuid courant: %O", action, state.cuuid)
-        throw new Error("fix me")
+        
+        let { uuid_contact } = payloadMessage
+
+        // Ajout flag _mergeVersion pour rafraichissement ecran
+        const data = {...payloadMessage}
+        data['_mergeVersion'] = mergeVersion
+
+        const liste = state.liste || []
+        
+        let retirer = data.supprime === true,
+            peutAppend = !retirer
+
+        // Recuperer version courante (en memoire)
+        let dataCourant = liste.filter(item=>item.uuid_contact === uuid_contact).pop()
+
+        if(dataCourant) {
+            if(retirer) {
+                state.liste = liste.filter(item=>item.uuid_contact !== uuid_contact)
+            } else {
+                liste.push(dataCourant)
+                state.liste = liste
+            }
+        } else if(peutAppend) {
+            liste.push(data)
+            state.liste = liste
+        }
     }
 
     // Trier
@@ -117,7 +137,6 @@ export function creerSlice(name) {
         reducers: {
             setUserId: setUserIdAction,
             setProfil: setProfilAction,
-            setCleSecreteProfil: setCleSecreteProfilAction,
             pushContacts: pushContactsAction, 
             // supprimer: supprimerAction,
             clearContacts: clearContactsAction,
@@ -134,7 +153,7 @@ export function creerSlice(name) {
 }
 
 export function creerThunks(actions, nomSlice) {
-    const { setUserId, setProfil, setCleSecreteProfil, pushContacts, clearContacts } = actions
+    const { setUserId, setProfil, pushContacts, pushContactsChiffres, setContactsChiffres, clearContacts } = actions
     
     // Async actions
     function chargerProfil(workers, userId, nomUsager, locationUrl) {
@@ -180,49 +199,24 @@ export function creerThunks(actions, nomSlice) {
     }
     
     async function traiterChargerContacts(workers, dispatch, getState) {
-        // const state = getState()[nomSlice]
-        return traiterRafraichirContacts(workers, dispatch, getState)
-    }
-
-    async function traiterRafraichirContacts(workers, dispatch, getState, promisesPreparationContacts) {
         // console.debug('traiterRafraichirCollection')
-        const { collectionsDao } = workers
+        const { messagerieDao } = workers
     
         const state = getState()[nomSlice]
-        const { userId, cuuid } = state
+        const { userId } = state
     
-        // console.debug("Rafraichir '%s' pour userId", cuuid, userId)
-    
-        // Nettoyer la liste
-        dispatch(clearContacts())
-    
-        console.error("todo")
-        // Vieux code workers
-        // MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-        //     .then(formatterContactsCb)
-        //     .catch(erreurCb)
+        console.debug("Rafraichir contacts pour userId", userId)
 
-        // Vieux code sync
-        // workers.connexion.getReferenceContacts({limit: SYNC_LIMIT})
-        //     .then(reponse=>MessageDao.mergeReferenceContacts(userId, reponse.contacts))
-        //     .then(()=>chargerContenuContacts(workers, userId))
-        //     .then(async uuidsCharges => {
-        //         if(uuidsCharges && uuidsCharges.length > 0) {
-        //             // Rafraichir ecran
-        //             const liste = await MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-        //             formatterContactsCb(liste)
-        //         }
-        //     })
-        //     .catch(err=>erreurCb(err, "Erreur chargement contacts"))
-
-
-
-        // // Charger le contenu de la collection deja connu
-        // promisesPreparationDossier = promisesPreparationDossier || []
-        // promisesPreparationDossier.push(collectionsDao.getParCollection(cuuid, userId))
-    
-        // // Attendre que les listeners soient prets, recuperer contenu idb
-        // const contenuIdb = (await Promise.all(promisesPreparationDossier)).pop()
+        // Charger le contenu de la collection deja connu et dechiffre
+        const contenuIdb = await messagerieDao.getContacts(userId)
+        console.debug("Contenu contacts IDB pour userId %O : %O", userId, contenuIdb)
+        if(contenuIdb && contenuIdb.length > 0) {
+            // Remplacer la liste de contacts
+            dispatch(pushContacts({liste: contenuIdb, clear: true}))
+        } else {
+            // Nettoyer la liste
+            dispatch(clearContacts())
+        }
     
         // // Pre-charger le contenu de la liste de fichiers avec ce qu'on a deja dans idb
         // // console.debug("Contenu idb : %O", contenuIdb)
@@ -231,7 +225,6 @@ export function creerThunks(actions, nomSlice) {
         //     // console.debug("Push documents provenance idb : %O", documents)
         //     dispatch(setCollectionInfo(collection))
         //     dispatch(push({liste: documents}))
-    
         //     // Detecter les documents connus qui sont dirty ou pas encore dechiffres
         //     const tuuids = documents.filter(item=>item.dirty||!item.dechiffre).map(item=>item.tuuid)
         //     if(tuuids.length > 0) {
@@ -240,18 +233,38 @@ export function creerThunks(actions, nomSlice) {
         //     }
         // }
     
-        // let compteur = 0
-        // for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
-        //     let resultatSync = await syncCollection(dispatch, workers, cuuid, CONST_SYNC_BATCH_SIZE, compteur)
-        //     // console.debug("Sync collection (cycle %d) : %O", cycle, resultatSync)
-        //     if( ! resultatSync || ! resultatSync.liste ) break
-        //     compteur += resultatSync.liste.length
-        //     if( resultatSync.complete ) break
-        // }
-        // if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
+        const cbChargerContacts = contacts => dispatch(chargerContactsParSyncid(workers, contacts))
+
+        let compteur = 0
+        for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
+            let resultatSync = await syncContacts(workers, CONST_SYNC_BATCH_SIZE, compteur, cbChargerContacts)
+            if( ! resultatSync || ! resultatSync.contacts || resultatSync.contacts.length === 0 ) break
+            compteur += resultatSync.contacts.length
+            if( resultatSync.complete ) break
+        }
+        if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
     
-        // On marque la fin du chargement/sync
-        dispatch(pushContacts({liste: []}))
+        // Pousser liste a dechiffrer
+        const contactsChiffres = await messagerieDao.getContactsChiffres(userId)
+        dispatch(pushContactsChiffres(contactsChiffres))
+    }
+
+    function chargerContactsParSyncid(workers, contacts) {
+        return (dispatch, getState) => traiterChargerContactsParSyncid(workers, contacts, dispatch, getState)
+    }
+
+    async function traiterChargerContactsParSyncid(workers, contacts, dispatch, getState) {
+        console.debug("traiterChargerContactsParSyncid contacts ", contacts)
+        const state = getState()[nomSlice]
+        const userId = state.userId
+
+        const { messagerieDao } = workers
+        const batchUuids = contacts.map(item=>item.uuid_contact)
+
+        const listeContacts = await chargerBatchContacts(workers, batchUuids)
+        console.debug("traiterChargerContactsParSyncid reponse ", listeContacts)
+
+        await messagerieDao.mergeReferenceContacts(userId, listeContacts)
     }
 
     const thunks = { 
@@ -276,7 +289,59 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
     console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
-    console.error("dechiffrageMiddlewareListener Not Implemented")
+    const getState = () => listenerApi.getState()[nomSlice]
+    const { clesDao, chiffrage, messagerieDao } = workers
+
+    // Recuperer la cle secrete du profil pour dechiffrer les contacts
+    const userId = getState().userId,
+          profil = getState().profil,
+          cle_ref_hachage_bytes = profil.cle_ref_hachage_bytes
+    const cleDechiffrage = await clesDao.getCleLocale(cle_ref_hachage_bytes)
+
+    await listenerApi.unsubscribe()
+    try {
+        let contactsChiffres = [...getState().listeDechiffrage]
+        while(contactsChiffres.length > 0) {
+            console.debug("dechiffrer contacts ", contactsChiffres)
+            const batchContacts = contactsChiffres.slice(0, 50)  // Batch de 20 fichiers a la fois
+            contactsChiffres = contactsChiffres.slice(50)  // Clip 
+            listenerApi.dispatch(actions.setContactsChiffres(contactsChiffres))
+            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchContacts.length, contactsChiffres.length)
+
+            for await (const contact of batchContacts) {
+                const docCourant = {...contact}  // Copie du proxy contact (read-only)
+                const ref_hachage_bytes = docCourant.ref_hachage_bytes
+                if(ref_hachage_bytes === cle_ref_hachage_bytes) {
+                    const cleDechiffrageContact = {...cleDechiffrage, ...contact}
+                    console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
+                    const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact)
+                    console.debug("Contenu dechiffre : ", dataDechiffre)
+                    
+                    // Ajout/override champs de metadonne avec contenu dechiffre
+                    Object.assign(docCourant, dataDechiffre)
+                    docCourant.dechiffre = 'true'
+                    docCourant.uuid_contact = contact.uuid_contact
+                    
+                    // Cleanup objet dechiffre
+                    delete docCourant.data_chiffre
+                    delete docCourant.ref_hachage_bytes
+                    delete docCourant.header
+                    delete docCourant.format
+                    
+                    // Conserver contact dechiffre
+                    await messagerieDao.updateContact(userId, docCourant, {replace: true})
+                    listenerApi.dispatch(actions.mergeContactsData(docCourant))
+                } else {
+                    console.error("ref_hachage_bytes : %O, cle : %O", ref_hachage_bytes, cle_ref_hachage_bytes)
+                    throw new Error("Contact avec mauvais cle - TODO")
+                }
+            }
+
+            contactsChiffres = [...getState().listeDechiffrage]
+        }
+    } finally {
+        await listenerApi.subscribe()
+    }
 }
 
 function genererTriListe(sortKeys) {
@@ -326,5 +391,32 @@ function genererTriListe(sortKeys) {
 
         // Fallback, tuuid (doit toujours etre different)
         return tuuidA.localeCompare(tuuidB) * ordre
+    }
+}
+
+async function syncContacts(workers, limit, skip, cbChargerContacts) {
+    const { connexion } = workers
+
+    // Vieux code sync
+    const reponseContacts = await connexion.getReferenceContacts({limit, skip})
+    const contacts = reponseContacts.contacts || []
+    console.debug("Reponse sync contacts ", contacts)
+    if(contacts.length > 0) {
+        cbChargerContacts(contacts)
+            .catch(err=>console.error("Erreur traitement chargerContactsParSyncid %O : %O", contacts, err))
+    }
+
+    return reponseContacts
+}
+
+async function chargerBatchContacts(workers, batchUuids) {
+    const { connexion } = workers
+    const reponse = await connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
+    if(!reponse.err) {
+        const contacts = reponse.contacts
+        console.debug("Contacts recus : %O", contacts)
+        return contacts
+    } else {
+        throw reponse.err
     }
 }

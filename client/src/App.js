@@ -640,6 +640,11 @@ function InitialiserMessagerie(props) {
     // dispatch(contactsActions.setUserId(userId))
     dispatch(messagerieActions.setUserId(userId))
     dispatch(contactsThunks.chargerProfil(workers, userId, nomUsager, window.location))
+      .then(()=>{
+        console.debug("Profil charger, faire les contacts")
+        return dispatch(contactsThunks.chargerContacts(workers))
+      })
+      .catch(err=>console.error("Erreur chargement profil/contacts ", err))
   }, [workers, userId, nomUsager])
 
 }

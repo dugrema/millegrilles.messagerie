@@ -47,8 +47,8 @@ function createObjectStores(db, oldVersion) {
                 messageStore.createIndex('subject', ['user_id', 'subject', 'date_reception'])
     
                 // Index contacts
-                contactStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
-                contactStore.createIndex('nom', ['user_id', 'nom'])
+                contactStore.createIndex('nom', ['user_id', 'dechiffre', 'nom'])
+                contactStore.createIndex('dechiffre', ['user_id', 'dechiffre'])
 
                 // Upload/download fichiers
                 db.createObjectStore(STORE_DOWNLOADS, {keyPath: 'fuuid'})
