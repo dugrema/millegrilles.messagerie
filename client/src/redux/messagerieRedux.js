@@ -6,7 +6,8 @@ const SOURCE_INBOX = 'inbox',
       SOURCE_CORBEILLE = 'corbeille'
 
 const SAFEGUARD_BATCH_MAX = 1000,
-      CONST_SYNC_BATCH_SIZE = 250
+      CONST_SYNC_BATCH_SIZE = 250,
+      CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER = 20
 
 const initialState = {
     // Usager
@@ -17,8 +18,6 @@ const initialState = {
     source: SOURCE_INBOX,       // Source de la requete - inbox, corbeille, outbox, custom
     sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
-    breadcrumb: [],             // Breadcrumb du path de la source affichee
-    intervalle: null,           // Intervalle de temps des donnees (filtre)
     selection: null,            // Messages selectionnes
     uuidMessageActif: null,     // Message actif
 
@@ -37,17 +36,6 @@ function setSortKeysAction(state, action) {
     const sortKeys = action.payload
     state.sortKeys = sortKeys
     if(state.liste) state.liste.sort(genererTriListe(sortKeys))
-}
-
-function setSourceAction(state, action) {
-    state.source = action.payload
-    state.intervalle = null
-    state.breadcrumb = []
-    state.liste = null
-}
-
-function setIntervalleAction(state, action) {
-    state.intervalle = action.payload
 }
 
 function pushMessagesAction(state, action) {
@@ -97,21 +85,24 @@ function mergeMessagesDataAction(state, action) {
 
 // Ajouter des messages a la liste a dechiffrer
 function pushMessagesChiffresAction(state, action) {
-    const fichiers = action.payload
-    state.listeDechiffrage = [...state.listeDechiffrage, ...fichiers]
+    const messages = action.payload
+    state.listeDechiffrage = [...state.listeDechiffrage, ...messages]
 }
 
 function setMessagesChiffresAction(state, action) {
     state.listeDechiffrage = action.payload
 }
 
-// Retourne un fichier de la liste a dechiffrer
-function clearMessagesChiffresAction(state) {
-    state.listeDechiffrage = []
-}
-
 function selectionMessagesAction(state, action) {
     state.selection = action.payload
+}
+
+function supprimerMessagesAction(state, action) {
+    let messages = action.payload
+    if(!Array.isArray(messages)) messages = [messages]
+    state.liste = state.liste.filter(item=>{
+        return ! messages.includes(item.uuid_transaction)
+    })
 }
 
 // Slice collection
@@ -124,14 +115,11 @@ export function creerSlice(name) {
         reducers: {
             setUserId: setUserIdAction,
             pushMessages: pushMessagesAction, 
-            // supprimer: supprimerAction,
+            supprimer: supprimerMessagesAction,
             clearMessages: clearMessagesAction,
             mergeMessagesData: mergeMessagesDataAction,
             setSortKeys: setSortKeysAction,
-            setSource: setSourceAction,
-            setIntervalle: setIntervalleAction,
             pushMessagesChiffres: pushMessagesChiffresAction,
-            clearMessagesChiffres: clearMessagesChiffresAction,
             selectionMessages: selectionMessagesAction,
             setMessagesChiffres: setMessagesChiffresAction,
         }
@@ -156,76 +144,80 @@ export function creerThunks(actions, nomSlice) {
     console.error("creerThunks Not implemented")
 
     // Async actions
-    function changerDossier(workers, sourceMessages, uuidDossier) {
-        return (dispatch, getState) => traiterChangerDossier(workers, sourceMessages, uuidDossier, dispatch, getState)
+    function chargerMessages(workers) {
+        return (dispatch, getState) => traiterChargerMessages(workers, dispatch, getState)
     }
     
-    async function traiterChangerDossier(workers, sourceMessages, uuidDossier, dispatch, getState) {
-        const state = getState()[nomSlice]
-        const sourcePrecedente = state.source,
-              uuidPrecedent = state.uuidDossier
-        // console.debug("Cuuid precedent : %O, nouveau : %O", cuuidPrecedent, cuuid)
+    async function traiterChargerMessages(workers, dispatch, getState) {
+        // const state = getState()[nomSlice]
+        // const sourcePrecedente = state.source,
+        //       uuidPrecedent = state.uuidDossier
     
-        if(sourcePrecedente === sourceMessages && uuidPrecedent === uuidDossier) return  // Rien a faire, meme source/dossier
-    
-        dispatch(setSourceMessages(sourceMessages, uuidDossier))
+        // if(sourcePrecedente === sourceMessages && uuidPrecedent === uuidDossier) return  // Rien a faire, meme source/dossier
+        // dispatch(setSourceMessages(sourceMessages, uuidDossier))
     
         return traiterRafraichirMessages(workers, dispatch, getState)
     }
 
     async function traiterRafraichirMessages(workers, dispatch, getState, promisesPreparationDossier) {
-        // console.debug('traiterRafraichirCollection')
-        const { collectionsDao } = workers
+        const { messagerieDao } = workers
     
         const state = getState()[nomSlice]
-        const { userId, cuuid } = state
+        const { userId } = state
     
-        // console.debug("Rafraichir '%s' pour userId", cuuid, userId)
+        console.debug("Rafraichir messages pour userId", userId)
     
         // Nettoyer la liste
         dispatch(clearMessages())
-    
-        console.error("todo")
 
-        // // Charger le contenu de la collection deja connu
-        // promisesPreparationDossier = promisesPreparationDossier || []
-        // promisesPreparationDossier.push(collectionsDao.getParCollection(cuuid, userId))
-    
-        // // Attendre que les listeners soient prets, recuperer contenu idb
-        // const contenuIdb = (await Promise.all(promisesPreparationDossier)).pop()
-    
-        // // Pre-charger le contenu de la liste de fichiers avec ce qu'on a deja dans idb
-        // // console.debug("Contenu idb : %O", contenuIdb)
-        // if(contenuIdb) {
-        //     const { documents, collection } = contenuIdb
-        //     // console.debug("Push documents provenance idb : %O", documents)
-        //     dispatch(setCollectionInfo(collection))
-        //     dispatch(push({liste: documents}))
-    
-        //     // Detecter les documents connus qui sont dirty ou pas encore dechiffres
-        //     const tuuids = documents.filter(item=>item.dirty||!item.dechiffre).map(item=>item.tuuid)
-        //     if(tuuids.length > 0) {
-        //         dispatch(chargerTuuids(workers, tuuids))
-        //             .catch(err=>console.error("Erreur traitement tuuids %O : %O", tuuids, err))
-        //     }
+        // // Charger le contenu de la collection deja connu et dechiffre
+        // const contenuIdb = await messagerieDao.getContacts(userId)
+        // if(contenuIdb && contenuIdb.length > 0) {
+        //     // Remplacer la liste de contacts
+        //     dispatch(pushContacts({liste: contenuIdb, clear: true}))
+        // } else {
+        //     // Nettoyer la liste
+        //     dispatch(clearContacts())
         // }
     
-        // let compteur = 0
-        // for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
-        //     let resultatSync = await syncCollection(dispatch, workers, cuuid, CONST_SYNC_BATCH_SIZE, compteur)
-        //     // console.debug("Sync collection (cycle %d) : %O", cycle, resultatSync)
-        //     if( ! resultatSync || ! resultatSync.liste ) break
-        //     compteur += resultatSync.liste.length
-        //     if( resultatSync.complete ) break
-        // }
-        // if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
+        const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
+
+        let dateMinimum = 0
+        for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
+            let resultatSync = await syncMessages(workers, CONST_SYNC_BATCH_SIZE, dateMinimum, cbChargerMessages)
+            if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
+            if( resultatSync.complete ) break
+
+            dateMinimum = resultatSync.messages.reduce(
+                (acc, item) => acc < item.date_reception ?item.date_reception:acc,   // Garder date la plus elevee
+                0  // Commencer a la date 0
+            )
+        }
+        if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
     
-        // On marque la fin du chargement/sync
-        dispatch(pushMessages({liste: []}))
+        // Pousser liste a dechiffrer
+        const messagesChiffres = await messagerieDao.getMessagesChiffres(userId)
+        dispatch(pushMessagesChiffres(messagesChiffres))
     }
 
+    function chargerMessagesParSyncid(workers, messages) {
+        return (dispatch, getState) => traiterChargerMessagesParSyncid(workers, messages, dispatch, getState)
+    }
+
+    async function traiterChargerMessagesParSyncid(workers, messages, dispatch, getState) {
+        const state = getState()[nomSlice]
+        const userId = state.userId
+    
+        const { messagerieDao } = workers
+        const batchUuids = messages.map(item=>item.uuid_transaction)
+    
+        const listeMessages = await chargerBatchMessages(workers, batchUuids)
+        console.debug("Liste messages recue : ", listeMessages)
+        await messagerieDao.mergeReferenceMessages(userId, listeMessages)
+    }
+    
     const thunks = { 
-        changerDossier,
+        chargerMessages,
     }
 
     return thunks
@@ -245,16 +237,89 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
     console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
+    const { clesDao, chiffrage, messagerieDao } = workers
+
     const getState = () => listenerApi.getState()[nomSlice]
 
-    const { clesDao, chiffrage, collectionsDao } = workers
+    // Recuperer la cle secrete du profil pour dechiffrer les contacts
+    const userId = getState().userId
+    // const cleDechiffrage = await clesDao.getCleLocale(cle_ref_hachage_bytes)
+
     await listenerApi.unsubscribe()
     try {
-        console.error("dechiffrageMiddlewareListener Not implemented")
+        let messagesChiffres = [...getState().listeDechiffrage]
+        while(messagesChiffres.length > 0) {
+            console.debug("dechiffrer contacts ", messagesChiffres)
+            const batchMessages = messagesChiffres.slice(0, CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Batch messages
+            messagesChiffres = messagesChiffres.slice(CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Clip 
+            listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
+            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
+
+            for await (const message of batchMessages) {
+                const docCourant = {...message}  // Copie du proxy contact (read-only)
+                console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                // const ref_hachage_bytes = docCourant.ref_hachage_bytes
+                // if(ref_hachage_bytes === cle_ref_hachage_bytes) {
+                //     const cleDechiffrageContact = {...cleDechiffrage, ...message}
+                //     console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
+                //     const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact)
+                //     console.debug("Contenu dechiffre : ", dataDechiffre)
+                    
+                //     // Ajout/override champs de metadonne avec contenu dechiffre
+                //     Object.assign(docCourant, dataDechiffre)
+                //     docCourant.dechiffre = 'true'
+                //     docCourant.uuid_transaction = contact.uuid_transaction
+                    
+                //     // Cleanup objet dechiffre
+                //     delete docCourant.data_chiffre
+                //     delete docCourant.ref_hachage_bytes
+                //     delete docCourant.header
+                //     delete docCourant.format
+                    
+                //     // Conserver contact dechiffre
+                //     await messagerieDao.updateContact(userId, docCourant, {replace: true})
+                //     listenerApi.dispatch(actions.mergeContactsData(docCourant))
+                // } else {
+                //     console.error("ref_hachage_bytes : %O, cle : %O", ref_hachage_bytes, cle_ref_hachage_bytes)
+                //     throw new Error("Contact avec mauvais cle - TODO")
+                // }
+            }
+
+            messagesChiffres = [...getState().listeDechiffrage]
+        }
     } finally {
         await listenerApi.subscribe()
     }
 }
+
+async function syncMessages(workers, limit, dateMinimum, cbChargerMessages) {
+    const { connexion } = workers
+
+    console.debug("Sync messages limit %d date min %d", limit, dateMinimum)
+
+    // Vieux code sync
+    const reponseMessages = await connexion.getReferenceMessages({limit, date_minimum: dateMinimum})
+    const messages = reponseMessages.messages || []
+    console.debug("Reponse sync messages ", messages)
+    if(messages.length > 0) {
+        await cbChargerMessages(messages)
+            // .catch(err=>console.error("Erreur traitement chargeMessagesParSyncid %O : %O", messages, err))
+    }
+
+    return reponseMessages
+}
+
+async function chargerBatchMessages(workers, batchUuids) {
+    const { connexion } = workers
+    const reponse = await connexion.getMessages({uuid_transactions: batchUuids, limit: batchUuids.length})
+    if(!reponse.err) {
+        const messages = reponse.messages
+        return messages
+    } else {
+        throw reponse.err
+    }
+}
+
 
 function genererTriListe(sortKeys) {
     

@@ -12,7 +12,7 @@ import storeSetup from './redux/store'
 
 import { LayoutMillegrilles, ModalErreur, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import messagerieActions from './redux/messagerieSlice'
+import messagerieActions, {thunks as messagerieThunks} from './redux/messagerieSlice'
 import {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
@@ -615,23 +615,6 @@ function Modals(props) {
   )
 }
 
-function chargerDnsMessagerie(infoDns, setDnsMessagerie) {
-  console.info("Info domaines messagerie : %O", infoDns)
-  const listeMessagerie = infoDns.filter(item=>item.application==='messagerie_web')
-  if(listeMessagerie.length === 0) {
-    throw new Error("Serveur de messagerie n'est pas installe ou demarre")
-  } if(listeMessagerie.length === 1) {
-    const item = listeMessagerie.shift()
-    const url = new URL(item.url)
-    const hostDns = url.host
-    console.info("Host dns messagerie local par defaut : %s", hostDns)
-    setDnsMessagerie(hostDns)
-  } else {
-    // Todo
-    throw new Error("TO DO - handling plusieurs serveurs messagerie / serveur manquant")
-  }
-}
-
 // Initialisation du profil usager
 function InitialiserMessagerie(props) {
 
@@ -650,8 +633,9 @@ function InitialiserMessagerie(props) {
   // Init messagerie et contacts
   useEffect(()=>{
     if(!userId) return  // Rien a faire
-    // dispatch(contactsActions.setUserId(userId))
     dispatch(messagerieActions.setUserId(userId))
+    dispatch(messagerieThunks.chargerMessages(workers))
+      .catch(err=>console.error("Erreur chargement messages ", err))
     dispatch(contactsThunks.chargerProfil(workers, userId, nomUsager, window.location))
       .then(()=>{
         console.debug("Profil charger, faire les contacts")

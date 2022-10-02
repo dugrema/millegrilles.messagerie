@@ -11,13 +11,28 @@ export function init() {
 }
 
 export async function getMessage(uuid_transaction) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_MESSAGES, 'readonly').objectStore(STORE_MESSAGES)
     return store.get(uuid_transaction)
 }
 
+export async function getMessagesChiffres(userId, opts) {
+    const db = await ouvrirDB()
+    const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index('dechiffre')
+    
+    const messages = []
+    let curseur = await index.openCursor([userId, 'false'])
+    while(curseur) {
+        const value = curseur.value
+        if(value.supprime !== true) messages.push(curseur.value)
+        curseur = await curseur.continue()
+    }
+
+    return messages
+}
+
 export async function mergeReferenceMessages(userId, messages) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
 
     // Parcourir chaque message pour voir s'il existe deja
     const store = db.transaction(STORE_MESSAGES, 'readwrite').objectStore(STORE_MESSAGES)
@@ -26,17 +41,17 @@ export async function mergeReferenceMessages(userId, messages) {
         const messageExistant = await store.get(uuid_transaction)
         if(!messageExistant) {
             // console.debug("Conserver nouveau message : %O", message)
-            await store.put({user_id: userId, ...message, '_etatChargement': 'nouveau'})
+            await store.put({user_id: userId, ...message, 'dechiffre': 'false'})
         } else {
             // Verifier si on doit ajouter date_envoi ou date_reception
             const { date_envoi: date_envoi_ref, date_reception: date_reception_ref } = message
             const { date_envoi: date_envoi_local, date_reception: date_reception_local } = messageExistant
             if(date_reception_ref && !date_reception_local) {
-                // Injecter date reception (le message etait deja dans boite d'envoi)
-                await store.put({date_reception: date_reception_ref})
+                // Injecter date reception (le message etait deja dans boite de reception)
+                await store.put({...messageExistant, date_reception: date_reception_ref})
             } else if(date_envoi_ref && !date_envoi_local) {
                 // Injecter date envoi (le message etait deja dans la boite d'envoi)
-                await store.put({date_envoi: date_envoi_ref})
+                await store.put({...messageExistant, date_envoi: date_envoi_ref})
             }
         }
     }
@@ -46,7 +61,7 @@ export async function getUuidMessagesParEtatChargement(userId, etatChargement, o
     opts = opts || {}
     const messages_envoyes = opts.messages_envoyes?true:false
 
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index('etatChargement')
 
     let curseur = await index.openCursor([userId, etatChargement])
@@ -173,7 +188,7 @@ export async function countMessages(userId, opts) {
 // Contacts
 
 export async function mergeReferenceContacts(userId, contacts) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     // console.debug("mergeReferenceContacts contacts: %O", contacts)
 
     // Parcourir chaque message pour voir s'il existe deja
@@ -203,7 +218,7 @@ export async function mergeReferenceContacts(userId, contacts) {
 }
 
 export async function getUuidContactsParEtatChargement(userId, etatChargement) {
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const index = db.transaction(STORE_CONTACTS, 'readwrite').store.index('etatChargement')
     return await index.getAllKeys([userId, etatChargement])
 }

@@ -120,11 +120,6 @@ function setContactsChiffresAction(state, action) {
     state.listeDechiffrage = action.payload
 }
 
-// Retourne un fichier de la liste a dechiffrer
-function clearContactsChiffresAction(state) {
-    state.listeDechiffrage = []
-}
-
 function selectionContactsAction(state, action) {
     state.selection = action.payload
 }
@@ -157,7 +152,6 @@ export function creerSlice(name) {
             mergeContactsData: mergeContactsDataAction,
             setSortKeys: setSortKeysAction,
             pushContactsChiffres: pushContactsChiffresAction,
-            clearContactsChiffres: clearContactsChiffresAction,
             selectionContacts: selectionContactsAction,
             setContactsChiffres: setContactsChiffresAction,
             setContactActif: setContactActifAction,

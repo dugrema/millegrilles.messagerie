@@ -40,7 +40,8 @@ function createObjectStores(db, oldVersion) {
                 db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
                 
                 // Index messages
-                messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
+                // messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
+                messageStore.createIndex('dechiffre', ['user_id', 'dechiffre'])
                 messageStore.createIndex('date_reception', ['user_id', 'date_reception'])
                 messageStore.createIndex('date_envoi', ['user_id', 'date_envoi'])
                 messageStore.createIndex('from', ['user_id', 'from', 'date_reception'])
