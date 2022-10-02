@@ -96,7 +96,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         messageBytes, 'Messagerie', certifcatsChiffragePem, 
         {DEBUG: true, identificateurs_document: {'message': 'true'}, nojson: true, type: 'binary'}
     )
-    // console.debug("Message chiffre : %O", messageChiffre)
+    console.debug("Message chiffre : %O", messageChiffre)
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
 
@@ -104,10 +104,8 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
     // Preparer l'enveloppe du message
     const enveloppeMessage = {
-        message_chiffre: messageChiffre.ciphertext,
-        'hachage_bytes': commandeMaitrecles['hachage_bytes'],
-        //'attachments': attachments,
-        // to: destinataires,
+        message_chiffre: messageChiffre.doc.data_chiffre,
+        hachage_bytes: commandeMaitrecles['hachage_bytes'],
         fingerprint_certificat: messageSigne['en-tete']['fingerprint_certificat'],
     }
    
