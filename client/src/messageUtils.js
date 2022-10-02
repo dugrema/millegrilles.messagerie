@@ -4,7 +4,7 @@ import pako from 'pako'
 
 const REGEX_SUBJECT = /^<p>([^<]+)<\/p><p><br><\/p>(.*)/i
 
-export async function posterMessage(workers, certifcatChiffragePem, from, to, content, opts) {
+export async function posterMessage(workers, certifcatsChiffragePem, from, to, content, opts) {
     
     const { connexion } = workers
 
@@ -22,7 +22,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
     }
     // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
-    const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts)
+    const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
 
     // console.debug("Enveloppe message : %O", enveloppeMessage)
     // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
@@ -34,7 +34,7 @@ export async function posterMessage(workers, certifcatChiffragePem, from, to, co
     return reponse
 }
 
-export async function signerMessage(workers, certifcatChiffragePem, from, to, subject, content, opts) {
+export async function signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts) {
     opts = opts || {}
 
     const {connexion, chiffrage} = workers
@@ -93,7 +93,7 @@ export async function signerMessage(workers, certifcatChiffragePem, from, to, su
 
     // Chiffrer le message 
     const messageChiffre = await chiffrage.chiffrerDocument(
-        messageBytes, 'Messagerie', certifcatChiffragePem, 
+        messageBytes, 'Messagerie', certifcatsChiffragePem, 
         {DEBUG: true, identificateurs_document: {'message': 'true'}, nojson: true, type: 'binary'}
     )
     // console.debug("Message chiffre : %O", messageChiffre)

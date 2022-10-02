@@ -139,10 +139,9 @@ function NouveauMessage(props) {
     useEffect(()=>{
         const { clesDao } = workers
         clesDao.getCertificatsMaitredescles()
-            .then(reponse=>{
-                console.debug("Reponse certificats maitre des cles ", reponse)
-                throw new Error("fix me")
-                setCertificatsMaitredescles()
+            .then(certificats=>{
+                console.debug("Reponse certificats maitre des cles ", certificats)
+                setCertificatsMaitredescles(certificats)
             })
             .catch(err=>erreurCb(err, "Erreur chargement du certificat de maitre des cles"))
     }, [workers, setCertificatsMaitredescles])
@@ -343,7 +342,7 @@ function AfficherDrafts(props) {
     )
 }
 
-async function envoyer(workers, certificatChiffragePem, from, to, content, opts) {
+async function envoyer(workers, certificatsChiffragePem, from, to, content, opts) {
     opts = opts || {}
 
     if(opts.attachments) {
@@ -354,7 +353,7 @@ async function envoyer(workers, certificatChiffragePem, from, to, content, opts)
         opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
     }
 
-    const resultat = await posterMessage(workers, certificatChiffragePem, from, to, content, opts)
+    const resultat = await posterMessage(workers, certificatsChiffragePem, from, to, content, opts)
     if(resultat.err) throw resultat.err
 }
 

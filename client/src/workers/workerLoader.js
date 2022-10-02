@@ -1,4 +1,4 @@
-import { wrap, releaseProxy } from 'comlink'
+import { wrap, proxy, releaseProxy } from 'comlink'
 
 import { usagerDao } from '@dugrema/millegrilles.reactjs'
 // import * as collectionsDao from '../redux/collectionsIdbDao'
@@ -41,10 +41,9 @@ export function setupWorkers() {
 }
 
 async function wireWorkers(workers) {
-    const { connexion, chiffrage, transfertFichiers } = workers
-    connexion.setX509Worker(chiffrage).catch(err=>console.error("Erreur chargement connexion worker : %O", err))
-    transfertFichiers.down_setChiffrage(chiffrage).catch(err=>console.error("Erreur chargement transfertFichiers/down worker : %O", err))
-    transfertFichiers.up_setChiffrage(chiffrage).catch(err=>console.error("Erreur chargement transfertFichiers/up worker : %O", err))
+    const { chiffrage, transfertFichiers } = workers
+    await transfertFichiers.down_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/down worker : %O", err))
+    await transfertFichiers.up_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/up worker : %O", err))
 
     const urlLocal = new URL(window.location.href)
     urlLocal.pathname = '/messagerie/fichiers'
