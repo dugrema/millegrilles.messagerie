@@ -255,6 +255,11 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
             console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
 
+            const liste_hachage_bytes = batchMessages.map(item=>item.hachage_bytes)
+            const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
+            const cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages)
+            console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)

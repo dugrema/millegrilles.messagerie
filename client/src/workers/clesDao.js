@@ -9,6 +9,9 @@ function build(workers) {
         getCles(liste_hachage_bytes) {
             return getCles(workers, liste_hachage_bytes)
         },
+        getClesMessages(liste_hachage_bytes, uuid_transaction_messages) {
+            return getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages)
+        },
         getCertificatsMaitredescles() {
             if(cacheCertificatsMaitredescles) return cacheCertificatsMaitredescles
             return getCertificatsMaitredescles(workers)
@@ -54,6 +57,38 @@ async function getCles(workers, liste_hachage_bytes) {
     if(clesManquantes.length > 0) {
         // Recuperer les cles du serveur
         const reponseClesChiffrees = await connexion.getClesFichiers(liste_hachage_bytes)
+        const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
+        Object.assign(clesDechiffrees, cles)
+    }
+
+    return clesDechiffrees
+}
+
+async function getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages) {
+
+    if(typeof(liste_hachage_bytes) === 'string') liste_hachage_bytes = [liste_hachage_bytes]
+    if(typeof(uuid_transaction_messages) === 'string') uuid_transaction_messages = [uuid_transaction_messages]
+
+    const { connexion, usagerDao } = workers
+
+    const clesManquantes = [],
+          clesDechiffrees = {}
+
+    // Recuperer cles connues localement
+    for await (const hachage_bytes of liste_hachage_bytes) {
+        const cleDechiffree = await usagerDao.getCleDechiffree(hachage_bytes)
+        if(cleDechiffree) {
+            clesDechiffrees[hachage_bytes] = cleDechiffree
+        } else {
+            clesManquantes.push(hachage_bytes)
+        }
+    }
+
+    console.debug("Cles connues : %d, cles manquantes : %d", Object.keys(clesDechiffrees).length, clesManquantes.length)
+    if(clesManquantes.length > 0) {
+        // Recuperer les cles du serveur
+        const reponseClesChiffrees = await connexion.getPermissionMessages(uuid_transaction_messages)
+        console.debug("Reponse cles chiffrees : ", reponseClesChiffrees)
         const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
         Object.assign(clesDechiffrees, cles)
     }
