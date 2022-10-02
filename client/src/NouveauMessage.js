@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, version } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { proxy } from 'comlink'
 
 import Row from 'react-bootstrap/Row'
@@ -12,8 +13,9 @@ import Dropdown from 'react-bootstrap/Dropdown'
 import ReactQuill from 'react-quill'
 import { useDropzone } from 'react-dropzone'
 
-import { ListeFichiers, FormatteurTaille, AlertTimeout } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, AlertTimeout, useDetecterSupport } from '@dugrema/millegrilles.reactjs'
 
+import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
 import { posterMessage, getClesFormattees } from './messageUtils'
 import { chargerProfilUsager } from './profil'
 import { uploaderFichiers } from './fonctionsFichiers'
@@ -28,10 +30,20 @@ import { mapper } from './mapperFichier'
 function NouveauMessage(props) {
 
     const { 
-        workers, etatConnexion, setAfficherNouveauMessage, certificatMaitreDesCles, usager, userId, dnsMessagerie, 
+        setAfficherNouveauMessage, dnsMessagerie, 
         showConfirmation, messageRepondre, setMessageRepondre,
-        evenementUpload, supportMedia,
     } = props
+
+    const workers = useWorkers(),
+          etatConnexion = useEtatConnexion(),
+          usager = useUsager(),
+          supportMedia = useDetecterSupport()
+
+    const profil = useSelector(state=>state.contacts.profil)
+
+    const userId = profil.userId
+
+    const [certificatsMaitredescles, setCertificatsMaitredescles] = useState('')
 
     const [to, setTo] = useState('')
     const [content, setContent] = useState('')
@@ -69,7 +81,7 @@ function NouveauMessage(props) {
 
     const envoyerCb = useCallback(()=>{
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
-        envoyer(workers, certificatMaitreDesCles, from, to, content, opts)
+        envoyer(workers, certificatsMaitredescles, from, to, content, opts)
             .then(()=>{
                 showConfirmation("Message envoye")
                 supprimerDraftCb(idDraft)
@@ -80,7 +92,7 @@ function NouveauMessage(props) {
                 erreurCb(err, 'Erreur envoi message')
             })
     }, [
-        workers, showConfirmation, certificatMaitreDesCles, 
+        workers, showConfirmation, certificatsMaitredescles, 
         from, to, replyTo, content, uuidThread, attachments, attachmentsCles, optionVideo,
         fermer, supprimerDraftCb, idDraft, erreurCb,
     ])
@@ -125,7 +137,18 @@ function NouveauMessage(props) {
     }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, setAttachmentsCles, erreurCb])
 
     useEffect(()=>{
-        throw new Error("fix me - redux")
+        const { clesDao } = workers
+        clesDao.getCertificatsMaitredescles()
+            .then(reponse=>{
+                console.debug("Reponse certificats maitre des cles ", reponse)
+                throw new Error("fix me")
+                setCertificatsMaitredescles()
+            })
+            .catch(err=>erreurCb(err, "Erreur chargement du certificat de maitre des cles"))
+    }, [workers, setCertificatsMaitredescles])
+
+    useEffect(()=>{
+        console.error("getListeDrafts() fix me")
         // MessageDao.getListeDrafts()
         //     .then(drafts=>{
         //         // console.debug("Drafts : %O", drafts)
@@ -157,7 +180,7 @@ function NouveauMessage(props) {
         if(!idDraft) {
             if(to || content || attachments) {  // Champs modifiables par l'usager
                 // Creer un nouveau draft
-                throw new Error("fix me - redux")
+                //throw new Error("fix me - redux")
                 // MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
             }
         } else {
@@ -237,7 +260,6 @@ function NouveauMessage(props) {
                 setAttachmentsPending={setAttachmentsPending}
                 attachmentsCles={attachmentsCles}
                 setAttachmentsCles={setAttachmentsCles}
-                evenementUpload={evenementUpload} 
                 supportMedia={supportMedia}
                 optionVideo={optionVideo}
                 setOptionVideo={setOptionVideo}
@@ -458,9 +480,8 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
 
 function AfficherAttachments(props) {
     const { 
-        workers, etatConnexion, evenementUpload, erreurCb,
+        workers, etatConnexion, erreurCb,
         attachments, setAttachments, attachmentsPending, setAttachmentsPending,
-        // setAttachmentsPrets, 
         attachmentsCles, setAttachmentsCles, 
         optionVideo, setOptionVideo,
     } = props
@@ -470,7 +491,6 @@ function AfficherAttachments(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
     const [selection, setSelection] = useState('')
     const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
-    const [evenementUpload1, addEvenementUpload1] = useState('')
     const [tuuidsAttachments, setTuuidsAttachments] = useState('')
     
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
@@ -478,8 +498,6 @@ function AfficherAttachments(props) {
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
 
-    const addEvenementUpload1Proxy = useMemo(()=>proxy(addEvenementUpload1), [addEvenementUpload1])
-    
     const tuuidsAttachmentHandler = useCallback((attachmentsMaj, attachmentsPendingMaj)=>{
         console.debug("tuuidsAttachmentHandler attachments: %O, attachmentsPending : %O", attachmentsMaj, attachmentsPendingMaj)
 
@@ -565,104 +583,104 @@ function AfficherAttachments(props) {
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
-    // Capturer evenement upload
-    useEffect(()=>addEvenementUpload1(evenementUpload), [evenementUpload, addEvenementUpload1])
-    // Traiter evenement upload
-    useEffect(()=>{
-        if(!evenementUpload1) return  // Rien a faire
-        addEvenementUpload1('')  // Eviter cycle
+    // // Capturer evenement upload
+    // useEffect(()=>addEvenementUpload1(evenementUpload), [evenementUpload, addEvenementUpload1])
+    // // Traiter evenement upload
+    // useEffect(()=>{
+    //     if(!evenementUpload1) return  // Rien a faire
+    //     addEvenementUpload1('')  // Eviter cycle
 
-        console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
-        if(attachmentsPending) {
-            const routingKey = evenementUpload1.routingKey
-            if(routingKey) {
-                const message = evenementUpload1.message
-                const { tuuid, version_courante } = message
-                const mimetype = (version_courante?version_courante.mimetype:null) || ''
-                const baseType = mimetype.split('/').shift()
+    //     console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
+    //     if(attachmentsPending) {
+    //         const routingKey = evenementUpload1.routingKey
+    //         if(routingKey) {
+    //             const message = evenementUpload1.message
+    //             const { tuuid, version_courante } = message
+    //             const mimetype = (version_courante?version_courante.mimetype:null) || ''
+    //             const baseType = mimetype.split('/').shift()
 
-                let complete = false
-                if(version_courante) {
-                    if(baseType === 'video') {
-                        const videos = version_courante.video || {},
-                              images = version_courante.images || {}
-                        complete = images.thumb && Object.values(videos).filter(item=>item.codec === 'h264').pop()
-                    } else if(baseType === 'image') {
-                        const images = version_courante.images || {}
-                        complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
-                    } else if(mimetype === 'application/pdf') {
-                        const images = version_courante.images || {}
-                        complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
-                    } else {
-                        complete = true  // Version courante, aucune autre information requise
-                    }
-                }
+    //             let complete = false
+    //             if(version_courante) {
+    //                 if(baseType === 'video') {
+    //                     const videos = version_courante.video || {},
+    //                           images = version_courante.images || {}
+    //                     complete = images.thumb && Object.values(videos).filter(item=>item.codec === 'h264').pop()
+    //                 } else if(baseType === 'image') {
+    //                     const images = version_courante.images || {}
+    //                     complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
+    //                 } else if(mimetype === 'application/pdf') {
+    //                     const images = version_courante.images || {}
+    //                     complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
+    //                 } else {
+    //                     complete = true  // Version courante, aucune autre information requise
+    //                 }
+    //             }
 
-                const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
-                    const fileId = item.fileId || item.tuuid
-                    if(fileId === tuuid) { // Remplacer
-                        const fichier = {fileId, ...evenementUpload1.message}
-                        // Determiner si l'attachment est pret
-                        if(!complete) {
-                            const row = preparerRowAttachment(workers, fichier)
-                            acc.push(row)
-                        }
-                    } else {
-                        acc.push(item)  // Conserver
-                    }
+    //             const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
+    //                 const fileId = item.fileId || item.tuuid
+    //                 if(fileId === tuuid) { // Remplacer
+    //                     const fichier = {fileId, ...evenementUpload1.message}
+    //                     // Determiner si l'attachment est pret
+    //                     if(!complete) {
+    //                         const row = preparerRowAttachment(workers, fichier)
+    //                         acc.push(row)
+    //                     }
+    //                 } else {
+    //                     acc.push(item)  // Conserver
+    //                 }
 
-                    return acc
-                }, [])
+    //                 return acc
+    //             }, [])
 
-                setAttachmentsPending(attachmentsPendingMaj)
-                if(complete) {
-                    const rowAttachment = preparerRowAttachment(workers, message)
-                    selectionner([rowAttachment])
-                }
-            } else {
-                const { complete, transaction } = evenementUpload1
-                // TODO Fix race condition sur setAttachmentsPending / liste pending
-                if(!complete) return  // Rien a faire, evite race condition sur selection
+    //             setAttachmentsPending(attachmentsPendingMaj)
+    //             if(complete) {
+    //                 const rowAttachment = preparerRowAttachment(workers, message)
+    //                 selectionner([rowAttachment])
+    //             }
+    //         } else {
+    //             const { complete, transaction } = evenementUpload1
+    //             // TODO Fix race condition sur setAttachmentsPending / liste pending
+    //             if(!complete) return  // Rien a faire, evite race condition sur selection
 
-                // const nouvelUpload = { correlation: complete, ...transaction }
-                let majListeners = false
-                const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
-                    if(transaction) {
-                        majListeners = true
-                        if(item.correlation === complete) {
-                            // Conserver identificateur tuuid (override correlation)
-                            const entete = transaction['en-tete']
-                            const tuuid = entete.uuid_transaction
-                            const attachmentMaj = {fileId: tuuid, tuuid, ...transaction}
-                            acc.push(attachmentMaj)
-                        } else {
-                            acc.push(item)  // Toujours actif
-                        }
-                    } else {
-                        acc.push(item)  // Toujours actif
-                    }
+    //             // const nouvelUpload = { correlation: complete, ...transaction }
+    //             let majListeners = false
+    //             const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
+    //                 if(transaction) {
+    //                     majListeners = true
+    //                     if(item.correlation === complete) {
+    //                         // Conserver identificateur tuuid (override correlation)
+    //                         const entete = transaction['en-tete']
+    //                         const tuuid = entete.uuid_transaction
+    //                         const attachmentMaj = {fileId: tuuid, tuuid, ...transaction}
+    //                         acc.push(attachmentMaj)
+    //                     } else {
+    //                         acc.push(item)  // Toujours actif
+    //                     }
+    //                 } else {
+    //                     acc.push(item)  // Toujours actif
+    //                 }
                     
-                    return acc
-                }, [])
-                setAttachmentsPending(attachmentsPendingMaj)
-                if(majListeners) tuuidsAttachmentHandler(null, attachmentsPendingMaj)
-            }
-        }
-    }, [workers, evenementUpload1, selectionner, attachmentsPending, setAttachmentsPending, addEvenementUpload1])
+    //                 return acc
+    //             }, [])
+    //             setAttachmentsPending(attachmentsPendingMaj)
+    //             if(majListeners) tuuidsAttachmentHandler(null, attachmentsPendingMaj)
+    //         }
+    //     }
+    // }, [workers, evenementUpload1, selectionner, attachmentsPending, setAttachmentsPending, addEvenementUpload1])
 
-    // Enregistrer evenements ecoute maj fichiers (attachments)
-    useEffect(()=>{
-        const { connexion } = workers
-        if(tuuidsAttachments && tuuidsAttachments.length > 0) {
-            const params = {tuuids: tuuidsAttachments}
-            console.debug("Ajouter listener fichiers %O", params)
-            connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
-            return () => {
-                console.debug("Retirer listener fichiers %O", params)
-                connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
-            }
-        }
-    }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
+    // // Enregistrer evenements ecoute maj fichiers (attachments)
+    // useEffect(()=>{
+    //     const { connexion } = workers
+    //     if(tuuidsAttachments && tuuidsAttachments.length > 0) {
+    //         const params = {tuuids: tuuidsAttachments}
+    //         console.debug("Ajouter listener fichiers %O", params)
+    //         connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
+    //         return () => {
+    //             console.debug("Retirer listener fichiers %O", params)
+    //             connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
+    //         }
+    //     }
+    // }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
 
     // useEffect(()=>{
     //     if(attachments) {

@@ -28,7 +28,7 @@ const ROUTING_KEYS_COLLECTIONS = [
 // ...ROUTING_KEYS_COLLECTIONS,
 // ]
 
-let _certificatMaitreCles = null,
+let // _certificatsMaitreCles = null,
     _domainesApplications = null
 
 function challenge(socket, params) {
@@ -42,28 +42,9 @@ function challenge(socket, params) {
     return socket.amqpdao.pki.formatterMessage(reponse, 'challenge', {ajouterCertificat: true})
 }
 
-async function getClesChiffrage(socket, params) {
-    let certificatMaitreCles = _certificatMaitreCles
-    if(!certificatMaitreCles) {
-        debug("Requete pour certificat maitre des cles")
-
-        try {
-            certificatMaitreCles = await socket.amqpdao.transmettreRequete(
-                CONST_DOMAINE_MAITREDESCLES, {}, 
-                {action: 'certMaitreDesCles', decoder: true}
-            )
-
-            // TTL
-            setTimeout(()=>{_certificatMaitreCles=null}, 120_000)
-        } catch(err) {
-            console.error("mqdao.transmettreRequete ERROR : %O", err)
-            return {ok: false, err: ''+err}
-        }
-    
-        // certificatMaitreCles = await transmettreRequete(socket, params, 'certMaitreDesCles', {domaine: CONST_DOMAINE_MAITREDESCLES})
-        _certificatMaitreCles = certificatMaitreCles
-    }
-    return certificatMaitreCles
+async function getClesChiffrage(socket) {
+    const certificats = await socket.amqpdao.getCertificatsMaitredescles()
+    return certificats
 }
 
 function getProfil(socket, params) {

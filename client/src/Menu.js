@@ -74,6 +74,10 @@ function Menu(props) {
             </Nav.Link>
         </Nav.Item>
 
+        <Nav.Link eventKey="nouveauMessage" title={t('menu.nouveauMessage')}>
+            {t('menu.nouveauMessage')}
+        </Nav.Link>
+
         <Nav.Link eventKey="contacts" title={t('menu.contacts')}>
             {t('menu.contacts')}
         </Nav.Link>

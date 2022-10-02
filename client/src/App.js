@@ -13,15 +13,10 @@ import storeSetup from './redux/store'
 import { LayoutMillegrilles, ModalErreur, TransfertModal, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import messagerieActions from './redux/messagerieSlice'
-import contactsActions, {thunks as contactsThunks} from './redux/contactsSlice'
+import {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
-
-// import Contacts, {chargerContenuContacts} from './Contacts'
-
-import { detecterSupport } from './fonctionsFichiers'
-import setWorkersTraitementFichiers from './workers/traitementFichiers'
 import { dechiffrerMessage } from './cles'
 
 import './i18n'
@@ -32,6 +27,7 @@ import 'react-bootstrap/dist/react-bootstrap.min.js'
 // Importer cascade CSS global
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'font-awesome/css/font-awesome.min.css'
+import 'react-quill/dist/quill.snow.css'
 import '@dugrema/millegrilles.reactjs/dist/index.css'
 
 import manifest from './manifest.build'
@@ -112,7 +108,6 @@ function LayoutMain() {
   const [afficherContacts, setAfficherContacts] = useState(false)
   const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   const [uuidMessage, setUuidMessage] = useState('')
-  const [dossier, setDossier] = useState('')
   
   const [erreur, setErreur] = useState('')
   const erreurCb = useCallback((err, message)=>{
@@ -145,14 +140,18 @@ function LayoutMain() {
   const handlerSelect = useCallback(eventKey => {
     switch(eventKey) {
       case 'contacts':
-        console.debug("Afficher contacts")
         setAfficherContacts(true)
+        break
+      case 'nouveauMessage':
+        setAfficherNouveauMessage(true)
         break
       case '':
       default:
+        // Revenir a la reception de messages
         setAfficherContacts(false)
+        setAfficherNouveauMessage(false)
     }
-  }, [setAfficherContacts])
+  }, [setAfficherContacts, setAfficherNouveauMessage])
 
   const menu = (
     <Menu 

@@ -56,22 +56,6 @@ async function getCles(workers, liste_hachage_bytes) {
         const reponseClesChiffrees = await connexion.getClesFichiers(liste_hachage_bytes)
         const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
         Object.assign(clesDechiffrees, cles)
-        // console.debug("getCles reponseClesChiffrees ", reponseClesChiffrees)
-        // for await(const cleHachage_bytes of Object.keys(reponseClesChiffrees.cles)) {
-        //     const infoCle = reponseClesChiffrees.cles[cleHachage_bytes]
-        //     const cleSecrete = await chiffrage.dechiffrerCleSecrete(infoCle.cle)
-
-        //     infoCle.cleSecrete = cleSecrete
-        //     delete infoCle.cle  // Supprimer cle chiffree
-
-        //     // Sauvegarder la cle pour reutilisation
-        //     usagerDao.saveCleDechiffree(cleHachage_bytes, cleSecrete, infoCle)
-        //         .catch(err=>{
-        //             console.warn("clesDao.getCles Erreur sauvegarde cle dechiffree %s dans la db locale", err)
-        //         })
-        
-        //     clesDechiffrees[cleHachage_bytes] = infoCle
-        // }
     }
 
     return clesDechiffrees
@@ -79,7 +63,8 @@ async function getCles(workers, liste_hachage_bytes) {
 
 async function getCertificatsMaitredescles(workers) {
     const { connexion } = workers
-    return connexion.getCertificatsMaitredescles()
+    const reponse = await connexion.getCertificatsMaitredescles()
+    return reponse
 }
 
 async function traiterReponseCles(workers, reponseCles) {

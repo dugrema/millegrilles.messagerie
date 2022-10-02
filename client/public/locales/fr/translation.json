@@ -5,6 +5,7 @@
     },
     "menu": {
         "messagerie": "Messagerie",
+        "nouveauMessage": "Nouveau",
         "contacts": "Contacts",
         "information": "Information",
         "language": "Language",
