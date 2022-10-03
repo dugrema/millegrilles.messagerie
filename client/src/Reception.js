@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
 
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -7,22 +8,26 @@ import Nav from 'react-bootstrap/Nav'
 
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
+import useWorkers, {useEtatConnexion, useEtatAuthentifie, useUsager} from './WorkerContext'
 
 function ListeMessages(props) {
 
-    console.error("Not implemented")
-    return ''
+    const { 
+        colonnes, enteteOnClickCb,
+        supprimerMessagesCb,
+    } = props
 
-    // const { 
-    //     workers, etatConnexion, etatAuthentifie, 
-    //     messages, compteMessages, colonnes, enteteOnClickCb, setUuidMessage, setDossier,
-    //     isListeComplete, getMessagesSuivants,
-    //     supprimerMessagesCb, setAfficherNouveauMessage,
-    // } = props
+    const etatConnexion = useEtatConnexion(),
+          etatAuthentifie = useEtatAuthentifie()
 
-    // const [filtreMessage, setFiltreMessage] = useState('actifs')
+    const messages = useSelector(state=>state.messagerie.liste),
+          compteMessages = messages?messages.length:0
 
-    // const afficherNouveauMessageCb = useCallback(() => setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
+    const [filtreMessage, setFiltreMessage] = useState('actifs')
+
+    const afficherNouveauMessageCb = useCallback(() => {
+        throw new Error("todo")
+    }, [])
 
     // useEffect(()=>{
     //     if(filtreMessage === 'supprimes') setDossier('supprimes')
@@ -30,46 +35,41 @@ function ListeMessages(props) {
     //     else setDossier('')
     // }, [filtreMessage, setDossier])
 
-    // if(!messages) return <p>Aucun message disponible.</p>
+    if(!messages || messages.length === 0) return <p>Aucun message disponible.</p>
     
-    // return (
-    //     <div>
-    //         <h3>Messages</h3>
+    return (
+        <div>
+            <h3>Messages</h3>
 
-    //         <Row>
-    //             <Col xs={12} md={3} className="buttonbar-left">
-    //                 <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
-    //             </Col>
-    //             <Col xs={12} md={6} className="buttonbar-left">
-    //                 <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
-    //                     <Nav.Item>
-    //                         <Nav.Link eventKey="actifs">Reception</Nav.Link>
-    //                     </Nav.Item>
-    //                     <Nav.Item>
-    //                         <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
-    //                     </Nav.Item>
-    //                     <Nav.Item>
-    //                         <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
-    //                     </Nav.Item>
-    //                 </Nav>
-    //             </Col>
-    //             <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
-    //         </Row>
+            <Row>
+                <Col xs={12} md={3} className="buttonbar-left">
+                    <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
+                </Col>
+                <Col xs={12} md={6} className="buttonbar-left">
+                    <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
+                        <Nav.Item>
+                            <Nav.Link eventKey="actifs">Reception</Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
+                        </Nav.Item>
+                    </Nav>
+                </Col>
+                <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+            </Row>
 
-    //         <AfficherListeMessages 
-    //             workers={workers}
-    //             colonnes={colonnes}
-    //             messages={messages} 
-    //             setUuidMessage={setUuidMessage} 
-    //             getMessagesSuivants={getMessagesSuivants}
-    //             isListeComplete={isListeComplete} 
-    //             enteteOnClickCb={enteteOnClickCb}
-    //             etatConnexion={etatConnexion}
-    //             etatAuthentifie={etatAuthentifie}
-    //             supprimerMessagesCb={supprimerMessagesCb}
-    //         />
-    //     </div>
-    // )
+            <AfficherListeMessages 
+                colonnes={colonnes}
+                enteteOnClickCb={enteteOnClickCb}
+                etatConnexion={etatConnexion}
+                etatAuthentifie={etatAuthentifie}
+                supprimerMessagesCb={supprimerMessagesCb}
+            />
+        </div>
+    )
 
 }
 
@@ -89,11 +89,16 @@ function AfficherNombreMessages(props) {
 
 function AfficherListeMessages(props) {
     const { 
-        workers, etatConnexion, etatAuthentifie,
-        messages, colonnes, setUuidMessage, 
-        isListeComplete, getMessagesSuivants, enteteOnClickCb,
+        colonnes, 
+        enteteOnClickCb,
         supprimerMessagesCb,
     } = props
+
+    const workers = useWorkers(),
+          etatConnexion = useEtatConnexion(),
+          etatAuthentifie = useEtatAuthentifie()
+
+    const messages = useSelector(state=>state.messagerie.liste)
 
     const [selection, setSelection] = useState('')
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
@@ -106,12 +111,14 @@ function AfficherListeMessages(props) {
         event.preventDefault()
         event.stopPropagation()
 
+        throw new Error("to do: ouvrir")
+
         // console.debug("Ouvrir event : %O, selection: %O", event, selection)
-        if(selection.length > 0) {
-            const uuid_message = selection[0]
-            setUuidMessage(uuid_message)
-        }
-    }, [selection, setUuidMessage])
+        // if(selection.length > 0) {
+        //     const uuid_message = selection[0]
+        //     setUuidMessage(uuid_message)
+        // }
+    }, [selection])
 
     const supprimerMessages = useCallback( ()=>{ 
         supprimerMessagesCb(selection)
@@ -130,7 +137,6 @@ function AfficherListeMessages(props) {
                 onContextMenu={onContextMenuCb}
                 onSelection={onSelectionLignes}
                 onClickEntete={enteteOnClickCb}
-                suivantCb={isListeComplete?'':getMessagesSuivants}
             />
 
             <MenuContextuelMessages 

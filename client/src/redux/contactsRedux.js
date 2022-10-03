@@ -107,7 +107,7 @@ function mergeContactsDataAction(state, action) {
     }
 
     // Trier
-    state.liste.sort(genererTriListe(state.sortKeys))
+    if(doitTrier) state.liste.sort(genererTriListe(state.sortKeys))
 }
 
 // Ajouter des contacts a la liste a dechiffrer

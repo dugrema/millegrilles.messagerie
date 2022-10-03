@@ -78,10 +78,44 @@ function mergeMessagesDataAction(state, action) {
         payload = [payload]
     }
 
-    console.error("mergeMessagesDataAction Not implemented")
-    
+    let doitTrier = false
+
+    for (const payloadMessage of payload) {
+        let { uuid_transaction } = payloadMessage
+        console.debug("mergeMessagesDataAction action: %O, uuid_transaction : %O", action, uuid_transaction)
+
+        // Ajout flag _mergeVersion pour rafraichissement ecran
+        const data = {...payloadMessage}
+        data['_mergeVersion'] = mergeVersion
+
+        const liste = state.liste || []
+        
+        let retirer = data.supprime === true,
+            peutAppend = !retirer
+
+        // Recuperer version courante (en memoire)
+        let dataCourant = liste.filter(item=>item.uuid_transaction === uuid_transaction).pop()
+
+        if(dataCourant) {
+            if(retirer) {
+                state.liste = liste.filter(item=>item.uuid_transaction !== uuid_transaction)
+            } else {
+                dataCourant = {...dataCourant, ...data}
+                let listeModifiee = liste.map(item=>{
+                    if(item.uuid_transaction !== uuid_transaction) return item
+                    return dataCourant
+                })
+                state.liste = listeModifiee
+            }
+        } else if(peutAppend) {
+            liste.push(data)
+            state.liste = liste
+            doitTrier = true
+        }
+    }
+
     // Trier
-    state.liste.sort(genererTriListe(state.sortKeys))
+    if(doitTrier) state.liste.sort(genererTriListe(state.sortKeys))
 }
 
 // Ajouter des messages a la liste a dechiffrer
@@ -172,14 +206,15 @@ export function creerThunks(actions, nomSlice) {
         dispatch(clearMessages())
 
         // // Charger le contenu de la collection deja connu et dechiffre
-        // const contenuIdb = await messagerieDao.getContacts(userId)
-        // if(contenuIdb && contenuIdb.length > 0) {
-        //     // Remplacer la liste de contacts
-        //     dispatch(pushContacts({liste: contenuIdb, clear: true}))
-        // } else {
-        //     // Nettoyer la liste
-        //     dispatch(clearContacts())
-        // }
+        const contenuIdb = await messagerieDao.getMessages(userId)
+        console.debug("traiterRafraichirMessages Messages ", contenuIdb)
+        if(contenuIdb && contenuIdb.length > 0) {
+            // Remplacer la liste de contacts
+            dispatch(pushMessages({liste: contenuIdb, clear: true}))
+        } else {
+            // Nettoyer la liste
+            dispatch(clearMessages())
+        }
     
         const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
 
@@ -206,15 +241,36 @@ export function creerThunks(actions, nomSlice) {
     }
 
     async function traiterChargerMessagesParSyncid(workers, messages, dispatch, getState) {
+        const { messagerieDao } = workers
         const state = getState()[nomSlice]
         const userId = state.userId
     
-        const { messagerieDao } = workers
-        const batchUuids = messages.map(item=>item.uuid_transaction)
+        let batchUuids = new Set()
+        for await (const messageSync of messages) {
+            const uuid_transaction = messageSync.uuid_transaction
+            const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
+            console.debug("Message idb pour %s = %O", uuid_transaction, messageIdb)
+            if(messageIdb) {
+                // Message connu, merge flags
+                const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
+                if(messageMaj.dechiffre === 'true') {
+                    // Deja dechiffre, on le guarde
+                    dispatch(actions.mergeMessagesData(messageMaj))
+                }
+            } else {
+                // Message inconnu, on le charge
+                console.debug("Message inconnu ", uuid_transaction)
+                batchUuids.add(uuid_transaction)
+            }
+        }
     
-        const listeMessages = await chargerBatchMessages(workers, batchUuids)
-        console.debug("Liste messages recue : ", listeMessages)
-        await messagerieDao.mergeReferenceMessages(userId, listeMessages)
+        batchUuids = [...batchUuids]
+        if(batchUuids.length > 0) {
+            console.debug("Charger messages du serveur ", batchUuids)
+            const listeMessages = await chargerBatchMessages(workers, batchUuids)
+            console.debug("Liste messages recue : ", listeMessages)
+            await messagerieDao.mergeReferenceMessages(userId, listeMessages)
+        }
     }
     
     const thunks = { 

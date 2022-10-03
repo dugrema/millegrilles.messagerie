@@ -10,10 +10,10 @@ export function init() {
     return ouvrirDB()
 }
 
-export async function getMessage(uuid_transaction) {
+export async function getMessage(userId, uuid_transaction) {
     const db = await ouvrirDB()
     const store = db.transaction(STORE_MESSAGES, 'readonly').objectStore(STORE_MESSAGES)
-    return store.get(uuid_transaction)
+    return store.get([uuid_transaction, userId])
 }
 
 export async function getMessagesChiffres(userId, opts) {
@@ -88,10 +88,14 @@ export async function updateMessage(message, opts) {
     const store = db.transaction(STORE_MESSAGES, 'readwrite').store
     if(opts.replace) {
         await store.put(message)
+        return message
     } else {
-        const messageOriginal = await store.get(message.uuid_transaction)
+        const userId = message.user_id || opts.userId
+        if(!userId) throw new Error("messagerieIdbDao.updateMessage userId doit etre fourni")
+        const messageOriginal = await store.get([message.uuid_transaction, userId])
         const messageMaj = {...messageOriginal, ...message}
         await store.put(messageMaj)
+        return messageMaj
     }
 }
 

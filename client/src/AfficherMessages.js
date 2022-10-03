@@ -1,15 +1,18 @@
-import { useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
+
+import {  FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import ListeMessages from './Reception'
 
-function Accueil(props) {
+function AfficherMessages(props) {
 
     const { 
-        workers, setUuidMessage,
-        colonnes, setColonnes, listeMessages, compteMessages, getMessagesSuivants, isListeComplete, setDossier,
+        setUuidMessage, listeMessages, compteMessages, getMessagesSuivants, isListeComplete, setDossier,
         supprimerMessagesCb, setAfficherNouveauMessage,
-     } = props
+    } = props
+
+    const [colonnes, setColonnes] = useState(preparerColonnes())
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -33,10 +36,9 @@ function Accueil(props) {
             <BreadcrumbMessages />
 
             <ListeMessages 
-                workers={workers} 
+                colonnes={colonnes}
                 messages={listeMessages} 
                 compteMessages={compteMessages}
-                colonnes={colonnes}
                 isListeComplete={isListeComplete}
                 getMessagesSuivants={getMessagesSuivants}
                 enteteOnClickCb={enteteOnClickCb}
@@ -49,7 +51,7 @@ function Accueil(props) {
 
 }
 
-export default Accueil
+export default AfficherMessages
 
 function BreadcrumbMessages(props) {
     return (
@@ -58,3 +60,30 @@ function BreadcrumbMessages(props) {
         </Breadcrumb>
     )
 }
+
+export function preparerColonnes(workers, opts) {
+    opts = opts || {}
+  
+    const messages_envoyes = opts.messages_envoyes?true:false
+    const colonne_date = messages_envoyes?'date_envoi':'date_reception'
+  
+    const params = {
+        ordreColonnes: [colonne_date, 'from', 'subject', 'boutonDetail'],
+        paramsColonnes: {
+            [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
+            'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
+            'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
+            'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
+        },
+        tri: {colonne: colonne_date, ordre: -1},
+        // rowLoader: data => dechiffrerMessage(workers, data)
+        idMapper: data => data.uuid_transaction,
+        // rowLoader: async data => data,
+        rowClassname: data => {
+          if(data.lu !== true) return 'nouveau'
+          return ''
+        }
+    }
+  
+    return params
+  }
