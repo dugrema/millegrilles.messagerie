@@ -1,5 +1,6 @@
 import { base64 } from 'multiformats/bases/base64'
 import { createSlice, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
+import { dechiffrerMessage } from '../cles'
 
 const SOURCE_INBOX = 'inbox',
       SOURCE_OUTBOX = 'outbox',
@@ -255,7 +256,12 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
             console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
 
-            const liste_hachage_bytes = batchMessages.map(item=>item.hachage_bytes)
+            // Identifier hachage_bytes et uuid_transaction de la bacth de messages
+            const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
+                acc.add(item.hachage_bytes)
+                if(item.attachments) for(const hachage_bytes of item.attachments) { acc.add(hachage_bytes) }
+                return acc
+            }, new Set())
             const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
             const cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages)
             console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
@@ -263,6 +269,21 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                
+                const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
+                // const docMessage = { 
+                //     data_chiffre: docCourant.message_chiffre,
+                //     hachage_bytes: docCourant.hachage_bytes,
+                //     format: docCourant.format,
+                //     header: cleDechiffrageMessage.header,
+                //     iv: cleDechiffrageMessage.iv,
+                //     tag: cleDechiffrageMessage.tag,
+                // }
+                console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                // const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docMessage, cleDechiffrageMessage)
+                const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
+                console.debug("Contenu dechiffre : ", dataDechiffre)
+
                 // const ref_hachage_bytes = docCourant.ref_hachage_bytes
                 // if(ref_hachage_bytes === cle_ref_hachage_bytes) {
                 //     const cleDechiffrageContact = {...cleDechiffrage, ...message}

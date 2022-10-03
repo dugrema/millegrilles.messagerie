@@ -4,29 +4,29 @@ import pako from 'pako'
 
 const { extraireExtensionsMillegrille } = forgecommon
 
-export async function dechiffrerMessage(workers, message) {
+export async function dechiffrerMessage(workers, message, cle) {
     const {uuid_transaction, hachage_bytes, message_chiffre, date_envoi, user_id} = message
 
     let messages_envoyes = date_envoi?true:false
 
-    let liste_hachage_bytes = [hachage_bytes]
-    if(message.attachments) {
-        const hachage_bytes_attachments = Object.keys(message.attachments)
-        liste_hachage_bytes = [...liste_hachage_bytes, ...hachage_bytes_attachments]
-    }
+    // let liste_hachage_bytes = [hachage_bytes]
+    // if(message.attachments) {
+    //     const hachage_bytes_attachments = Object.keys(message.attachments)
+    //     liste_hachage_bytes = [...liste_hachage_bytes, ...hachage_bytes_attachments]
+    // }
 
     // Dechiffrer le message
-    const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes, messages_envoyes})
-        .then(cles=>{
+    // const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes, messages_envoyes})
+    //     .then(cles=>{
             // console.debug("dechiffrerMessage cles : %O", cles)
-            const cle = cles[hachage_bytes],
-                cleDechiffree = cle.cleSecrete
-            // console.debug("dechiffrerMessage params cle: %O, cleDechiffree: %O\nMessage: %O", cle, cleDechiffree, message_chiffre)
-            return workers.chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag)
-        })
-        .then(messageDechiffre=>pako.inflate(messageDechiffre).buffer)
-        .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
-        .then(JSON.parse)
+    // const cle = cles[hachage_bytes]
+
+    const docChiffre = { data_chiffre: message_chiffre }
+
+    const messageDechiffre = await workers.chiffrage.chiffrage.dechiffrerChampsChiffres(docChiffre, cle, {lzma: true})
+        // .then(messageDechiffre=>pako.inflate(messageDechiffre).buffer)
+        // .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
+        // .then(JSON.parse)
     
     let userId = user_id,
         resultatValider = null
