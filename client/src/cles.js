@@ -1,42 +1,25 @@
-import { usagerDao, forgecommon /*saveCleDechiffree, getCleDechiffree*/ } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, forgecommon } from '@dugrema/millegrilles.reactjs'
 import { pki } from '@dugrema/node-forge'
-import pako from 'pako'
 
 const { extraireExtensionsMillegrille } = forgecommon
 
 export async function dechiffrerMessage(workers, message, cle) {
-    const {uuid_transaction, hachage_bytes, message_chiffre, date_envoi, user_id} = message
+    const { message_chiffre, date_envoi, user_id } = message
 
     let messages_envoyes = date_envoi?true:false
 
-    // let liste_hachage_bytes = [hachage_bytes]
-    // if(message.attachments) {
-    //     const hachage_bytes_attachments = Object.keys(message.attachments)
-    //     liste_hachage_bytes = [...liste_hachage_bytes, ...hachage_bytes_attachments]
-    // }
-
-    // Dechiffrer le message
-    // const messageDechiffre = await getClesMessages(workers, uuid_transaction, {liste_hachage_bytes, messages_envoyes})
-    //     .then(cles=>{
-            // console.debug("dechiffrerMessage cles : %O", cles)
-    // const cle = cles[hachage_bytes]
-
     const docChiffre = { data_chiffre: message_chiffre }
-
     const messageDechiffre = await workers.chiffrage.chiffrage.dechiffrerChampsChiffres(docChiffre, cle, {lzma: true})
-        // .then(messageDechiffre=>pako.inflate(messageDechiffre).buffer)
-        // .then(messageDechiffre=>new TextDecoder().decode(messageDechiffre))
-        // .then(JSON.parse)
     
     let userId = user_id,
         resultatValider = null
+
     if(!messages_envoyes) {
         // Message incoming, valider
         const certificat_message = message.certificat_message,
             certificat_millegrille = message.certificat_millegrille
         const certForge = pki.certificateFromPem(certificat_message)
         const extensions = extraireExtensionsMillegrille(certForge)
-        // console.debug("Extensions cert : %O", extensions)
         userId = extensions.userId
 
         resultatValider = await workers.chiffrage.verifierMessage(
@@ -149,53 +132,3 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
 
     return cles
 }
-
-// async function chargerClesMessages(workers, listeMessages) {
-//     const { connexion, chiffrage } = workers
-
-//     if(!listeMessages || listeMessages.length === 0) return  // Rien a faire
-
-//     const uuidMessages = listeMessages.map(item=>item.uuid_transaction)
-//     const reponseCles = await connexion.getPermissionMessages(uuidMessages)
-//     const cles = reponseCles.cles
-//     // console.debug("Reponse permission dechiffrage messages : %O", reponseCles)
-
-//     const messagesDechiffres = []
-//     for(let idx=0; idx<listeMessages.length; idx++) {
-//         const message = listeMessages[idx]
-//         // console.debug("Dechiffrer message : %O", message)
-//         const {uuid_transaction, hachage_bytes, message_chiffre} = message
-//         const cle = cles[hachage_bytes]
-//         // Dechiffrer cle asymmetrique
-//         const cleDechiffree = await chiffrage.dechiffrerCleSecrete(cle.cle)
-//         // const cleDechiffrerBuffer = Buffer.from(cleDechiffree, 'binary').buffer
-//         console.debug("Cle secrete dechiffree : %O", cleDechiffree)
-//         const messageDechiffre = await chiffrage.chiffrage.dechiffrer(message_chiffre, cleDechiffree, cle.iv, cle.tag, {DEBUG: false})
-
-//         // const messageDechiffre = await chiffrage.chiffrage.testDecipher(message_chiffre, cleDechiffree, cle.iv, {tag: cle.tag})
-//         const messageTexte = JSON.parse(new TextDecoder().decode(messageDechiffre))
-//         // console.debug("Message texte : %O", messageTexte)
-//         // console.debug("Dechiffrage du message")
-//         // const messageDechiffre = await decipher.update(message_chiffre)
-//         // console.debug("Message dechiffre : %O", messageDechiffre)
-
-//         // Verification du certificat du message
-//         const dateMessage = new Date(messageTexte['en-tete'].estampille*1000)
-//         // console.debug("Date message : %O", dateMessage)
-//         const certificatVerifie = await chiffrage.validerCertificat(message.certificat_message, dateMessage)
-//         if(certificatVerifie === true) {
-//             // console.debug("Certificat verifie: %O", certificatVerifie)
-//             const messageValide = await chiffrage.verifierMessage({_certificat: message.certificat_message, ...messageTexte})
-//             if(messageValide === true) {
-//                 // console.debug("Message valide : %O", messageValide)
-//                 messagesDechiffres.push({...message, dechiffre: messageTexte})
-//             } else {
-//                 console.warn("Message invalide : %O", messageTexte)
-//             }
-//         } else {
-//             console.warn("Certificat invalide pour message %O", messageTexte)
-//         }
-//     }
-
-//     return messagesDechiffres
-// }

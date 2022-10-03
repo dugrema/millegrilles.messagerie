@@ -84,7 +84,7 @@ export async function getUuidMessagesParEtatChargement(userId, etatChargement, o
 
 export async function updateMessage(message, opts) {
     opts = opts || {}
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_MESSAGES, 'readwrite').store
     if(opts.replace) {
         await store.put(message)

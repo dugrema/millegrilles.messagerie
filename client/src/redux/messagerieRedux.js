@@ -270,45 +270,34 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
+                // Dechiffrer message
                 const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
-                // const docMessage = { 
-                //     data_chiffre: docCourant.message_chiffre,
-                //     hachage_bytes: docCourant.hachage_bytes,
-                //     format: docCourant.format,
-                //     header: cleDechiffrageMessage.header,
-                //     iv: cleDechiffrageMessage.iv,
-                //     tag: cleDechiffrageMessage.tag,
-                // }
                 console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
-                // const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docMessage, cleDechiffrageMessage)
                 const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
                 console.debug("Contenu dechiffre : ", dataDechiffre)
 
-                // const ref_hachage_bytes = docCourant.ref_hachage_bytes
-                // if(ref_hachage_bytes === cle_ref_hachage_bytes) {
-                //     const cleDechiffrageContact = {...cleDechiffrage, ...message}
-                //     console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
-                //     const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact)
-                //     console.debug("Contenu dechiffre : ", dataDechiffre)
-                    
-                //     // Ajout/override champs de metadonne avec contenu dechiffre
-                //     Object.assign(docCourant, dataDechiffre)
-                //     docCourant.dechiffre = 'true'
-                //     docCourant.uuid_transaction = contact.uuid_transaction
-                    
-                //     // Cleanup objet dechiffre
-                //     delete docCourant.data_chiffre
-                //     delete docCourant.ref_hachage_bytes
-                //     delete docCourant.header
-                //     delete docCourant.format
-                    
-                //     // Conserver contact dechiffre
-                //     await messagerieDao.updateContact(userId, docCourant, {replace: true})
-                //     listenerApi.dispatch(actions.mergeContactsData(docCourant))
-                // } else {
-                //     console.error("ref_hachage_bytes : %O, cle : %O", ref_hachage_bytes, cle_ref_hachage_bytes)
-                //     throw new Error("Contact avec mauvais cle - TODO")
-                // }
+                const validation = dataDechiffre.validation
+                if(validation.valide !== true) {
+                    console.warn("Message invalide %s, skip", message.uuid_transaction)
+                    continue
+                }
+
+                // Ajout/override champs de metadonne avec contenu dechiffre
+                Object.assign(docCourant, dataDechiffre)
+                docCourant.dechiffre = 'true'
+
+                // Cleanup objet dechiffre
+                delete docCourant.message_chiffre
+                delete docCourant.hachage_bytes
+                delete docCourant.certificat_message
+                delete docCourant.certificat_millegrille
+                delete docCourant['_signature']
+
+                // Sauvegarder dans IDB
+                await messagerieDao.updateMessage(docCourant, {replace: true})
+
+                // Mettre a jour liste a l'ecran
+                listenerApi.dispatch(actions.mergeMessagesData(docCourant))
             }
 
             messagesChiffres = [...getState().listeDechiffrage]
