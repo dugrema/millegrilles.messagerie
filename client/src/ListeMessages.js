@@ -98,7 +98,8 @@ function AfficherListeMessages(props) {
     const workers = useWorkers(),
           dispatch = useDispatch(),
           etatConnexion = useEtatConnexion(),
-          etatAuthentifie = useEtatAuthentifie()
+          etatAuthentifie = useEtatAuthentifie(),
+          selection = useSelector(state=>state.messagerie.selection)
 
     const messages = useSelector(state=>state.messagerie.liste)
 
@@ -115,15 +116,12 @@ function AfficherListeMessages(props) {
         event.preventDefault()
         event.stopPropagation()
 
-        throw new Error("fix me")
-        //console.debug("Ouvrir event : %O, selection: %O", event, selection)
-        //dispatch(messagerieActions.setUuidMessageActif())
-
-        // if(selection.length > 0) {
-        //     const uuid_message = selection[0]
-        //     setUuidMessage(uuid_message)
-        // }
-    }, [])
+        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        if(selection.length === 1) {
+            const uuid_message = selection[0]
+            dispatch(messagerieActions.setUuidMessageActif(uuid_message))
+        }
+    }, [dispatch, selection])
 
     const supprimerMessages = useCallback( ()=>{ 
         // supprimerMessagesCb(selection)

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
@@ -9,6 +11,9 @@ import multibase from 'multibase'
 
 import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
+import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
+import messagerieActions from './redux/messagerieSlice'
+
 import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
 import { mapper, mapperRowAttachment } from './mapperFichier'
 // import { detecterSupport } from './fonctionsFichiers'
@@ -18,20 +23,37 @@ import PreviewFichiers from './FilePlayer'
 import AfficherVideo from './AfficherVideo'
 
 function AfficherMessage(props) {
-    // console.debug("AfficherMessage proppys: %O", props)
+    console.debug("AfficherMessage proppys: %O", props)
 
     const { 
-        workers, etatConnexion, etatAuthentifie, downloadAction,
-        uuidMessage, setUuidMessage, listeMessages,
-        certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, supportMedia,
+        // workers, etatConnexion, etatAuthentifie, 
+        downloadAction,
+        certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, 
+        supportMedia,
     } = props
-    const message = useMemo(()=>listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop(), [uuidMessage, listeMessages])
+
+    const workers = useWorkers(),
+          dispatch = useDispatch(),
+          etatConnexion = useEtatConnexion(),
+          etatAuthentifie = useEtatAuthentifie()
+
+    const listeMessages = useSelector(state=>state.messagerie.liste),
+          uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif)
+
+    console.debug("uuid message actif : %O, liste messages %O", uuidMessageActif, listeMessages)
+
+    const message = useMemo(()=>{
+        return listeMessages.filter(item=>item.uuid_transaction===uuidMessageActif).pop()
+    }, [uuidMessageActif, listeMessages])
+
     // const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [attachmentACopier, setAttachmentACopier] = useState('')
     const [afficherVideo, setAfficherVideo] = useState(false)
 
-    const retour = useCallback(()=>{setUuidMessage('')}, [setUuidMessage])
+    const retour = useCallback(()=>{
+        dispatch(messagerieActions.setUuidMessageActif(null))
+    }, [dispatch])
     const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
     const choisirCollectionCb = useCallback(
         attachment => {
@@ -65,20 +87,17 @@ function AfficherMessage(props) {
             <BreadcrumbMessage retourMessages={retour} />
 
             <RenderMessage 
-                workers={workers} 
-                etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
-                // message={messageDechiffre} 
                 message={message} 
                 infoMessage={message} 
-                setUuidMessage={setUuidMessage}
                 choisirCollectionCb={choisirCollectionCb} 
                 repondreCb={repondreCb} 
                 transfererCb={transfererCb}
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
-                certificatMaitreDesCles={certificatMaitreDesCles} />
+                certificatMaitreDesCles={certificatMaitreDesCles} 
+                retourMessages={retour} />
 
             <ModalSelectionnerCollection 
                 show={showChoisirCollection} 
@@ -108,9 +127,14 @@ function BreadcrumbMessage(props) {
 function RenderMessage(props) {
     console.debug("RenderMessage : %O", props)
     const { 
-        workers, etatConnexion, downloadAction, choisirCollectionCb, setUuidMessage, repondreCb, transfererCb, 
+        downloadAction, choisirCollectionCb, 
+        // setUuidMessage, 
+        repondreCb, transfererCb, retourMessages,
         afficherVideo, supportMedia, setAfficherVideo, certificatMaitreDesCles, 
     } = props
+
+    const workers = useWorkers()
+
     const message = props.message || {}
     const infoMessage = props.infoMessage || {}
     const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
@@ -129,10 +153,10 @@ function RenderMessage(props) {
         workers.connexion.supprimerMessages(uuid_transaction)
             .then(reponse=>{
                 // console.debug("Message supprime : %O", reponse)
-                setUuidMessage('')  // Retour
+                retourMessages()  // Retour
             })
             .catch(erreurCb)
-    }, [workers, uuid_transaction, setUuidMessage, erreurCb])
+    }, [workers, retourMessages, uuid_transaction, erreurCb])
 
     if(!props.message) return ''
 
@@ -156,8 +180,6 @@ function RenderMessage(props) {
 
             <ContenuMessage 
                 content={content}
-                workers={workers} 
-                etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
                 attachments={attachments} 
                 attachments_inline={attachments_inline} 
@@ -173,10 +195,13 @@ function RenderMessage(props) {
 
 function ContenuMessage(props) {
     const { 
-        workers, etatConnexion, downloadAction, content, afficherVideo, 
+        downloadAction, content, afficherVideo, 
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
         setAfficherVideo, certificatMaitreDesCles,
     } = props
+
+    const workers = useWorkers(),
+          etatConnexion = useEtatConnexion()
 
     const fichiers = attachments?attachments.fichiers:null
 

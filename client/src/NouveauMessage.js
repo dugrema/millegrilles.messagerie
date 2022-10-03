@@ -17,7 +17,6 @@ import { ListeFichiers, FormatteurTaille, AlertTimeout, useDetecterSupport } fro
 
 import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
 import { posterMessage, getClesFormattees } from './messageUtils'
-import { chargerProfilUsager } from './profil'
 import { uploaderFichiers } from './fonctionsFichiers'
 // import { getClesAttachments } from './cles'
 
@@ -164,16 +163,21 @@ function NouveauMessage(props) {
     }, [workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
 
     useEffect(()=>{
-        const from = `@${usager.nomUsager}:${dnsMessagerie}`
-        setFrom(from)
+        if(!profil || !usager) return
 
-        chargerProfilUsager(workers, {usager, dnsMessagerie})
-            .then( profil => {
-                const replyTo = profil.adresses?profil.adresses[0]:''
-                setReplyTo(replyTo)
-            })
-            .catch(err=>console.error("Erreur chargement profil : %O", err))
-    }, [workers, usager, dnsMessagerie, setReplyTo])
+        let replyTo = null, from = null
+        if(profil.adresses && profil.adresses.length > 0) {
+            replyTo = profil.adresses[0]
+        } 
+        if(replyTo) {
+            from = replyTo
+        } else {
+            const hostname = window.location.hostname
+            from = `@${usager.nomUsager}:${hostname}`
+        }
+        setFrom(from)
+        setReplyTo(replyTo)
+    }, [workers, profil, usager, setReplyTo])
 
     useEffect(()=>{
         if(!idDraft) {
