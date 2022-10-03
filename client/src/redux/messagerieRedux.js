@@ -140,6 +140,10 @@ function supprimerMessagesAction(state, action) {
     })
 }
 
+function setUuidMessageActifAction(state, action) {
+    state.uuidMessageActif = action.payload
+}
+
 // Slice collection
 
 export function creerSlice(name) {
@@ -157,6 +161,7 @@ export function creerSlice(name) {
             pushMessagesChiffres: pushMessagesChiffresAction,
             selectionMessages: selectionMessagesAction,
             setMessagesChiffres: setMessagesChiffresAction,
+            setUuidMessageActif: setUuidMessageActifAction,
         }
     })
 

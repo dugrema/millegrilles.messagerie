@@ -1,16 +1,13 @@
 import { useState, useCallback } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 
 import {  FormatterDate } from '@dugrema/millegrilles.reactjs'
 
-import ListeMessages from './Reception'
+import ListeMessages from './ListeMessages'
 
 function AfficherMessages(props) {
-
-    const { 
-        setUuidMessage, listeMessages, compteMessages, getMessagesSuivants, isListeComplete, setDossier,
-        supprimerMessagesCb, setAfficherNouveauMessage,
-    } = props
 
     const [colonnes, setColonnes] = useState(preparerColonnes())
 
@@ -32,31 +29,41 @@ function AfficherMessages(props) {
     }, [colonnes, setColonnes])    
 
     return (
-        <>
-            <BreadcrumbMessages />
-
-            <ListeMessages 
-                colonnes={colonnes}
-                messages={listeMessages} 
-                compteMessages={compteMessages}
-                isListeComplete={isListeComplete}
-                getMessagesSuivants={getMessagesSuivants}
-                enteteOnClickCb={enteteOnClickCb}
-                setUuidMessage={setUuidMessage}  
-                supprimerMessagesCb={supprimerMessagesCb} 
-                setAfficherNouveauMessage={setAfficherNouveauMessage} 
-                setDossier={setDossier} />
-        </>
+        <AfficherListe 
+            colonnes={colonnes}
+            enteteOnClickCb={enteteOnClickCb} />
     )
 
 }
 
 export default AfficherMessages
 
+function AfficherListe(props) {
+
+    const { colonnes, enteteOnClickCb } = props
+
+    const listeMessages = useSelector(state=>state.messagerie.liste),
+          compteMessages = listeMessages?listeMessages.length:0
+
+    return (
+        <>
+            <BreadcrumbMessages />
+
+            <ListeMessages 
+                titre='Reception'
+                colonnes={colonnes}
+                messages={listeMessages} 
+                compteMessages={compteMessages}
+                enteteOnClickCb={enteteOnClickCb} />
+        </>
+    )
+}
+
+
 function BreadcrumbMessages(props) {
     return (
         <Breadcrumb>
-            <Breadcrumb.Item active>Messages</Breadcrumb.Item>
+            <Breadcrumb.Item active>Reception</Breadcrumb.Item>
         </Breadcrumb>
     )
 }

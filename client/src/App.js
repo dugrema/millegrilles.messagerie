@@ -777,38 +777,38 @@ function InitialisationUpload(props) {
   return ''
 }
 
-function preparerColonnes(workers, opts) {
-  opts = opts || {}
+// function preparerColonnes(workers, opts) {
+//   opts = opts || {}
 
-  const messages_envoyes = opts.messages_envoyes?true:false
-  const colonne_date = messages_envoyes?'date_envoi':'date_reception'
+//   const messages_envoyes = opts.messages_envoyes?true:false
+//   const colonne_date = messages_envoyes?'date_envoi':'date_reception'
 
-  const params = {
-      ordreColonnes: [colonne_date, 'from', 'subject', 'boutonDetail'],
-      paramsColonnes: {
-          [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
-          'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
-          'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
-          'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
-      },
-      tri: {colonne: colonne_date, ordre: -1},
-      // rowLoader: data => dechiffrerMessage(workers, data)
-      rowLoader: async data => {
-          if(data['_etatChargement'] !== 'dechiffre') {
-            const messageDechiffre = await dechiffrerMessage(workers, data)
-            return {...data, ...messageDechiffre, '_etatChargement': 'dechiffre'}
-          } else {
-            return data
-          }
-      },
-      rowClassname: data => {
-        if(data.lu !== true) return 'nouveau'
-        return ''
-      }
-  }
+//   const params = {
+//       ordreColonnes: [colonne_date, 'from', 'subject', 'boutonDetail'],
+//       paramsColonnes: {
+//           [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
+//           'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
+//           'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
+//           'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
+//       },
+//       tri: {colonne: colonne_date, ordre: -1},
+//       // rowLoader: data => dechiffrerMessage(workers, data)
+//       rowLoader: async data => {
+//           if(data['_etatChargement'] !== 'dechiffre') {
+//             const messageDechiffre = await dechiffrerMessage(workers, data)
+//             return {...data, ...messageDechiffre, '_etatChargement': 'dechiffre'}
+//           } else {
+//             return data
+//           }
+//       },
+//       rowClassname: data => {
+//         if(data.lu !== true) return 'nouveau'
+//         return ''
+//       }
+//   }
 
-  return params
-}
+//   return params
+// }
 
 // function formatterMessages(messages, colonnes, userId, setMessagesFormattes, setCompteMessages, erreurCb, opts) {
 //   opts = opts || {}
