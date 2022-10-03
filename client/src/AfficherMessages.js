@@ -9,6 +9,8 @@ import ListeMessages from './ListeMessages'
 
 function AfficherMessages(props) {
 
+    const { showNouveauMessage } = props
+
     const [colonnes, setColonnes] = useState(preparerColonnes())
 
     const enteteOnClickCb = useCallback(colonne=>{
@@ -31,7 +33,8 @@ function AfficherMessages(props) {
     return (
         <AfficherListe 
             colonnes={colonnes}
-            enteteOnClickCb={enteteOnClickCb} />
+            enteteOnClickCb={enteteOnClickCb} 
+            showNouveauMessage={showNouveauMessage} />
     )
 
 }
@@ -40,7 +43,7 @@ export default AfficherMessages
 
 function AfficherListe(props) {
 
-    const { colonnes, enteteOnClickCb } = props
+    const { colonnes, enteteOnClickCb, showNouveauMessage } = props
 
     const listeMessages = useSelector(state=>state.messagerie.liste),
           compteMessages = listeMessages?listeMessages.length:0
@@ -54,7 +57,8 @@ function AfficherListe(props) {
                 colonnes={colonnes}
                 messages={listeMessages} 
                 compteMessages={compteMessages}
-                enteteOnClickCb={enteteOnClickCb} />
+                enteteOnClickCb={enteteOnClickCb}
+                showNouveauMessage={showNouveauMessage} />
         </>
     )
 }
@@ -70,7 +74,7 @@ function BreadcrumbMessages(props) {
 
 export function preparerColonnes(workers, opts) {
     opts = opts || {}
-  
+
     const messages_envoyes = opts.messages_envoyes?true:false
     const colonne_date = messages_envoyes?'date_envoi':'date_reception'
   

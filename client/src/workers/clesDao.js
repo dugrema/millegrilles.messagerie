@@ -13,7 +13,7 @@ function build(workers) {
             return getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages)
         },
         getCertificatsMaitredescles() {
-            if(cacheCertificatsMaitredescles) return cacheCertificatsMaitredescles
+            if(cacheCertificatsMaitredescles) return Promise.resolve(cacheCertificatsMaitredescles)
             return getCertificatsMaitredescles(workers)
                 .then(reponse=>{
                     cacheCertificatsMaitredescles = reponse

@@ -16,6 +16,7 @@ function ListeMessages(props) {
     const { 
         colonnes, enteteOnClickCb,
         supprimerMessagesCb,
+        showNouveauMessage,
     } = props
 
     const etatConnexion = useEtatConnexion(),
@@ -25,10 +26,6 @@ function ListeMessages(props) {
           compteMessages = messages?messages.length:0
 
     const [filtreMessage, setFiltreMessage] = useState('actifs')
-
-    const afficherNouveauMessageCb = useCallback(() => {
-        throw new Error("todo")
-    }, [])
 
     // useEffect(()=>{
     //     if(filtreMessage === 'supprimes') setDossier('supprimes')
@@ -44,7 +41,7 @@ function ListeMessages(props) {
         <div>
             <Row>
                 <Col xs={12} md={3} className="buttonbar-left">
-                    <Button onClick={afficherNouveauMessageCb}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
+                    <Button onClick={showNouveauMessage}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
                 </Col>
                 <Col xs={12} md={6} className="buttonbar-left">
                     <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>

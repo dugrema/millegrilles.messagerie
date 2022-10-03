@@ -29,7 +29,7 @@ import { mapper } from './mapperFichier'
 function NouveauMessage(props) {
 
     const { 
-        setAfficherNouveauMessage, dnsMessagerie, 
+        fermerNouveauMessage, dnsMessagerie, 
         showConfirmation, messageRepondre, setMessageRepondre,
     } = props
 
@@ -75,8 +75,8 @@ function NouveauMessage(props) {
 
     const fermer = useCallback( supprimerDraft => {
         if(supprimerDraft === true) supprimerDraftCb(idDraft)
-        setAfficherNouveauMessage(false)
-    }, [setAfficherNouveauMessage, supprimerDraftCb, idDraft])
+        fermerNouveauMessage()
+    }, [fermerNouveauMessage, supprimerDraftCb, idDraft])
 
     const envoyerCb = useCallback(()=>{
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
@@ -137,7 +137,9 @@ function NouveauMessage(props) {
 
     useEffect(()=>{
         const { clesDao } = workers
-        clesDao.getCertificatsMaitredescles()
+        const certPromise = clesDao.getCertificatsMaitredescles()
+        console.warn("Cert promise : ", certPromise)
+        certPromise
             .then(certificats=>{
                 console.debug("Reponse certificats maitre des cles ", certificats)
                 setCertificatsMaitredescles(certificats)
