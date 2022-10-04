@@ -9,7 +9,7 @@ import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import ReactQuill from 'react-quill'
 import multibase from 'multibase'
 
-import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport } from '@dugrema/millegrilles.reactjs'
 
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
 import messagerieActions from './redux/messagerieSlice'
@@ -29,11 +29,11 @@ function AfficherMessage(props) {
         // workers, etatConnexion, etatAuthentifie, 
         downloadAction,
         certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, 
-        supportMedia,
     } = props
 
     const workers = useWorkers(),
           dispatch = useDispatch(),
+          supportMedia = useDetecterSupport(),
           etatConnexion = useEtatConnexion(),
           etatAuthentifie = useEtatAuthentifie()
 
@@ -448,7 +448,7 @@ function AfficherAttachments(props) {
 
             const dictAttachments = {}
             fichiers.forEach( attachmentObj => {
-                const attachment = {...attachmentObj}
+                let attachment = {...attachmentObj}
                 const fuuid = attachment.fuuid
                 const version_courante = {
                     mimetype: attachment.mimetype || 'application/bytes',
@@ -461,6 +461,11 @@ function AfficherAttachments(props) {
                 if(attachment.video) {
                     version_courante.video = {...attachment.video}
                     delete attachment.video
+                }
+                if(attachment.metadata && attachment.metadata.data) {
+                    // Extract metadata (normalement chiffre)
+                    const fichierData = attachment.metadata.data
+                    attachment = {...attachment, ...fichierData}
                 }
                 dictAttachments[fuuid] = {
                     ...attachment, 

@@ -75,6 +75,21 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
             clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
         }
 
+        console.debug("Cles attachments : ", clesAttachmentsPrets)
+
+        // Dechiffrer metadata du fichier (remplacer data_chiffre par data)
+        for await (const attachment of attachments) {
+            const hachage_bytes = attachment.fuuid
+            const metadata = {...attachment.metadata}
+            attachment.metadata = metadata
+
+            console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
+            const data_dechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, clesAttachmentsPrets[hachage_bytes])
+            console.debug("Metadata dechiffre %s : %O", hachage_bytes, data_dechiffre)
+            delete metadata.data_chiffre
+            metadata.data = data_dechiffre
+        }
+
         message.attachments = {
             cles: clesAttachmentsPrets,
             fichiers: attachments

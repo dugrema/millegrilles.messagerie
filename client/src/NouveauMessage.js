@@ -784,7 +784,7 @@ function AfficherAttachments(props) {
                 etatConnexion={etatConnexion}
                 workers={workers} 
                 fermer={fermerAttacherFichiers} 
-                selectionner={selectionner} 
+                onSelect={selectionner} 
                 erreurCb={erreurCb} />
 
         </div>

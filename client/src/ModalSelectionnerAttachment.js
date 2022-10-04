@@ -20,7 +20,7 @@ import actionsNavigationSecondaire, {thunks as thunksNavigationSecondaire} from 
 import { mapDocumentComplet, estMimetypeMedia } from './mapperFichier'
 
 function ModalSelectionnerAttachement(props) {
-    const { titre, show, fermer, erreurCb } = props
+    const { titre, show, fermer, erreurCb, onSelect } = props
     
     const workers = useWorkers()
     const dispatch = useDispatch()
@@ -54,8 +54,12 @@ function ModalSelectionnerAttachement(props) {
     }, [])
 
     const choisirHandler = useCallback(()=>{
-        console.debug("Choisir selection %O", selection)
-    }, [selection, liste])
+        console.debug("Selection %O, liste fichiers %O", selection, liste)
+        const selectionFichiers = liste.filter(item=>selection.includes(item.tuuid))
+        console.debug("Choisir fichiers %O", selectionFichiers)
+        onSelect(selectionFichiers)
+        fermer()
+    }, [selection, liste, onSelect, fermer])
 
     const naviguerCollection = useCallback( cuuid => {
         if(!cuuid) cuuid = ''
@@ -129,8 +133,6 @@ function ModalSelectionnerAttachement(props) {
         if(!userId) return
         dispatch(actionsNavigationSecondaire.setUserId(userId))
     }, [userId])
-
-    console.debug("!!! cuuid %O, liste fichiers %O, breadcrumb %O ", cuuid, liste, breadcrumb)
 
     return (
         <Modal show={show} size="lg" onHide={fermer}>

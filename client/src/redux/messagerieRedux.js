@@ -329,7 +329,6 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             // Identifier hachage_bytes et uuid_transaction de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
                 acc.add(item.hachage_bytes)
-                if(item.attachments) for(const hachage_bytes of item.attachments) { acc.add(hachage_bytes) }
                 return acc
             }, new Set())
             const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
