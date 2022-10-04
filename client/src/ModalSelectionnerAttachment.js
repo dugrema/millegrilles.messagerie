@@ -26,6 +26,8 @@ function ModalSelectionnerAttachement(props) {
     const dispatch = useDispatch()
     const usager = useUsager()
 
+    const nomRootLocal = 'Favoris'
+
     const [initComplete, setInitComplete] = useState(false)
     const [colonnes, setColonnes] = useState(preparerColonnes(workers))
 
@@ -63,6 +65,28 @@ function ModalSelectionnerAttachement(props) {
             console.error("naviguerCollection Erreur dispatch changerCollection", err)
         }
     }, [dispatch, workers, erreurCb])
+
+    const onDoubleClick = useCallback( (event, value) => {
+        const dataset = event.currentTarget.dataset
+        window.getSelection().removeAllRanges()
+        
+        const folderId = value.folderId || dataset.folderId
+        const fileId = value.fileId || dataset.fileId
+
+        console.debug("onDoubleClick dataset %O, folderId %o, fileId %O", dataset, folderId, fileId)
+
+        if(folderId) {
+            naviguerCollection(folderId)
+        } else if(fileId) {
+            throw new Error("todo")
+            // console.debug("dbl click liste : %O, value : %O", liste, value)
+            // const fileItem = liste.filter(item=>item.tuuid===value.fileId).pop()
+            // const mimetype = fileItem.mimetype || ''
+            // if(mimetype.startsWith('video/')) setAfficherVideo(fileId)
+            // else showPreviewAction(fileId)
+        }
+
+    }, [naviguerCollection, liste])
 
     const handlerSliceBreadcrumb = useCallback(level => {
         let tuuid = ''
@@ -113,12 +137,18 @@ function ModalSelectionnerAttachement(props) {
                 {titre}
             </Modal.Header>
 
+            <SectionBreadcrumb 
+                nomRootLocal={nomRootLocal}
+                breadcrumb={breadcrumb}
+                toBreadrumbIdx={handlerSliceBreadcrumb}
+              />
+
             <ListeFichiers 
                 modeView='liste'
                 colonnes={colonnes}
                 rows={liste} 
                 // onClick={onClick} 
-                // onDoubleClick={ouvrir}
+                onDoubleClick={onDoubleClick}
                 // onContextMenu={onContextMenuCb}
                 // onSelection={onSelectionLignes}
                 // onClickEntete={enteteOnClickCb}
@@ -307,28 +337,6 @@ function trierNom(a, b) {
 //     }
 // }
 
-function SectionBreadcrumb(props) {
-
-    const { value, setIdx } = props
-
-    return (
-        <Breadcrumb>
-            
-            <Breadcrumb.Item onClick={()=>setIdx(-1)}>Favoris</Breadcrumb.Item>
-            
-            {value.map((item, idxItem)=>{
-                return (
-                    <Breadcrumb.Item key={idxItem} onClick={()=>setIdx(idxItem)} >
-                        {item.nom}
-                    </Breadcrumb.Item>
-                )
-            })}
-
-        </Breadcrumb>
-    )
-
-}
-
 function BoutonsFormat(props) {
 
     const { modeView, setModeView } = props
@@ -385,4 +393,41 @@ function FormatterColonneDate(props) {
     } else {
         return <FormatterDate value={props.value} />   
     }
+}
+
+function SectionBreadcrumb(props) {
+
+    const { nomRootLocal, breadcrumb, toBreadrumbIdx } = props
+
+    const handlerSliceBreadcrumb = useCallback(event => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const idx = event.currentTarget.dataset.idx
+        Promise.resolve(toBreadrumbIdx(idx))
+            .catch(err=>console.error("SectionBreadcrumb Erreur ", err))
+    }, [breadcrumb, toBreadrumbIdx])
+
+    return (
+        <Breadcrumb>
+            
+            <Breadcrumb.Item onClick={handlerSliceBreadcrumb}>{nomRootLocal}</Breadcrumb.Item>
+            
+            {breadcrumb.map((item, idxItem)=>{
+                // Dernier
+                if(idxItem === breadcrumb.length - 1) {
+                    return <span key={idxItem}>&nbsp; / {item.label}</span>
+                }
+                
+                // Parents
+                return (
+                    <Breadcrumb.Item key={idxItem} onClick={handlerSliceBreadcrumb} data-idx={''+idxItem}>
+                        {item.label}
+                    </Breadcrumb.Item>
+                )
+            })}
+
+        </Breadcrumb>
+    )
+
 }
