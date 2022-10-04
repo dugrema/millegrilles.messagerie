@@ -477,8 +477,9 @@ function AfficherAttachments(props) {
             // console.debug("Dict attachments combines : %O", dictAttachments)
 
             const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
-            const listeMappee = liste.map(item=>mapper(item, workers, {cles, supportMedia}))
-            console.debug("Liste mappee : %O", listeMappee)
+            const listeMappee = liste.map(item=>{
+                return mapper(item, workers, {ref_hachage_bytes: item.fuuid, cles, supportMedia})
+            })
 
             setAttachmentsList(listeMappee)
         }

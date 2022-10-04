@@ -3,6 +3,7 @@ import multibase from 'multibase'
 import { trouverLabelImage, trouverLabelVideo } from '@dugrema/millegrilles.reactjs/src/labelsRessources'
 import { ajouterUpload } from '../redux/uploaderSlice'
 import * as Comlink from 'comlink'
+import { base64 } from 'multiformats/bases/base64'
 
 const UPLOAD_BATCH_SIZE = 5 * 1024 * 1024,
       ETAT_PREPARATION = 1,
@@ -29,6 +30,8 @@ export default setup
 
 async function getFichierChiffre(workers, fuuid, opts) {
     opts = opts || {}
+    // console.debug("getFichierChiffre %s (opts %O)", fuuid, opts)
+    const cles = opts.cles
     const { dataChiffre, mimetype, controller, progress, ref_hachage_bytes } = opts
     const { connexion, chiffrage, usagerDao } = workers
 
@@ -36,7 +39,8 @@ async function getFichierChiffre(workers, fuuid, opts) {
     const cleFichierFct = async () => {
         const hachage_bytes = ref_hachage_bytes || fuuid
 
-        let cleFichier = null
+        let cleFichier = null,
+            cleSecrete = null
         try {
             cleFichier = await usagerDao.getCleDechiffree(hachage_bytes)
             if(cleFichier) return cleFichier
@@ -44,11 +48,18 @@ async function getFichierChiffre(workers, fuuid, opts) {
             console.error("Erreur acces usagerDao ", err)
         }
 
-        const reponse = await connexion.getClesFichiers([hachage_bytes])
+        if(cles && cles[hachage_bytes]) {
+            cleFichier = cles[hachage_bytes]
+            cleSecrete = cleFichier.cleSecrete
+            if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
+        } else {
+            const reponse = await connexion.getClesFichiers([hachage_bytes])
+            cleFichier = reponse.cles[hachage_bytes]
+            cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
+        }
+        // console.debug("getFichierChiffre %s cle secrete %O", hachage_bytes, cleSecrete)
 
-        cleFichier = reponse.cles[hachage_bytes]
-        const cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
-        cleFichier.cleSecrete = cleSecrete
+        cleFichier = {...cleFichier, cleSecrete}
 
         // Sauvegarder la cle pour reutilisation
         usagerDao.saveCleDechiffree(hachage_bytes, cleSecrete, cleFichier)

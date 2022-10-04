@@ -60,7 +60,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
     let fuuidsCles = fuuids
     if(attachments) {
-        console.debug("signerMessage Message attachments : %O", attachments)
+        // console.debug("signerMessage Message attachments : %O", attachments)
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
         if(fuuidsCleSeulement) {
             fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
@@ -75,7 +75,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
             clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
         }
 
-        console.debug("Cles attachments : ", clesAttachmentsPrets)
+        // console.debug("Cles attachments : ", clesAttachmentsPrets)
 
         // Dechiffrer metadata du fichier (remplacer data_chiffre par data)
         for await (const attachment of attachments) {
@@ -83,11 +83,16 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
             const metadata = {...attachment.metadata}
             attachment.metadata = metadata
 
-            console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
-            const data_dechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, clesAttachmentsPrets[hachage_bytes])
-            console.debug("Metadata dechiffre %s : %O", hachage_bytes, data_dechiffre)
-            delete metadata.data_chiffre
-            metadata.data = data_dechiffre
+            // console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
+            const cleDechiffrage = clesAttachmentsPrets[hachage_bytes]
+            if(cleDechiffrage) {
+                const data_dechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, cleDechiffrage)
+                // console.debug("Metadata dechiffre %s : %O", hachage_bytes, data_dechiffre)
+                delete metadata.data_chiffre
+                metadata.data = data_dechiffre
+            } else {
+                console.warn("Erreur dechiffrage fuuid %s, cle absente", hachage_bytes)
+            }
         }
 
         message.attachments = {
@@ -113,7 +118,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         messageBytes, 'Messagerie', certifcatsChiffragePem, 
         {DEBUG: true, identificateurs_document: {'message': 'true'}, nojson: true, type: 'binary'}
     )
-    console.debug("Message chiffre : %O", messageChiffre)
+    // console.debug("Message chiffre : %O", messageChiffre)
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
 

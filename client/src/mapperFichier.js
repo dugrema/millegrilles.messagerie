@@ -51,6 +51,7 @@ export function mapper(row, workers, opts) {
         thumbnailIcon = Icones.ICONE_FOLDER
     } else {
         const { mimetype, date_fichier, taille, images, video } = version_courante
+        const ref_hachage_bytes = fuuid
         mimetype_fichier = mimetype
         date_version = date_fichier
         taille_fichier = taille
@@ -65,25 +66,25 @@ export function mapper(row, workers, opts) {
                 const thumbnail = images.thumb || images.thumbnail,
                     small = images.small || images.poster
                 if(thumbnail && thumbnail.data_chiffre) {
-                    miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre, cles})
+                    miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre, ref_hachage_bytes, cles})
                 }
-                if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail, cles})
+                if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail, ref_hachage_bytes, cles})
 
-                imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp, cles})
+                imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp, ref_hachage_bytes, cles})
             }
 
             if(video) {
                 // const videoLoader = videoResourceLoader(null, fichier.video, {supporteWebm: support.webm, baseUrl: '/messagerie/streams', creerToken})                
                 // videoLoader = videoResourceLoader(getFichierChiffre, video, {supporteWebm, cles})
                 videoLoader = videoResourceLoader(getFichierChiffre, video, {
-                    version_courante, genererToken, creerToken,
+                    ref_hachage_bytes, version_courante, genererToken, creerToken,
                     fuuid: fuuid_v_courante, 
                     baseUrl: '/messagerie/streams', 
                 })
             }
         
             // Loader du fichier source (principal), supporte thumbnail pour chargement
-            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {cles})
+            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {ref_hachage_bytes, cles})
         }
 
         if(mimetype === 'application/pdf') {
@@ -151,6 +152,7 @@ export function mapperRecherche(row, workers) {
         thumbnailIcon = Icones.ICONE_FOLDER
     } else {
         const { mimetype, taille } = version_courante
+        const ref_hachage_bytes = fuuid
         mimetype_fichier = mimetype
         taille_fichier = taille
         ids.fileId = tuuid    // Fichier, tuuid est le fileId
