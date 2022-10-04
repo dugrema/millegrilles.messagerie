@@ -22,7 +22,7 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     }
     // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
-    const { enveloppeMessage, commandeMaitrecles } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
+    const { enveloppeMessage, commandeMaitrecles, message } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
 
     // console.debug("Enveloppe message : %O", enveloppeMessage)
     // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
@@ -31,7 +31,9 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     const reponse = await connexion.posterMessage(enveloppeMessage, commandeMaitrecles)
 //    console.debug("Reponse poster : %O", reponse)
 
-    return reponse
+    const uuid_message = reponse.message.uuid_message
+
+    return {...reponse, messageOriginal: message, uuid_message}
 }
 
 export async function signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts) {
@@ -125,7 +127,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     const enveloppeRoutage = await connexion.formatterMessage(
         routageMessage, 'Messagerie', {action: 'poster', ajouterCertificat: true})
 
-    return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles, fuuids }
+    return { enveloppeMessage: enveloppeRoutage, commandeMaitrecles, fuuids, message }
 }
 
 export async function getClesFormattees(workers, fuuidsCles, opts) {

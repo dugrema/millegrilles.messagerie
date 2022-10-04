@@ -1,13 +1,13 @@
 import React, { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
 
 import Container from 'react-bootstrap/Container'
-import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
 
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 
 import ErrorBoundary from './ErrorBoundary'
-import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
+import useWorkers, {useEtatConnexion, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
 import storeSetup from './redux/store'
 
 import { LayoutMillegrilles, ModalErreur, TransfertModal } from '@dugrema/millegrilles.reactjs'
@@ -16,6 +16,8 @@ import messagerieActions, {thunks as messagerieThunks} from './redux/messagerieS
 import {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
+
+import { EvenementsMessageHandler } from './Evenements'
 
 import './i18n'
 
@@ -187,6 +189,7 @@ function LayoutMain() {
       <InitialiserMessagerie />
       <InitialisationDownload />
       <InitialisationUpload />
+      <EvenementsMessageHandler />
 
     </LayoutMillegrilles>
   )
@@ -282,9 +285,9 @@ function Modals(props) {
 // Initialisation du profil usager
 function InitialiserMessagerie(props) {
 
-  const workers = useWorkers()
-  const usager = useUsager()
-  const dispatch = useDispatch()
+  const workers = useWorkers(),
+        usager = useUsager(),
+        dispatch = useDispatch()
 
   const {userId, nomUsager} = useMemo(()=>{
     if(!usager || !usager.extensions) return {}

@@ -181,8 +181,6 @@ export function creerThunks(actions, nomSlice) {
         // supprimer, 
     } = actions
 
-    console.error("creerThunks Not implemented")
-
     // Async actions
     function chargerMessages(workers) {
         return (dispatch, getState) => traiterChargerMessages(workers, dispatch, getState)
@@ -223,18 +221,22 @@ export function creerThunks(actions, nomSlice) {
     
         const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
 
-        let dateMinimum = 0
-        for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
-            let resultatSync = await syncMessages(workers, CONST_SYNC_BATCH_SIZE, dateMinimum, cbChargerMessages)
-            if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
-            if( resultatSync.complete ) break
+        try {
+            let dateMinimum = 0
+            for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
+                let resultatSync = await syncMessages(workers, CONST_SYNC_BATCH_SIZE, dateMinimum, cbChargerMessages)
+                if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
+                if( resultatSync.complete ) break
 
-            dateMinimum = resultatSync.messages.reduce(
-                (acc, item) => acc < item.date_reception ?item.date_reception:acc,   // Garder date la plus elevee
-                0  // Commencer a la date 0
-            )
+                dateMinimum = resultatSync.messages.reduce(
+                    (acc, item) => acc < item.date_reception ?item.date_reception:acc,   // Garder date la plus elevee
+                    0  // Commencer a la date 0
+                )
+            }
+            if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
+        } catch(err) {
+            console.error("traiterRafraichirMessages Erreur sync messages ", err)
         }
-        if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
     
         // Pousser liste a dechiffrer
         const messagesChiffres = await messagerieDao.getMessagesChiffres(userId)
@@ -250,6 +252,8 @@ export function creerThunks(actions, nomSlice) {
         const state = getState()[nomSlice]
         const userId = state.userId
     
+        console.debug("traiterChargerMessagesParSyncid messages ", messages)
+
         let batchUuids = new Set()
         for await (const messageSync of messages) {
             const uuid_transaction = messageSync.uuid_transaction
@@ -258,6 +262,7 @@ export function creerThunks(actions, nomSlice) {
             if(messageIdb) {
                 // Message connu, merge flags
                 const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
+                console.debug("Message maj avec sync ", messageMaj)
                 if(messageMaj.dechiffre === 'true') {
                     // Deja dechiffre, on le guarde
                     dispatch(actions.mergeMessagesData(messageMaj))
@@ -373,7 +378,6 @@ async function syncMessages(workers, limit, dateMinimum, cbChargerMessages) {
 
     console.debug("Sync messages limit %d date min %d", limit, dateMinimum)
 
-    // Vieux code sync
     const reponseMessages = await connexion.getReferenceMessages({limit, date_minimum: dateMinimum})
     const messages = reponseMessages.messages || []
     console.debug("Reponse sync messages ", messages)

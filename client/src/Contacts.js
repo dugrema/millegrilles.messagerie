@@ -14,6 +14,7 @@ import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, useEtatPret} from './WorkerContext'
 import contactsAction, { thunks as contactsThunks } from './redux/contactsSlice'
 
+import { EvenementsContactHandler } from './Evenements'
 import EditerContact from './EditerContact'
 import { MenuContextuelListeContacts, onContextMenu } from './MenuContextuel'
 
@@ -97,46 +98,12 @@ function Contacts(props) {
                 supprimerContacts={supprimerContactsCb} 
                 retour={retourContacts} />
 
-            <HandlerEvenements />
+            <EvenementsContactHandler />
         </>
     )
 }
 
 export default Contacts
-
-function HandlerEvenements(_props) {
-
-    const workers = useWorkers()
-    const etatPret = useEtatPret()
-    const dispatch = useDispatch()
-    const userId = useSelector(state=>state.contacts.userId)
-
-    const { connexion } = workers
-    
-    const evenementContactCb = useMemo(
-        () => comlinkProxy( evenement => traiterContactEvenement(workers, dispatch, userId, evenement) ),
-        [workers, dispatch]
-    )
-
-    // Enregistrer changement de collection
-    useEffect(()=>{
-        if(!connexion || !etatPret) return  // Pas de connexion, rien a faire
-
-        // Enregistrer listeners
-        console.debug("Enregistrer callback contacts")
-        connexion.enregistrerCallbackEvenementContact({}, evenementContactCb)
-            .catch(err=>console.warn("Erreur enregistrement listeners majCollection : %O", err))
-
-        // Cleanup listeners
-        return () => {
-            console.debug("Retirer callback contacts")
-            connexion.retirerCallbackEvenementContact({}, evenementContactCb)
-                .catch(err=>console.warn("Erreur retirer listeners maj contenu favoris : %O", err))
-        }
-    }, [connexion, etatPret, evenementContactCb])
-
-    return ''  // Aucun affichage
-}
 
 function BreadcrumbContacts(props) {
 
@@ -312,153 +279,3 @@ function mapContact(contact, idx) {
     const item = {...contact, fileId, adresse}
     return item
 }
-
-// function formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb) {
-//     // console.debug("formatterContacts colonnes: %O", colonnes)
-//     const {colonne, ordre} = colonnes.tri
-//     // let contactsTries = [...contacts]
-
-//     let contactsTries = contacts.map(item=>{
-//         const fileId = item.uuid_contact
-//         const adresse = item.adresses?item.adresses[0]:''
-//         const nom = item.nom || 'Vide'
-//         return {...item, fileId, nom, adresse}
-//     })
-
-//     // console.debug("Contacts a trier : %O", contactsTries)
-
-//     switch(colonne) {
-//         case 'adresse': contactsTries.sort(trierAdresses); break
-//         default: contactsTries.sort(trierNoms)
-//     }
-
-//     if(ordre < 0) contactsTries = contactsTries.reverse()
-
-//     setContacts(contactsTries)
-
-//     throw new Error("fix me - redux")
-//     // MessageDao.countContacts(userId)
-//     //     .then(setCompteContacts)
-//     //     .catch(erreurCb)
-// }
-
-// function trierNoms(a, b) {
-//     return trierString('nom', a, b)
-// }
-
-// function trierAdresses(a, b) {
-//     const chaine = trierNoms
-//     return trierString('adresse', a, b, {chaine})
-// }
-
-// export async function chargerContenuContacts(workers, userId) {
-//     // console.debug("Traiter contacts nouveaux/stale pour userId : %s", userId)
-//     let listeUuids = []
-//     {
-//         throw new Error("fix me - redux")
-//         // const uuidNouveau = await MessageDao.getUuidContactsParEtatChargement(userId, 'nouveau')
-//         // const uuidStale = await MessageDao.getUuidContactsParEtatChargement(userId, 'stale')
-//         // // console.debug("UUID nouveaux contacts : %O, stales : %O", uuidNouveau, uuidStale)
-
-//         // listeUuids = [...uuidNouveau, ...uuidStale]
-//     }
-
-//     const BATCH_SIZE = 2
-//     let batchUuids = []
-//     for await (let uuidContact of listeUuids) {
-//         batchUuids.push(uuidContact)
-
-//         if(batchUuids.length === BATCH_SIZE) {
-//             await chargerBatchContacts(workers, userId, batchUuids)
-//             batchUuids = []
-//         }
-//     }
-//     // Derniere batch
-//     if(batchUuids.length > 0) await chargerBatchContacts(workers, userId, batchUuids)
-
-//     return listeUuids
-// }
-
-// async function chargerBatchContacts(workers, userId, batchUuids) {
-//     // console.debug("Charger batch contacts %s : %O", userId, batchUuids)
-//     const reponse = await workers.connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
-//     if(!reponse.err) {
-//         const contacts = reponse.contacts
-//         // console.debug("Contacts recus : %O", contacts)
-//         for await (let contact of contacts) {
-//             throw new Error("fix me - redux")
-//             // await MessageDao.updateContact({...contact, '_etatChargement': 'charge'})
-//         }
-//     } else {
-//         throw reponse.err
-//     }
-// }
-
-function traiterContactEvenement(workers, dispatch, userId, evenementContact) {
-    console.debug("traiterContactEvenement ", evenementContact)
-    const { messagerieDao } = workers
-
-    // Traiter message
-    const routing = evenementContact.routingKey,
-            action = routing.split('.').pop()
-    const message = evenementContact.message
-
-    if(action === 'majContact') {
-        // Conserver information de contact
-        const date_modification = message['en-tete'].estampille
-        const contactMaj = {...message, user_id: userId, date_modification, dechiffre: 'false'}
-        delete contactMaj['en-tete']
-        delete contactMaj['_certificat']
-        delete contactMaj['_signature']
-
-        console.debug("traiterContactEvenement majContact ", contactMaj)
-
-        // Conserver maj de contact
-        messagerieDao.mergeReferenceContacts(userId, [contactMaj])
-            .then(()=>{
-                dispatch(contactsAction.pushContactsChiffres([contactMaj]))
-            })
-            .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
-
-    } else if(action === 'contactsSupprimes') {
-        const uuid_contacts = message.uuid_contacts
-        console.debug("traiterContactEvenement contactsSupprimes ", message)
-        messagerieDao.supprimerContacts(uuid_contacts)
-            .then(()=>{
-                dispatch(contactsAction.supprimerContacts(uuid_contacts))
-            })
-            .catch(err=>console.error("Erreur supprimer contact sur evenement : %O", err))
-    } else {
-        console.error("Recu message contact de type inconnu : %O", evenementContact)
-    }
-    
-}
-
-
-// function trierString(nomChamp, a, b, opts) {
-//     opts = opts || {}
-
-//     const nomA = a?a[nomChamp]:'',
-//           nomB = b?b[nomChamp]:''
-//     if(nomA === nomB) {
-//         if(opts.chaine) return opts.chaine(a, b)
-//         return 0
-//     }
-//     if(!nomA) return 1
-//     if(!nomB) return -1
-//     return nomA.localeCompare(nomB)
-// }
-
-// function trierNombre(nomChamp, a, b, opts) {
-//     opts = opts || {}
-
-//     const tailleA = a?a[nomChamp]:'',
-//           tailleB = b?b[nomChamp]:''
-//     if(tailleA === tailleB) {
-//         if(opts.chaine) return opts.chaine()
-//         return 0    
-//     }
-//     if(!tailleA) return 1
-//     if(!tailleB) return -1
-//     return tailleA - tailleB
-// }

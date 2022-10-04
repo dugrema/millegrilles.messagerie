@@ -39,8 +39,7 @@ function NouveauMessage(props) {
           supportMedia = useDetecterSupport()
 
     const profil = useSelector(state=>state.contacts.profil)
-
-    const userId = profil.userId
+    const userId = useSelector(state=>state.contacts.userId)
 
     const [certificatsMaitredescles, setCertificatsMaitredescles] = useState('')
 
@@ -67,7 +66,7 @@ function NouveauMessage(props) {
 
     const supprimerDraftCb = useCallback(idDraft=>{
         idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
-        throw new Error("fix me - redux")
+        console.error("supprimerDraftCb fix me - redux")
         // MessageDao.supprimerDraft(idDraft).catch(erreurCb)
         // const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
         // setDrafts(draftsMaj)
@@ -80,9 +79,9 @@ function NouveauMessage(props) {
 
     const envoyerCb = useCallback(()=>{
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
-        envoyer(workers, certificatsMaitredescles, from, to, content, opts)
+        envoyer(workers, userId, certificatsMaitredescles, from, to, content, opts)
             .then(()=>{
-                showConfirmation("Message envoye")
+                // showConfirmation("Message envoye")
                 supprimerDraftCb(idDraft)
                 fermer(true)
             })
@@ -91,7 +90,7 @@ function NouveauMessage(props) {
                 erreurCb(err, 'Erreur envoi message')
             })
     }, [
-        workers, showConfirmation, certificatsMaitredescles, 
+        workers, userId, showConfirmation, certificatsMaitredescles, 
         from, to, replyTo, content, uuidThread, attachments, attachmentsCles, optionVideo,
         fermer, supprimerDraftCb, idDraft, erreurCb,
     ])
@@ -138,7 +137,6 @@ function NouveauMessage(props) {
     useEffect(()=>{
         const { clesDao } = workers
         const certPromise = clesDao.getCertificatsMaitredescles()
-        console.warn("Cert promise : ", certPromise)
         certPromise
             .then(certificats=>{
                 console.debug("Reponse certificats maitre des cles ", certificats)
@@ -348,8 +346,9 @@ function AfficherDrafts(props) {
     )
 }
 
-async function envoyer(workers, certificatsChiffragePem, from, to, content, opts) {
+async function envoyer(workers, userId, certificatsChiffragePem, from, to, content, opts) {
     opts = opts || {}
+    const { messagerieDao } = workers
 
     if(opts.attachments) {
         // Mapper data attachments
@@ -360,7 +359,28 @@ async function envoyer(workers, certificatsChiffragePem, from, to, content, opts
     }
 
     const resultat = await posterMessage(workers, certificatsChiffragePem, from, to, content, opts)
+    console.debug("Resultat poster message ", resultat)
     if(resultat.err) throw resultat.err
+    if(resultat.ok === false) throw new Error("Erreur envoyer message")
+
+    // Sauvegarder dans la boite d'envoi
+    const messageEnvoyer = {
+        ...resultat.messageOriginal,
+        user_id: userId,
+        uuid_transaction: resultat.uuid_message,  // Message envoyer n'a pas de uuid_transaction
+        uuid_message: resultat.uuid_message,
+        date_envoi: resultat.message['en-tete'].estampille,
+        dechiffre: 'true',
+        lu: false,
+        supprime: false,
+    }
+
+    console.debug("Envoyer userId %s resultat : %O", userId, messageEnvoyer)
+
+    const messageMaj = await messagerieDao.updateMessage(messageEnvoyer)
+    console.debug("envoyer Messages maj ", messageMaj)
+
+    return messageMaj
 }
 
 function mapperAttachments(attachments, opts) {

@@ -111,7 +111,7 @@ export async function getMessages(userId, opts) {
     const limit = opts.limit || 40
     const skipCount = opts.skip || 0
 
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const index = db.transaction(STORE_MESSAGES, 'readonly').store.index(colonne)
 
     let position = 0
@@ -172,7 +172,7 @@ export async function countMessages(userId, opts) {
     // const inclure_supprime = opts.inclure_supprime || false
     // const supprime = opts.supprime || false
     
-    const db = await ouvrirDB({upgrade: true})
+    const db = await ouvrirDB()
     const store = db.transaction(STORE_MESSAGES, 'readonly').store
 
     const filtreFct = preparerFiltreMessages(userId, opts)
