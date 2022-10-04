@@ -15,7 +15,7 @@ import { LayoutMillegrilles, ModalErreur, TransfertModal } from '@dugrema/milleg
 import messagerieActions, {thunks as messagerieThunks} from './redux/messagerieSlice'
 import {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
-import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
+import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, ajouterDownload, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
 import { EvenementsMessageHandler } from './Evenements'
 
@@ -132,6 +132,19 @@ function LayoutMain() {
     dispatch(continuerDownload(workers, {fuuid}))
       .catch(err=>erreurCb(err, "Erreur continuer uploads"))
   }, [workers])
+  
+  const downloadAction = useCallback(fichier=>{
+    console.debug("Download action fichier : ", fichier)
+
+    const champs = ['cle', 'version_courante', 'fuuid']
+    const copieFichier = {}
+    for (const champ of champs) {
+      copieFichier[champ] = fichier[champ]
+    }
+
+    dispatch(ajouterDownload(workers, copieFichier))
+      .catch(err=>erreurCb(err, 'Erreur ajout download'))
+  }, [workers, dispatch, erreurCb])
 
   const handlerSelect = useCallback(eventKey => {
     switch(eventKey) {
@@ -170,6 +183,7 @@ function LayoutMain() {
               fermerContacts={fermerContacts}
               showNouveauMessage={showNouveauMessage}
               fermerNouveauMessage={fermerNouveauMessage}
+              downloadAction={downloadAction}
               erreurCb={erreurCb}
             />
         </Suspense>
@@ -184,6 +198,7 @@ function LayoutMain() {
           continuerUploads={handlerContinuerUploads}
           supprimerDownloads={handlerSupprimerDownloads}
           continuerDownloads={handlerContinuerDownloads}
+          downloadAction={downloadAction}
         />
 
       <InitialiserMessagerie />
