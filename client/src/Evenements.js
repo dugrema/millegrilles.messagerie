@@ -72,13 +72,14 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
 
     } else if(action === 'messageLu') {
         console.debug("traiterMessageEvenement Message lu ", message)
-    //     const uuid_contacts = message.uuid_contacts
-    //     console.debug("traiterContactEvenement contactsSupprimes ", message)
-    //     messagerieDao.supprimerContacts(uuid_contacts)
-    //         .then(()=>{
-    //             dispatch(contactsAction.supprimerContacts(uuid_contacts))
-    //         })
-    //         .catch(err=>console.error("Erreur supprimer contact sur evenement : %O", err))
+
+        for await (const uuid_transaction of Object.keys(message.lus)) {
+            const flag_lu = message.lus[uuid_transaction]
+            const messageMaj = {uuid_transaction, user_id: userId, lu: flag_lu?true:false}
+            await messagerieDao.updateMessage(messageMaj)
+            dispatch(messagerieAction.mergeMessagesData(messageMaj))
+        }
+
     } else {
         console.error("Recu evenement message de type inconnu : %O", evenementMessage)
     }
