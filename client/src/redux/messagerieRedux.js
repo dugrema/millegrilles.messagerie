@@ -17,7 +17,7 @@ const initialState = {
 
     // Liste a l'ecran
     source: SOURCE_INBOX,       // Source de la requete - inbox, corbeille, outbox, custom
-    sortKeys: {key: 'sujet', ordre: 1}, // Ordre de tri
+    sortKeys: {key: 'date_reception', ordre: -1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
     selection: null,            // Messages selectionnes
     uuidMessageActif: null,     // Message actif
@@ -59,7 +59,7 @@ function pushMessagesAction(state, action) {
 
     // Trier
     liste.sort(genererTriListe(state.sortKeys))
-    // console.debug("pushAction liste triee : %O", liste)
+    console.debug("pushAction liste triee : %O", liste)
 
     state.liste = liste
 }
@@ -79,16 +79,15 @@ function mergeMessagesDataAction(state, action) {
     }
 
     let doitTrier = false
+    let liste = state.liste || []
 
     for (const payloadMessage of payload) {
         let { uuid_transaction } = payloadMessage
-        console.debug("mergeMessagesDataAction action: %O, uuid_transaction : %O", action, uuid_transaction)
+        // console.debug("mergeMessagesDataAction action: %O, uuid_transaction : %O", action, uuid_transaction)
 
         // Ajout flag _mergeVersion pour rafraichissement ecran
         const data = {...payloadMessage}
         data['_mergeVersion'] = mergeVersion
-
-        const liste = state.liste || []
         
         let retirer = data.supprime === true,
             peutAppend = !retirer
@@ -98,24 +97,29 @@ function mergeMessagesDataAction(state, action) {
 
         if(dataCourant) {
             if(retirer) {
-                state.liste = liste.filter(item=>item.uuid_transaction !== uuid_transaction)
+                liste = liste.filter(item=>item.uuid_transaction !== uuid_transaction)
             } else {
                 dataCourant = {...dataCourant, ...data}
                 let listeModifiee = liste.map(item=>{
                     if(item.uuid_transaction !== uuid_transaction) return item
                     return dataCourant
                 })
-                state.liste = listeModifiee
+                liste = listeModifiee
+                doitTrier = true
             }
         } else if(peutAppend) {
             liste.push(data)
-            state.liste = liste
             doitTrier = true
         }
     }
 
     // Trier
-    if(doitTrier) state.liste.sort(genererTriListe(state.sortKeys))
+    if(doitTrier) {
+        // console.debug("mergeMessagesDataAction trier")
+        liste.sort(genererTriListe(state.sortKeys))
+    }
+
+    state.liste = liste
 }
 
 // Ajouter des messages a la liste a dechiffrer
@@ -258,27 +262,27 @@ export function creerThunks(actions, nomSlice) {
         for await (const messageSync of messages) {
             const uuid_transaction = messageSync.uuid_transaction
             const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
-            console.debug("Message idb pour %s = %O", uuid_transaction, messageIdb)
+            // console.debug("Message idb pour %s = %O", uuid_transaction, messageIdb)
             if(messageIdb) {
                 // Message connu, merge flags
                 const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
-                console.debug("Message maj avec sync ", messageMaj)
+                // console.debug("Message maj avec sync ", messageMaj)
                 if(messageMaj.dechiffre === 'true') {
                     // Deja dechiffre, on le guarde
                     dispatch(actions.mergeMessagesData(messageMaj))
                 }
             } else {
                 // Message inconnu, on le charge
-                console.debug("Message inconnu ", uuid_transaction)
+                // console.debug("Message inconnu ", uuid_transaction)
                 batchUuids.add(uuid_transaction)
             }
         }
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            console.debug("Charger messages du serveur ", batchUuids)
+            // console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids)
-            console.debug("Liste messages recue : ", listeMessages)
+            // console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -316,11 +320,11 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
     try {
         let messagesChiffres = [...getState().listeDechiffrage]
         while(messagesChiffres.length > 0) {
-            console.debug("dechiffrer contacts ", messagesChiffres)
+            // console.debug("dechiffrer contacts ", messagesChiffres)
             const batchMessages = messagesChiffres.slice(0, CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Batch messages
             messagesChiffres = messagesChiffres.slice(CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Clip 
             listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
-            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
+            // console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
 
             // Identifier hachage_bytes et uuid_transaction de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
@@ -330,17 +334,17 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             }, new Set())
             const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
             const cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages)
-            console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+            // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
 
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
-                console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                // console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
                 // Dechiffrer message
                 const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
-                console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                // console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
-                console.debug("Contenu dechiffre : ", dataDechiffre)
+                // console.debug("Contenu dechiffre : ", dataDechiffre)
 
                 const validation = dataDechiffre.validation
                 if(validation.valide !== true) {
@@ -403,8 +407,10 @@ async function chargerBatchMessages(workers, batchUuids) {
 
 function genererTriListe(sortKeys) {
     
-    const key = sortKeys.key || 'nom',
+    const key = sortKeys.key || 'date_reception',
           ordre = sortKeys.ordre || 1
+
+    // console.trace("genererTriListe key %O, ordre %O", key, ordre)
 
     return (a, b) => {
         if(a === b) return 0
@@ -412,41 +418,35 @@ function genererTriListe(sortKeys) {
         if(!b) return -1
 
         let valA = a[key], valB = b[key]
-        if(key === 'dateFichier') {
-            valA = a.dateFichier || a.derniere_modification || a.date_creation
-            valB = b.dateFichier || b.derniere_modification || b.date_creation
-        } else if(key === 'taille') {
-            const version_couranteA = a.version_courante || {},
-                  version_couranteB = b.version_courante || {}
-            valA = version_couranteA.taille || a.taille
-            valB = version_couranteB.taille || b.taille
-        }
-
         if(valA === valB) return 0
         if(!valA) return 1
         if(!valB) return -1
 
         if(typeof(valA) === 'string') {
             const diff = valA.localeCompare(valB)
-            if(diff) return diff * ordre
+            if(diff!==0) return diff * ordre
         } else if(typeof(valA) === 'number') {
             const diff = valA - valB
-            if(diff) return diff * ordre
+            if(diff!==0) return diff * ordre
         } else {
             throw new Error(`genererTriListe values ne peut pas etre compare ${''+valA} ? ${''+valB}`)
         }
 
         // Fallback, nom/tuuid du fichier
-        const { tuuid: tuuidA, nom: nomA } = a,
-              { tuuid: tuuidB, nom: nomB } = b
+        const { from: auteurA, subject: subjectA, uuid_transaction: uuid_transactionA } = a,
+              { from: auteurB, subject: subjectB, uuid_transaction: uuid_transactionB } = b
 
-        const labelA = nomA || tuuidA,
-              labelB = nomB || tuuidB
-        
-        const compLabel = labelA.localeCompare(labelB)
-        if(compLabel) return compLabel * ordre
+        if(subjectA && subjectB) {
+            const compSubject = subjectA.localeCompare(subjectB) & ordre
+            if(compSubject !== 0) return compSubject
+        }
+                  
+        if(auteurA && auteurB) {
+            const compAuteur = auteurA.localeCompare(auteurB) & ordre
+            if(compAuteur !== 0) return compAuteur
+        }
 
-        // Fallback, tuuid (doit toujours etre different)
-        return tuuidA.localeCompare(tuuidB) * ordre
+        // Fallback, uuid (doit toujours etre different)
+        return uuid_transactionA.localeCompare(uuid_transactionB) * ordre
     }
 }

@@ -4,6 +4,7 @@ import { proxy as comlinkProxy } from 'comlink'
 
 import useWorkers, {useEtatConnexion, useUsager, useEtatPret} from './WorkerContext'
 import contactsAction from './redux/contactsSlice'
+import messagerieAction from './redux/messagerieSlice'
 
 export function EvenementsMessageHandler(_props) {
 
@@ -14,15 +15,15 @@ export function EvenementsMessageHandler(_props) {
 
     const { connexion } = workers
 
-    const userId = useMemo(()=>{
-        if(!usager || !usager.extensions) return {}
-        return usager.extensions.userId
-    }, [usager])
+    const userId = useSelector(state=>state.contacts.userId)
 
     // Handler evenements messages
     const evenementMessageCb = useMemo(
-        () => comlinkProxy( evenement => traiterMessageEvenement(workers, dispatch, userId, evenement) ),
-        [workers, dispatch]
+        () => comlinkProxy( evenement => {
+            traiterMessageEvenement(workers, dispatch, userId, evenement)
+                .catch(err=>console.error("Erreur traitement evenement message ", err))
+        }),
+        [workers, userId, dispatch]
     )
 
     // Enregistrer changement de collection
@@ -44,33 +45,33 @@ export function EvenementsMessageHandler(_props) {
   
 }
 
-function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
+async function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
     console.debug("traiterMessageEvenement ", evenementMessage)
-    const { messagerieDao } = workers
+    const { x509, chiffrage, messagerieDao } = workers
   
     // Traiter message
     const routing = evenementMessage.routingKey,
             action = routing.split('.').pop()
     const message = evenementMessage.message
+
+    // const verificationMessage = await x509.verifierMessage(message)
+    // console.debug("Message verification ", verificationMessage)
+    console.warn("TODO verifier message")
   
-    // if(action === 'majContact') {
-    //     // Conserver information de contact
-    //     const date_modification = message['en-tete'].estampille
-    //     const contactMaj = {...message, user_id: userId, date_modification, dechiffre: 'false'}
-    //     delete contactMaj['en-tete']
-    //     delete contactMaj['_certificat']
-    //     delete contactMaj['_signature']
+    if(action === 'nouveauMessage') {
+        console.debug("traiterMessageEvenement Nouveau message ", message)
+        const messageMaj = {...message, user_id: userId, dechiffre: 'false'}
+        delete messageMaj['en-tete']
+        delete messageMaj['_certificat']
+        delete messageMaj['_signature']
   
-    //     console.debug("traiterContactEvenement majContact ", contactMaj)
-  
-    //     // Conserver maj de contact
-    //     messagerieDao.mergeReferenceContacts(userId, [contactMaj])
-    //         .then(()=>{
-    //             dispatch(contactsAction.pushContactsChiffres([contactMaj]))
-    //         })
-    //         .catch(err=>console.error("Erreur maj contact sur evenement : %O", err))
-  
-    // } else if(action === 'contactsSupprimes') {
+        console.debug("traiterMessageEvenement majMessage ", messageMaj)
+        await messagerieDao.updateMessage(messageMaj)
+        dispatch(messagerieAction.mergeMessagesData(messageMaj))
+        dispatch(messagerieAction.pushMessagesChiffres([messageMaj]))
+
+    } else if(action === 'messageLu') {
+        console.debug("traiterMessageEvenement Message lu ", message)
     //     const uuid_contacts = message.uuid_contacts
     //     console.debug("traiterContactEvenement contactsSupprimes ", message)
     //     messagerieDao.supprimerContacts(uuid_contacts)
@@ -78,8 +79,7 @@ function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
     //             dispatch(contactsAction.supprimerContacts(uuid_contacts))
     //         })
     //         .catch(err=>console.error("Erreur supprimer contact sur evenement : %O", err))
-    // } else 
-    {
+    } else {
         console.error("Recu evenement message de type inconnu : %O", evenementMessage)
     }
     

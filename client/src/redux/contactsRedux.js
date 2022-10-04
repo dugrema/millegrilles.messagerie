@@ -274,7 +274,7 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 }
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
-    console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
+    // console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
     const getState = () => listenerApi.getState()[nomSlice]
     const { clesDao, chiffrage, messagerieDao } = workers
 
@@ -288,7 +288,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
     try {
         let contactsChiffres = [...getState().listeDechiffrage]
         while(contactsChiffres.length > 0) {
-            console.debug("dechiffrer contacts ", contactsChiffres)
+            // console.debug("dechiffrer contacts ", contactsChiffres)
             const batchContacts = contactsChiffres.slice(0, 50)  // Batch de 20 fichiers a la fois
             contactsChiffres = contactsChiffres.slice(50)  // Clip 
             listenerApi.dispatch(actions.setContactsChiffres(contactsChiffres))
@@ -299,9 +299,9 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 const ref_hachage_bytes = docCourant.ref_hachage_bytes
                 if(ref_hachage_bytes === cle_ref_hachage_bytes) {
                     const cleDechiffrageContact = {...cleDechiffrage, ...contact}
-                    console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
+                    // console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
                     const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact)
-                    console.debug("Contenu dechiffre : ", dataDechiffre)
+                    // console.debug("Contenu dechiffre : ", dataDechiffre)
                     
                     // Ajout/override champs de metadonne avec contenu dechiffre
                     Object.assign(docCourant, dataDechiffre)
