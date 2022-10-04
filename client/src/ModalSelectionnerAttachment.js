@@ -30,10 +30,12 @@ function ModalSelectionnerAttachement(props) {
 
     const [initComplete, setInitComplete] = useState(false)
     const [colonnes, setColonnes] = useState(preparerColonnes(workers))
+    const [modeView, setModeView] = useState('liste')
 
     const listeBrute = useSelector(state=>state.navigationSecondaire.liste)
     const cuuid = useSelector(state=>state.navigationSecondaire.cuuid)
     const breadcrumb = useSelector((state) => state.navigationSecondaire.breadcrumb)
+    const selection = useSelector(state=>state.navigationSecondaire.selection)
 
     const userId = useMemo(()=>{
         if(!usager || !usager.extensions) return
@@ -45,6 +47,15 @@ function ModalSelectionnerAttachement(props) {
         return listeBrute
           .map(item=>mapDocumentComplet(workers, item))
     }, [workers, show, listeBrute])
+
+    const onSelectionLignes = useCallback(selection=>{
+        console.debug("Selection ", selection)
+        dispatch(actionsNavigationSecondaire.selectionTuuids(selection))
+    }, [])
+
+    const choisirHandler = useCallback(()=>{
+        console.debug("Choisir selection %O", selection)
+    }, [selection, liste])
 
     const naviguerCollection = useCallback( cuuid => {
         if(!cuuid) cuuid = ''
@@ -78,15 +89,10 @@ function ModalSelectionnerAttachement(props) {
         if(folderId) {
             naviguerCollection(folderId)
         } else if(fileId) {
-            throw new Error("todo")
-            // console.debug("dbl click liste : %O, value : %O", liste, value)
-            // const fileItem = liste.filter(item=>item.tuuid===value.fileId).pop()
-            // const mimetype = fileItem.mimetype || ''
-            // if(mimetype.startsWith('video/')) setAfficherVideo(fileId)
-            // else showPreviewAction(fileId)
+            choisirHandler()
         }
 
-    }, [naviguerCollection, liste])
+    }, [naviguerCollection, choisirHandler, liste])
 
     const handlerSliceBreadcrumb = useCallback(level => {
         let tuuid = ''
@@ -109,10 +115,6 @@ function ModalSelectionnerAttachement(props) {
             }
         }
     }, [dispatch, breadcrumb, naviguerCollection])
-
-    const choisirHandler = useCallback(()=>{
-        console.debug("Choisir")
-    }, [])
 
     useEffect(()=>{
         if(!show || initComplete) return
@@ -137,29 +139,56 @@ function ModalSelectionnerAttachement(props) {
                 {titre}
             </Modal.Header>
 
-            <SectionBreadcrumb 
-                nomRootLocal={nomRootLocal}
-                breadcrumb={breadcrumb}
-                toBreadrumbIdx={handlerSliceBreadcrumb}
-              />
-
+            <Row>
+                <Col>
+                    <SectionBreadcrumb 
+                        nomRootLocal={nomRootLocal}
+                        breadcrumb={breadcrumb}
+                        toBreadrumbIdx={handlerSliceBreadcrumb}
+                    />
+                </Col>
+                <Col xs={12} sm={9} md={8} lg={5} className="buttonbars">
+                    <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+                </Col>
+            </Row>
             <ListeFichiers 
-                modeView='liste'
+                modeView={modeView}
                 colonnes={colonnes}
                 rows={liste} 
                 // onClick={onClick} 
                 onDoubleClick={onDoubleClick}
                 // onContextMenu={onContextMenuCb}
-                // onSelection={onSelectionLignes}
+                onSelection={onSelectionLignes}
                 // onClickEntete={enteteOnClickCb}
             />
 
             <Modal.Footer>
-                <Button onClick={choisirHandler} disabled={breadcrumb.length === 0}>Deplacer</Button>
+                <Button onClick={choisirHandler} disabled={breadcrumb.length === 0}>Choisir</Button>
             </Modal.Footer>
 
         </Modal>
     )    
+}
+
+function BoutonsFormat(props) {
+
+    const { modeView, setModeView } = props
+
+    const setModeListe = useCallback(()=>{ setModeView('liste') }, [setModeView])
+    const setModeThumbnails = useCallback(()=>{ setModeView('thumbnails') }, [setModeView])
+
+    let variantListe = 'secondary', variantThumbnail = 'outline-secondary'
+    if( modeView === 'thumbnails' ) {
+        variantListe = 'outline-secondary'
+        variantThumbnail = 'secondary'
+    }
+
+    return (
+        <ButtonGroup>
+            <Button variant={variantListe} onClick={setModeListe}><i className="fa fa-list" /></Button>
+            <Button variant={variantThumbnail} onClick={setModeThumbnails}><i className="fa fa-th-large" /></Button>
+        </ButtonGroup>
+    )
 }
 
 // function ModalSelectionnerAttachement(props) {
@@ -336,27 +365,6 @@ function trierNom(a, b) {
 //         setListe( donnees )
 //     }
 // }
-
-function BoutonsFormat(props) {
-
-    const { modeView, setModeView } = props
-
-    const setModeListe = useCallback(()=>{ setModeView('liste') }, [setModeView])
-    const setModeThumbnails = useCallback(()=>{ setModeView('thumbnails') }, [setModeView])
-
-    let variantListe = 'secondary', variantThumbnail = 'outline-secondary'
-    if( modeView === 'thumbnails' ) {
-        variantListe = 'outline-secondary'
-        variantThumbnail = 'secondary'
-    }
-
-    return (
-        <ButtonGroup>
-            <Button variant={variantListe} onClick={setModeListe}><i className="fa fa-list" /></Button>
-            <Button variant={variantThumbnail} onClick={setModeThumbnails}><i className="fa fa-th-large" /></Button>
-        </ButtonGroup>
-    )
-}
 
 function preparerColonnes(workers) {
 

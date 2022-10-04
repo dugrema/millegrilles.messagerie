@@ -71,7 +71,7 @@ async function getFichierChiffre(workers, fuuid, opts) {
             // Recuperer le fichier
             const reponse = await axios({
                 method: 'GET',
-                url: `/collections/fichiers/${fuuid}`,
+                url: `/messagerie/fichiers/${fuuid}`,
                 responseType: 'arraybuffer',
                 timeout: 20000,
                 progress,
