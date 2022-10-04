@@ -223,3 +223,110 @@ export function onContextMenu(event, value, setContextuel) {
 
     setContextuel(params)
 }
+
+export function mapDocumentComplet(workers, doc) {
+
+    const { connexion, traitementFichiers } = workers
+
+    const { nom, tuuid, date_creation, fuuid_v_courante, mimetype } = doc
+    const version_courante = doc.version_courante?{...doc.version_courante}:null
+    const copie = {...doc, version_courante}
+    
+
+    if(tuuid) {
+        // Mapper vers fileId ou folderId
+        // Utiliser mimetype pour detecter si c'est un repertoire ou fichier
+        if(mimetype) copie.fileId = tuuid
+        else {
+            copie.mimetype = 'Repertoire'
+            copie.folderId = tuuid
+        }
+
+        // Remplacer le nom temporairement durant le dechiffrage
+        if(!nom) copie.nom = tuuid
+    }
+    
+    if(date_creation) copie.dateAjout = date_creation
+    copie.dateFichier = doc.dateFichier || date_creation
+
+    // Icones et image
+    copie.thumbnail = {
+        thumbnailIcon: getThumbnailIcon(mimetype),
+        thumbnailCaption: nom,
+    }
+
+    // Loader du fichier source (principal), supporte thumbnail pour chargement
+    copie.loader = loadFichierChiffre(traitementFichiers.getFichierChiffre, fuuid_v_courante, mimetype)    
+
+    if(version_courante) {
+        const { anime, taille, images, video, duration, mimetype } = version_courante
+        
+        if(taille) copie.taille = taille
+        if(duration) copie.duration = duration
+
+        if(images) {
+            const imageLoader = imageResourceLoader(
+                traitementFichiers.getFichierChiffre, 
+                images, 
+                {anime, supporteWebp: true, fuuid: fuuid_v_courante, mimetype}
+            )
+            copie.imageLoader = imageLoader
+        }
+
+        if(video) {
+            const creerToken = async fuuids => {
+                if(typeof(fuuids) === 'string') fuuids = [fuuids]  // Transformer en array
+                const reponse = await connexion.creerTokenStream(fuuids)
+                return reponse.token
+            }
+
+            if(Object.keys(video).length > 0) {
+                copie.videoLoader = videoResourceLoader(
+                    traitementFichiers.getFichierChiffre, video, {creerToken, fuuid: fuuid_v_courante, version_courante})
+            } else {
+                // Utilisation du video original seulement
+                copie.videoLoader = videoResourceLoader(
+                    traitementFichiers.getFichierChiffre, {}, {creerToken, fuuid: fuuid_v_courante, version_courante})
+            }
+        }
+    }
+
+    return copie
+}
+
+function getThumbnailIcon(mimetype) {
+    if(!mimetype) return ICONE_FOLDER
+
+    if(mimetype === 'application/pdf') {
+        return ICONE_FICHIER_PDF
+    }
+    
+    const mimetypeBase = mimetype.split('/').shift()
+
+    if(mimetypeBase === 'image') {
+        return ICONE_FICHIER_IMAGE
+    } else if(mimetypeBase === 'video') {
+        return ICONE_FICHIER_VIDEO
+    } else if(mimetypeBase === 'audio') {
+        return ICONE_FICHIER_AUDIO
+    } else if(mimetypeBase === 'application/text') {
+        return ICONE_FICHIER_TEXT
+    } else if(mimetypeBase === 'application/zip') {
+        return ICONE_FICHIER_ZIP
+    }
+
+    return ICONE_FICHIER
+}
+
+export function estMimetypeMedia(mimetype) {
+    if(mimetype === 'application/pdf') return true
+    
+    const mimetypeBase = mimetype.split('/').shift()
+    if(mimetypeBase === 'image') {
+        return true
+    } else if(mimetypeBase === 'video') {
+        return true
+    }
+
+    return false
+}

@@ -41,13 +41,14 @@ function configurerEvenements(socket) {
       { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
 
       // GrosFichiers pour attachements
-      { eventName: 'getCollection', callback: (params, cb) => traiter(socket, mqdao.getCollection, {params, cb}) },
+      { eventName: 'syncCollection', callback: (params, cb) => traiter(socket, mqdao.syncCollection, {params, cb}) },
       { eventName: 'getDocuments', callback: (params, cb) => traiter(socket, mqdao.getDocuments, {params, cb}) },
-      { eventName: 'getDocumentsParFuuid', callback: (params, cb) => traiter(socket, mqdao.getDocumentsParFuuid, {params, cb}) },
-      { eventName: 'getFavoris', callback: (params, cb) => traiter(socket, mqdao.getFavoris, {params, cb}) },
       { eventName: 'getPermissionCles', callback: (params, cb) => traiter(socket, mqdao.getPermissionCles, {params, cb}) },
-      { eventName: 'copierFichierTiers', callback: (params, cb) => traiter(socket, mqdao.copierFichierTiers, {params, cb}) },
-      { eventName: 'getCollectionUpload', callback: (params, cb) => traiter(socket, mqdao.favorisCreerPath, {params, cb}) },
+      // { eventName: 'getCollection', callback: (params, cb) => traiter(socket, mqdao.getCollection, {params, cb}) },
+      // { eventName: 'getDocumentsParFuuid', callback: (params, cb) => traiter(socket, mqdao.getDocumentsParFuuid, {params, cb}) },
+      // { eventName: 'getFavoris', callback: (params, cb) => traiter(socket, mqdao.getFavoris, {params, cb}) },
+      // { eventName: 'copierFichierTiers', callback: (params, cb) => traiter(socket, mqdao.copierFichierTiers, {params, cb}) },
+      // { eventName: 'getCollectionUpload', callback: (params, cb) => traiter(socket, mqdao.favorisCreerPath, {params, cb}) },
 
       // Evenements
       {eventName: 'enregistrerCallbackEvenementContact', callback: (params, cb) => {mqdao.enregistrerCallbackEvenementContact(socket, params, cb)}},

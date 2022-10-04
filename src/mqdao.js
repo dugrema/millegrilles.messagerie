@@ -163,37 +163,6 @@ async function creerTokenStream(socket, params) {
     }
 }
 
-
-// Section GrosFichiers pour attachements
-
-function getDocuments(socket, params) {
-    return transmettreRequete(socket, params, 'documentsParTuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function getDocumentsParFuuid(socket, params) {
-    return transmettreRequete(socket, params, 'documentsParFuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function getFavoris(socket, params) {
-    return transmettreRequete(socket, params, 'favoris', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function getCollection(socket, params) {
-    return transmettreRequete(socket, params, 'contenuCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function getPermissionCles(socket, params) {
-    return transmettreRequete(socket, params, 'getClesFichiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function copierFichierTiers(socket, params) {
-    return transmettreCommande(socket, params, 'copierFichierTiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
-function favorisCreerPath(socket, params) {
-    return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
-}
-
 function supprimerMessages(socket, params) {
     return transmettreCommande(socket, params, 'supprimerMessages')
 }
@@ -201,6 +170,41 @@ function supprimerMessages(socket, params) {
 function supprimerContacts(socket, params) {
     return transmettreCommande(socket, params, 'supprimerContacts')
 }
+
+
+// Section GrosFichiers pour attachements
+
+function getDocuments(socket, params) {
+    return transmettreRequete(socket, params, 'documentsParTuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
+function syncCollection(socket, params) {
+    return transmettreRequete(socket, params, 'syncCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+  
+function getPermissionCles(socket, params) {
+    return transmettreRequete(socket, params, 'getClesFichiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
+
+// function getDocumentsParFuuid(socket, params) {
+//     return transmettreRequete(socket, params, 'documentsParFuuid', {domaine: CONST_DOMAINE_GROSFICHIERS})
+// }
+
+// function getFavoris(socket, params) {
+//     return transmettreRequete(socket, params, 'favoris', {domaine: CONST_DOMAINE_GROSFICHIERS})
+// }
+
+// function getCollection(socket, params) {
+//     return transmettreRequete(socket, params, 'contenuCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
+// }
+
+// function copierFichierTiers(socket, params) {
+//     return transmettreCommande(socket, params, 'copierFichierTiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
+// }
+
+// function favorisCreerPath(socket, params) {
+//     return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
+// }
 
 // Listeners
 
@@ -341,8 +345,8 @@ module.exports = {
     creerTokenStream,
 
     // GrosFichiers
-    getDocuments, getDocumentsParFuuid, getFavoris, getCollection, getPermissionCles, copierFichierTiers,
-    favorisCreerPath,
+    syncCollection, getDocuments, getPermissionCles,
+    // getDocumentsParFuuid, getFavoris, getCollection, copierFichierTiers, favorisCreerPath,
 
     // Evenements
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,

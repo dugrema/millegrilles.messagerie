@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+
 import Modal from 'react-bootstrap/Modal'
 import Button from 'react-bootstrap/Button'
 import Container from 'react-bootstrap/Container'
@@ -7,128 +9,241 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate, FilePicker } from '@dugrema/millegrilles.reactjs'
+// import { FormatteurTaille, FormatterDate, FormatterDuree, Thumbnail, FilePicker } from '@dugrema/millegrilles.reactjs'
 
-import { mapper } from './mapperFichier'
+import useWorkers, {useEtatConnexion, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
+import actionsNavigationSecondaire, {thunks as thunksNavigationSecondaire} from './redux/navigationSecondaireSlice'
+
+// import { mapper } from './mapperFichier'
+import { mapDocumentComplet, estMimetypeMedia } from './mapperFichier'
 
 function ModalSelectionnerAttachement(props) {
+    const { titre, show, fermer, erreurCb, BoutonAction } = props
+    
+    const workers = useWorkers()
+    const dispatch = useDispatch()
+    const usager = useUsager()
 
-    // console.debug("ModalSelectionnerAttachement proppys : %O", props)
+    const [initComplete, setInitComplete] = useState(false)
 
-    const { workers, show, fermer, etatConnexion, selectionner } = props
+    const listeBrute = useSelector(state=>state.navigationSecondaire.liste)
+    const cuuid = useSelector(state=>state.navigationSecondaire.cuuid)
+    const breadcrumb = useSelector((state) => state.navigationSecondaire.breadcrumb)
 
-    const [favoris, setFavoris] = useState('')
-    const [liste, setListe] = useState([])
-    const [breadcrumb, setBreadcrumb] = useState([])
-    const [colonnes, setColonnes] = useState('')
-    const [modeView, setModeView] = useState('')
-    const [cuuidCourant, setCuuidCourant] = useState('')
-    const [selection, setSelection] = useState('')
-    const selectionnerCb = useCallback(()=>{ 
+    const userId = useMemo(()=>{
+        if(!usager || !usager.extensions) return
+        return usager.extensions.userId
+    }, [usager])
 
-        // Extraire info detaillee des fichiers
-        console.debug("Liste a filtrer : %O", liste)
-        const detailSelection = liste.filter(item=>selection.includes(item.fileId))
+    const liste = useMemo(()=>{
+        if(!show || !listeBrute) return []
+        return listeBrute
+          .map(item=>mapDocumentComplet(workers, item))
+    }, [show, listeBrute])
 
-        selectionner(detailSelection)
-        fermer()
-    }, [selection, selectionner, liste, fermer])
-
-    const onDoubleClick = useCallback((event, value)=>{
-        window.getSelection().removeAllRanges()
-        // console.debug("Ouvrir %O (liste courante: %O)", value, liste)
-        if(value.folderId) {
-            const folderItem = liste.filter(item=>item.folderId===value.folderId).pop()
-            setBreadcrumb([...breadcrumb, folderItem])
-            setCuuidCourant(value.folderId)
-        } else {
-            // Determiner le type de fichier
-            //showPreviewAction(value.fileId)
-            // console.debug("!!! Preview action fichier TODO !!! %O", value)
+    const naviguerCollection = useCallback( cuuid => {
+        if(!cuuid) cuuid = ''
+        try {
+            if(cuuid) {
+                dispatch(actionsNavigationSecondaire.breadcrumbPush({tuuid: cuuid}))
+            } else {
+                dispatch(actionsNavigationSecondaire.breadcrumbSlice())
+            }
+        } catch(err) {
+            console.error("naviguerCollection Erreur dispatch breadcrumb : ", err)
         }
-    }, [liste, setCuuidCourant, breadcrumb, setBreadcrumb])
-
-    const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
-
-    const setBreadcrumbIdx = useCallback( idx => {
-        // Tronquer la breadcrumb pour revenir a un folder precedent
-        const breadcrumbTronquee = breadcrumb.filter((_, idxItem)=>idxItem<=idx)
-        setBreadcrumb(breadcrumbTronquee)
-
-        // Set nouveau cuuid courant
-        if(idx >= 0) setCuuidCourant(breadcrumbTronquee[idx].folderId)
-        else setCuuidCourant('')  // Racine des favoris
-    }, [breadcrumb, setBreadcrumb, setCuuidCourant])
-
-    useEffect(()=>{
-        if(favoris) return  // Empecher boucle
-        if(show) {
-            workers.connexion.getFavoris()
-                .then(reponse=>{
-                    // console.debug("Favoris grosfichiers : %O", reponse)
-                    setFavoris(reponse.favoris)
-                })
-                .catch(err=>console.error("Erreur chargement favoris grosfichiers : %O", err))
+        try {
+            dispatch(thunksNavigationSecondaire.changerCollection(workers, cuuid))
+                .then(()=>console.debug("Succes changerCollection : ", cuuid))
+                .catch(err=>erreurCb(err, 'Erreur changer collection'))
+        } catch(err) {
+            console.error("naviguerCollection Erreur dispatch changerCollection", err)
         }
-    }, [workers, favoris, setFavoris, show])
+    }, [dispatch, workers, erreurCb])
 
-    // Preparer format des colonnes
-    useEffect(()=>{ setColonnes(preparerColonnes()) }, [setColonnes])
-
-    // Preparer donnees a afficher dans la liste
-    useEffect(()=>{
-        if(!etatConnexion || !show) return  // Rien a faire
-        if(!cuuidCourant) {
-            if(favoris) {
-                // Utiliser liste de favoris
-                // console.debug("Set liste protege avec favoris: %O", favoris)
-                setListe( preprarerDonnees(favoris, workers, {trier: trierNom}) )
+    const handlerSliceBreadcrumb = useCallback(level => {
+        let tuuid = ''
+        if(level) {
+            const collection = breadcrumb[level]
+            tuuid = collection.tuuid
+            dispatch(actionsNavigationSecondaire.breadcrumbSlice(level))
+            try {
+                Promise.resolve(naviguerCollection(tuuid))
+                    .catch(err=>console.error("SectionBreadcrumb Erreur navigation ", err))
+            } catch(err) {
+                console.error("handlerSliceBreadcrumb Erreur naviguerCollection %s: ", tuuid, err)
             }
         } else {
-            // console.debug("Set liste avec cuuidCourant %s", cuuidCourant)
-            chargerCollection(workers, cuuidCourant, setListe)
+            try {
+                Promise.resolve(naviguerCollection())
+                    .catch(err=>console.error("SectionBreadcrumb Erreur navigation vers favoris", err))
+            } catch(err) {
+                console.error("handlerSliceBreadcrumb Erreur naviguerCollection favoris : ", err)
+            }
         }
-    }, [show, workers, etatConnexion, favoris, setListe, cuuidCourant])
+    }, [dispatch, breadcrumb, naviguerCollection])
+
+    useEffect(()=>{
+        if(!show || initComplete) return
+        // Charger position initiale (favoris)
+        console.debug("ModalCopier Set collection favoris")
+        Promise.resolve(naviguerCollection())
+          .then(()=>setInitComplete(true))
+          .catch(err=>console.error("CopierModal Erreur navigation ", err))
+    }, [naviguerCollection, show, initComplete, setInitComplete])
+
+    useEffect(()=>{
+        if(!userId) return
+        dispatch(actionsNavigationSecondaire.setUserId(userId))
+    }, [userId])
+
+    return "Mon modal"
 
     return (
-        <Modal show={show} size="lg">
-            <Modal.Header>
-                Selectionner attachement
+        <Modal show={show} onHide={fermer}>
+
+            <Modal.Header closeButton={true}>
+                {titre}
             </Modal.Header>
 
-            <Container>
-
-                <Row>
-                    <Col xs={12} lg={7}>
-                        <SectionBreadcrumb value={breadcrumb} setIdx={setBreadcrumbIdx} />
-                    </Col>
-
-                    <Col xs={12} lg={5} className="buttonbars">
-                        <BoutonsFormat modeView={modeView} setModeView={setModeView} />
-                    </Col>
-                </Row>
-
-                <ListeFichiers 
-                    modeView={modeView}
-                    colonnes={colonnes}
-                    rows={liste} 
-                    // onClick={onClick} 
-                    onDoubleClick={onDoubleClick}
-                    // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                    onSelection={onSelectionLignes}
-                    onClickEntete={colonne=>{
-                        // console.debug("Entete click : %s", colonne)
-                    }}
+            <FilePicker 
+                liste={liste} 
+                breadcrumb={breadcrumb} 
+                toBreadrumbIdx={handlerSliceBreadcrumb}
+                toCollection={naviguerCollection}
                 />
-            </Container>
 
             <Modal.Footer>
-                <Button variant="secondary" onClick={selectionnerCb}>Choisir</Button>
-                <Button variant="secondary" onClick={fermer}>Annuler</Button>
+                <BoutonAction cuuid={cuuid} disabled={breadcrumb.length === 0} />
             </Modal.Footer>
+
         </Modal>
-    )
+    )    
 }
+
+// function ModalSelectionnerAttachement(props) {
+
+//     // console.debug("ModalSelectionnerAttachement proppys : %O", props)
+
+//     const { workers, show, fermer, etatConnexion, selectionner } = props
+
+//     // const [favoris, setFavoris] = useState('')
+//     // const [liste, setListe] = useState([])
+//     // const [breadcrumb, setBreadcrumb] = useState([])
+
+//     const [colonnes, setColonnes] = useState('')
+//     const [modeView, setModeView] = useState('')
+//     const [cuuidCourant, setCuuidCourant] = useState('')
+    
+//     const [selection, setSelection] = useState('')
+
+//     const selectionnerCb = useCallback(()=>{ 
+
+//         // Extraire info detaillee des fichiers
+//         console.debug("Liste a filtrer : %O", liste)
+//         const detailSelection = liste.filter(item=>selection.includes(item.fileId))
+
+//         selectionner(detailSelection)
+//         fermer()
+    
+//     }, [selection, selectionner, liste, fermer])
+
+//     const onDoubleClick = useCallback((event, value)=>{
+//         window.getSelection().removeAllRanges()
+//         // console.debug("Ouvrir %O (liste courante: %O)", value, liste)
+//         if(value.folderId) {
+//             const folderItem = liste.filter(item=>item.folderId===value.folderId).pop()
+//             setBreadcrumb([...breadcrumb, folderItem])
+//             setCuuidCourant(value.folderId)
+//         } else {
+//             // Determiner le type de fichier
+//             //showPreviewAction(value.fileId)
+//             // console.debug("!!! Preview action fichier TODO !!! %O", value)
+//         }
+//     }, [liste, setCuuidCourant, breadcrumb, setBreadcrumb])
+
+//     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
+
+//     // const setBreadcrumbIdx = useCallback( idx => {
+//     //     // Tronquer la breadcrumb pour revenir a un folder precedent
+//     //     const breadcrumbTronquee = breadcrumb.filter((_, idxItem)=>idxItem<=idx)
+//     //     setBreadcrumb(breadcrumbTronquee)
+
+//     //     // Set nouveau cuuid courant
+//     //     if(idx >= 0) setCuuidCourant(breadcrumbTronquee[idx].folderId)
+//     //     else setCuuidCourant('')  // Racine des favoris
+//     // }, [breadcrumb, setBreadcrumb, setCuuidCourant])
+
+//     useEffect(()=>{
+//         if(favoris) return  // Empecher boucle
+//         if(show) {
+//             workers.connexion.getFavoris()
+//                 .then(reponse=>{
+//                     // console.debug("Favoris grosfichiers : %O", reponse)
+//                     setFavoris(reponse.favoris)
+//                 })
+//                 .catch(err=>console.error("Erreur chargement favoris grosfichiers : %O", err))
+//         }
+//     }, [workers, favoris, setFavoris, show])
+
+//     // Preparer format des colonnes
+//     useEffect(()=>{ setColonnes(preparerColonnes()) }, [setColonnes])
+
+//     // Preparer donnees a afficher dans la liste
+//     // useEffect(()=>{
+//     //     if(!etatConnexion || !show) return  // Rien a faire
+//     //     if(!cuuidCourant) {
+//     //         if(favoris) {
+//     //             // Utiliser liste de favoris
+//     //             // console.debug("Set liste protege avec favoris: %O", favoris)
+//     //             setListe( preprarerDonnees(favoris, workers, {trier: trierNom}) )
+//     //         }
+//     //     } else {
+//     //         // console.debug("Set liste avec cuuidCourant %s", cuuidCourant)
+//     //         chargerCollection(workers, cuuidCourant, setListe)
+//     //     }
+//     // }, [show, workers, etatConnexion, favoris, setListe, cuuidCourant])
+
+//     return (
+//         <Modal show={show} size="lg">
+//             <Modal.Header>
+//                 Selectionner attachement
+//             </Modal.Header>
+
+//             <Container>
+
+//                 <Row>
+//                     <Col xs={12} lg={7}>
+//                         <SectionBreadcrumb value={breadcrumb} setIdx={setBreadcrumbIdx} />
+//                     </Col>
+
+//                     <Col xs={12} lg={5} className="buttonbars">
+//                         <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+//                     </Col>
+//                 </Row>
+
+//                 <ListeFichiers 
+//                     modeView={modeView}
+//                     colonnes={colonnes}
+//                     rows={liste} 
+//                     // onClick={onClick} 
+//                     onDoubleClick={onDoubleClick}
+//                     // onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+//                     onSelection={onSelectionLignes}
+//                     onClickEntete={colonne=>{
+//                         // console.debug("Entete click : %s", colonne)
+//                     }}
+//                 />
+//             </Container>
+
+//             <Modal.Footer>
+//                 <Button variant="secondary" onClick={selectionnerCb}>Choisir</Button>
+//                 <Button variant="secondary" onClick={fermer}>Annuler</Button>
+//             </Modal.Footer>
+//         </Modal>
+//     )
+// }
 
 export default ModalSelectionnerAttachement
 
@@ -156,31 +271,31 @@ function trierNom(a, b) {
     return nomA.localeCompare(nomB)
 }
 
-function preprarerDonnees(liste, workers, opts) {
-    opts = opts || {}
-    const listeMappee = liste.map(item=>{
-        const itemMappe = mapper(item, workers)
-        return {...itemMappe, pret: true}
-    })
+// function preprarerDonnees(liste, workers, opts) {
+//     opts = opts || {}
+//     const listeMappee = liste.map(item=>{
+//         const itemMappe = mapper(item, workers)
+//         return {...itemMappe, pret: true}
+//     })
 
-    if(opts.trier) {
-        listeMappee.sort(opts.trier)
-    }
+//     if(opts.trier) {
+//         listeMappee.sort(opts.trier)
+//     }
 
-    return listeMappee
-}
+//     return listeMappee
+// }
 
-async function chargerCollection(workers, cuuid, setListe, usager) {
-    const { connexion } = workers
-    const reponse = await connexion.getCollection(cuuid)
-    const { documents } = reponse
+// async function chargerCollection(workers, cuuid, setListe, usager) {
+//     const { connexion } = workers
+//     const reponse = await connexion.getCollection(cuuid)
+//     const { documents } = reponse
 
-    if(documents) {
-        const donnees = preprarerDonnees(documents, workers)
-        // console.debug("chargerCollection donnees : %O", donnees)
-        setListe( donnees )
-    }
-}
+//     if(documents) {
+//         const donnees = preprarerDonnees(documents, workers)
+//         // console.debug("chargerCollection donnees : %O", donnees)
+//         setListe( donnees )
+//     }
+// }
 
 function SectionBreadcrumb(props) {
 
