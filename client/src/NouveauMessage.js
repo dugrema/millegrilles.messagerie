@@ -516,27 +516,25 @@ function AfficherAttachments(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
     const [selection, setSelection] = useState('')
     const [showAttacherFichiers, setShowAttacherFichiers] = useState(false)
-    const [tuuidsAttachments, setTuuidsAttachments] = useState('')
     
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
     const onSelectionLignes = useCallback(selection=>{setSelection(selection)}, [setSelection])
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
 
-    const tuuidsAttachmentHandler = useCallback((attachmentsMaj, attachmentsPendingMaj)=>{
-        console.debug("tuuidsAttachmentHandler attachments: %O, attachmentsPending : %O", attachmentsMaj, attachmentsPendingMaj)
+    // const tuuidsAttachmentHandler = useCallback((attachmentsMaj, attachmentsPendingMaj)=>{
+    //     console.debug("tuuidsAttachmentHandler attachments: %O, attachmentsPending : %O", attachmentsMaj, attachmentsPendingMaj)
 
-        let tuuids = []
-        attachmentsMaj = attachmentsMaj || attachments || []
-        attachmentsPendingMaj = attachmentsPendingMaj || attachmentsPending || []
+    //     let tuuids = []
+    //     attachmentsMaj = attachmentsMaj || attachments || []
+    //     attachmentsPendingMaj = attachmentsPendingMaj || attachmentsPending || []
 
-        const liste = [...attachmentsMaj, ...attachmentsPendingMaj]
+    //     const liste = [...attachmentsMaj, ...attachmentsPendingMaj]
 
-        tuuids = liste.map(item=>(item.tuuid||item.fileId)).filter(item=>item)
-        console.debug("Tuuids listener : %O", tuuids)
+    //     tuuids = liste.map(item=>(item.tuuid||item.fileId)).filter(item=>item)
+    //     console.debug("Tuuids listener : %O", tuuids)
 
-        setTuuidsAttachments(tuuids)
-    }, [setTuuidsAttachments, attachments, attachmentsPending])
+    // }, [attachments, attachmentsPending])
 
     const listeAttachments = useMemo(()=>{
         const liste = []
@@ -562,18 +560,18 @@ function AfficherAttachments(props) {
             }
             console.debug("Maj attachments pending pour selection : %O", attachmentsMaj)
             setAttachmentsPending([...attachmentsMaj])
-            tuuidsAttachmentHandler(null, attachmentsMaj)
+            // tuuidsAttachmentHandler(null, attachmentsMaj)
         } else {
             // Fichier existant, provient d'une collection de l'usager
             if(attachments) {
                 // Retirer fuuids deja selectionnes
-                const attachmentsFuuids = attachments.map(item=>item.fuuid)
-                selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid))
+                const attachmentsFuuids = attachments.map(item=>item.fuuid_v_courante)
+                selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid_v_courante))
             }
             const attachmentsMaj = [...attachments, ...selection]
             console.debug("Attachments maj : %O", attachmentsMaj)
             setAttachments(attachmentsMaj)
-            tuuidsAttachmentHandler(attachmentsMaj)
+            // tuuidsAttachmentHandler(attachmentsMaj)
 
             // Extraire la liste complete des fuuids de la selection
             const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
@@ -588,7 +586,7 @@ function AfficherAttachments(props) {
                 })
         }
 
-    }, [workers, attachments, attachmentsPending, attachmentsCles, setAttachments, setAttachmentsPending, setAttachmentsCles, tuuidsAttachmentHandler])
+    }, [workers, attachments, attachmentsPending, attachmentsCles, setAttachments, setAttachmentsPending, setAttachmentsCles])
 
     const onDrop = useCallback(acceptedFiles=>{
         preparerUploaderFichiers(workers, acceptedFiles)
