@@ -780,6 +780,7 @@ function AfficherAttachments(props) {
 
             <ModalSelectionnerAttachement 
                 show={showAttacherFichiers} 
+                titre="Selectionner des fichiers"
                 etatConnexion={etatConnexion}
                 workers={workers} 
                 fermer={fermerAttacherFichiers} 

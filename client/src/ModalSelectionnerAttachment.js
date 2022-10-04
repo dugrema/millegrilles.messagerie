@@ -8,8 +8,9 @@ import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
+import ProgressBar from 'react-bootstrap/ProgressBar'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate, FilePicker } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
 // import { FormatteurTaille, FormatterDate, FormatterDuree, Thumbnail, FilePicker } from '@dugrema/millegrilles.reactjs'
 
 import useWorkers, {useEtatConnexion, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
@@ -19,13 +20,14 @@ import actionsNavigationSecondaire, {thunks as thunksNavigationSecondaire} from 
 import { mapDocumentComplet, estMimetypeMedia } from './mapperFichier'
 
 function ModalSelectionnerAttachement(props) {
-    const { titre, show, fermer, erreurCb, BoutonAction } = props
+    const { titre, show, fermer, erreurCb } = props
     
     const workers = useWorkers()
     const dispatch = useDispatch()
     const usager = useUsager()
 
     const [initComplete, setInitComplete] = useState(false)
+    const [colonnes, setColonnes] = useState(preparerColonnes(workers))
 
     const listeBrute = useSelector(state=>state.navigationSecondaire.liste)
     const cuuid = useSelector(state=>state.navigationSecondaire.cuuid)
@@ -40,7 +42,7 @@ function ModalSelectionnerAttachement(props) {
         if(!show || !listeBrute) return []
         return listeBrute
           .map(item=>mapDocumentComplet(workers, item))
-    }, [show, listeBrute])
+    }, [workers, show, listeBrute])
 
     const naviguerCollection = useCallback( cuuid => {
         if(!cuuid) cuuid = ''
@@ -84,6 +86,10 @@ function ModalSelectionnerAttachement(props) {
         }
     }, [dispatch, breadcrumb, naviguerCollection])
 
+    const choisirHandler = useCallback(()=>{
+        console.debug("Choisir")
+    }, [])
+
     useEffect(()=>{
         if(!show || initComplete) return
         // Charger position initiale (favoris)
@@ -98,24 +104,28 @@ function ModalSelectionnerAttachement(props) {
         dispatch(actionsNavigationSecondaire.setUserId(userId))
     }, [userId])
 
-    return "Mon modal"
+    console.debug("!!! cuuid %O, liste fichiers %O, breadcrumb %O ", cuuid, liste, breadcrumb)
 
     return (
-        <Modal show={show} onHide={fermer}>
+        <Modal show={show} size="lg" onHide={fermer}>
 
             <Modal.Header closeButton={true}>
                 {titre}
             </Modal.Header>
 
-            <FilePicker 
-                liste={liste} 
-                breadcrumb={breadcrumb} 
-                toBreadrumbIdx={handlerSliceBreadcrumb}
-                toCollection={naviguerCollection}
-                />
+            <ListeFichiers 
+                modeView='liste'
+                colonnes={colonnes}
+                rows={liste} 
+                // onClick={onClick} 
+                // onDoubleClick={ouvrir}
+                // onContextMenu={onContextMenuCb}
+                // onSelection={onSelectionLignes}
+                // onClickEntete={enteteOnClickCb}
+            />
 
             <Modal.Footer>
-                <BoutonAction cuuid={cuuid} disabled={breadcrumb.length === 0} />
+                <Button onClick={choisirHandler} disabled={breadcrumb.length === 0}>Deplacer</Button>
             </Modal.Footer>
 
         </Modal>
@@ -247,20 +257,20 @@ function ModalSelectionnerAttachement(props) {
 
 export default ModalSelectionnerAttachement
 
-function preparerColonnes() {
-    const params = {
-        ordreColonnes: ['nom', 'taille', 'mimetype', 'dateAjout', 'boutonDetail'],
-        paramsColonnes: {
-            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 5},
-            'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
-            'mimetype': {'label': 'Type', className: 'details', xs: 3, lg: 2},
-            'dateAjout': {'label': 'Date ajout', className: 'details', formatteur: FormatterDate, xs: 5, lg: 2},
-            'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
-        },
-        tri: {colonne: 'nom', ordre: 1},
-    }
-    return params
-}
+// function preparerColonnes() {
+//     const params = {
+//         ordreColonnes: ['nom', 'taille', 'mimetype', 'dateAjout', 'boutonDetail'],
+//         paramsColonnes: {
+//             'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 5},
+//             'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
+//             'mimetype': {'label': 'Type', className: 'details', xs: 3, lg: 2},
+//             'dateAjout': {'label': 'Date ajout', className: 'details', formatteur: FormatterDate, xs: 5, lg: 2},
+//             'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
+//         },
+//         tri: {colonne: 'nom', ordre: 1},
+//     }
+//     return params
+// }
 
 function trierNom(a, b) {
     const nomA = a.nom?a.nom:'',
@@ -338,4 +348,41 @@ function BoutonsFormat(props) {
             <Button variant={variantThumbnail} onClick={setModeThumbnails}><i className="fa fa-th-large" /></Button>
         </ButtonGroup>
     )
+}
+
+function preparerColonnes(workers) {
+
+    const rowLoader = (item, idx) => mapDocumentComplet(workers, item, idx)
+
+    const params = {
+        ordreColonnes: ['nom', 'taille', 'mimetype', 'dateFichier', 'boutonDetail'],
+        paramsColonnes: {
+            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 5},
+            'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
+            'mimetype': {'label': 'Type', className: 'details', xs: 3, lg: 2},
+            'dateFichier': {'label': 'Date', className: 'details', formatteur: FormatterColonneDate, xs: 5, lg: 3},
+            'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
+        },
+        tri: {colonne: 'nom', ordre: 1},
+        rowLoader,
+    }
+    return params
+}
+
+function FormatterColonneDate(props) {
+    const data = props.data || {}
+    const { upload } = data
+    if(upload) {
+        if( upload.status === 1 ) {
+            return <span>En attente</span>
+        } else if( upload.status === 2 ) {
+            const taille = data.size || data.taille
+            const pct = Math.min(Math.round(upload.position / taille * 100)) || 0
+            return <ProgressBar now={pct} label={pct + '%'} />
+        } else {
+            return <span>En cours de traitement</span>
+        }
+    } else {
+        return <FormatterDate value={props.value} />   
+    }
 }
