@@ -224,8 +224,6 @@ function NouveauMessage(props) {
 
     return (
         <>
-            <BreadcrumbMessage retourMessages={fermer} />
-
             <AlertTimeout value={erreur} setValue={setErreur} titre="Erreur" variant="danger" />
 
             <AfficherDrafts 
@@ -306,18 +304,6 @@ function NouveauMessage(props) {
 }
 
 export default NouveauMessage
-
-function BreadcrumbMessage(props) {
-
-    const { retourMessages } = props
-
-    return (
-        <Breadcrumb>
-            <Breadcrumb.Item onClick={retourMessages}>Messages</Breadcrumb.Item>
-            <Breadcrumb.Item active>Nouveau</Breadcrumb.Item>
-        </Breadcrumb>
-    )
-}
 
 function Editeur(props) {
     const { content, setContent } = props

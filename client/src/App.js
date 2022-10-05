@@ -1,8 +1,10 @@
 import React, { lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { Provider as ReduxProvider, useDispatch, useSelector } from 'react-redux'
 
-import Container from 'react-bootstrap/Container'
 import { useTranslation } from 'react-i18next'
+
+import Breadcrumb from 'react-bootstrap/Breadcrumb'
+import Container from 'react-bootstrap/Container'
 
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 
@@ -13,7 +15,7 @@ import storeSetup from './redux/store'
 import { LayoutMillegrilles, ModalErreur, TransfertModal } from '@dugrema/millegrilles.reactjs'
 
 import messagerieActions, {thunks as messagerieThunks} from './redux/messagerieSlice'
-import {thunks as contactsThunks} from './redux/contactsSlice'
+import contactsActions, {thunks as contactsThunks} from './redux/contactsSlice'
 import { setUserId as setUserIdUpload, setUploads, supprimerParEtat, continuerUpload, annulerUpload } from './redux/uploaderSlice'
 import { setUserId as setUserIdDownload, supprimerDownloadsParEtat, ajouterDownload, continuerDownload, arreterDownload, setDownloads } from './redux/downloaderSlice'
 
@@ -111,7 +113,15 @@ function LayoutMain() {
   }, [setErreur])
   const handlerCloseErreur = useCallback(()=>setErreur(''), [setErreur])
 
-  const fermerContacts = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
+  const fermerContactActif = useCallback(()=>{
+    dispatch(contactsActions.setContactActif(null))
+  }, [dispatch])
+
+  const fermerContacts = useCallback(()=>{
+    fermerContactActif()
+    setAfficherContacts(false)
+  }, [fermerContactActif, setAfficherContacts])
+
   const showNouveauMessage = useCallback(()=>{
     // setAfficherNouveauMessage(true)
     dispatch(messagerieActions.setUuidMessageActif(''))
@@ -152,23 +162,22 @@ function LayoutMain() {
       .catch(err=>erreurCb(err, 'Erreur ajout download'))
   }, [workers, dispatch, erreurCb])
 
+  const retourAfficherMessages = useCallback(()=>{
+    setAfficherContacts(false)
+    dispatch(messagerieActions.setUuidMessageActif(null))
+  }, [dispatch, setAfficherContacts])
+
   const handlerSelect = useCallback(eventKey => {
     switch(eventKey) {
       case 'contacts':
         setAfficherContacts(true)
         break
-      case 'nouveauMessage':
-        // setAfficherNouveauMessage(true)
-        dispatch(messagerieActions.setUuidMessageActif(''))
-        break
       case '':
       default:
         // Revenir a la reception de messages
-        setAfficherContacts(false)
-        // setAfficherNouveauMessage(false)
-        dispatch(messagerieActions.setUuidMessageActif(null))
+        retourAfficherMessages()
     }
-  }, [dispatch, setAfficherContacts])
+  }, [retourAfficherMessages])
 
   // const repondreMessageCb = useCallback(message => {
   //   setMessageRepondre({message, conserverAttachments: false})
@@ -194,9 +203,12 @@ function LayoutMain() {
           <Contenu 
               // afficherNouveauMessage={afficherNouveauMessage}
               afficherContacts={afficherContacts}
+              setAfficherContacts={setAfficherContacts}
               fermerContacts={fermerContacts}
+              fermerContactActif={fermerContactActif}
               showNouveauMessage={showNouveauMessage}
               fermerNouveauMessage={fermerNouveauMessage}
+              retourAfficherMessages={retourAfficherMessages}
               downloadAction={downloadAction}
               erreurCb={erreurCb}
             />
@@ -229,13 +241,13 @@ function Contenu(props) {
   const dispatch = useDispatch()
   const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
 
-  const fermerMessage = useCallback(()=>{
-    throw new Error("fixme, dispatch message actif uuid")
-  }, [dispatch])
-
   if(!workers) return <Attente />
 
-  const { afficherNouveauMessage, afficherContacts, fermerContacts, showNouveauMessage, fermerNouveauMessage } = props
+  const { 
+    afficherNouveauMessage, afficherContacts, setAfficherContacts,
+    fermerContactActif, fermerContacts, showNouveauMessage, 
+    fermerNouveauMessage, retourAfficherMessages, 
+  } = props
 
   // Selection de la page a afficher
   let Page, retour = null
@@ -248,7 +260,7 @@ function Contenu(props) {
     retour = fermerNouveauMessage
   } else if(uuidMessage) {
     Page = AfficherMessage
-    retour = fermerMessage
+    retour = retourAfficherMessages
   } else {
     Page = AfficherMessages
   }
@@ -256,6 +268,11 @@ function Contenu(props) {
   return (
       <ErrorBoundary erreurCb={props.erreurCb}>
           <Suspense fallback={<Attente />}>
+            <BreadcrumbMessages 
+              retourAfficherMessages={retourAfficherMessages} 
+              fermerContactActif={fermerContactActif}
+              afficherContacts={afficherContacts}
+              setAfficherContacts={setAfficherContacts} />
             <Page {...props} retour={retour} showNouveauMessage={showNouveauMessage} />
           </Suspense>
 
@@ -267,6 +284,40 @@ function Contenu(props) {
 
 function Attente(props) {
   return <p>Chargement en cours</p>
+}
+
+function BreadcrumbMessages(props) {
+
+  const { retourAfficherMessages, fermerContactActif, afficherContacts, setAfficherContacts } = props
+
+  const listeMessages = useSelector(state=>state.messagerie.liste),
+        uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
+        uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
+
+  let sousBreadcrumbs = []
+
+  if(afficherContacts) {
+    if(uuidContactActif) {
+      sousBreadcrumbs.push(<Breadcrumb.Item key="contacts" onClick={fermerContactActif}>Contacts</Breadcrumb.Item>)
+      sousBreadcrumbs.push(<Breadcrumb.Item key="contact" active>Contact</Breadcrumb.Item>)
+    } else {
+      sousBreadcrumbs.push(<Breadcrumb.Item key="contacts" active>Contacts</Breadcrumb.Item>)
+    }
+  } else if(uuidMessageActif) {
+    sousBreadcrumbs.push(<Breadcrumb.Item key="message" active>Message</Breadcrumb.Item>)
+  } else if(uuidMessageActif === '') {
+    sousBreadcrumbs.push(<Breadcrumb.Item key="nouveau" active>Nouveau</Breadcrumb.Item>)
+  }
+
+  const rootActive = sousBreadcrumbs.length === 0
+  let breadcrumbDossier = <Breadcrumb.Item onClick={retourAfficherMessages} active={rootActive}>Reception</Breadcrumb.Item>
+
+  return (
+      <Breadcrumb>
+          {breadcrumbDossier}
+          {sousBreadcrumbs}
+      </Breadcrumb>
+  )
 }
 
 function Modals(props) {

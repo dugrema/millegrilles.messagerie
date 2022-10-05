@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
-import Breadcrumb from 'react-bootstrap/Breadcrumb'
-
 import {  FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import ListeMessages from './ListeMessages'
@@ -49,28 +47,16 @@ function AfficherListe(props) {
           compteMessages = listeMessages?listeMessages.length:0
 
     return (
-        <>
-            <BreadcrumbMessages />
-
-            <ListeMessages 
-                titre='Reception'
-                colonnes={colonnes}
-                messages={listeMessages} 
-                compteMessages={compteMessages}
-                enteteOnClickCb={enteteOnClickCb}
-                showNouveauMessage={showNouveauMessage} />
-        </>
+        <ListeMessages 
+            titre='Reception'
+            colonnes={colonnes}
+            messages={listeMessages} 
+            compteMessages={compteMessages}
+            enteteOnClickCb={enteteOnClickCb}
+            showNouveauMessage={showNouveauMessage} />
     )
 }
 
-
-function BreadcrumbMessages(props) {
-    return (
-        <Breadcrumb>
-            <Breadcrumb.Item active>Reception</Breadcrumb.Item>
-        </Breadcrumb>
-    )
-}
 
 export function preparerColonnes(workers, opts) {
     opts = opts || {}

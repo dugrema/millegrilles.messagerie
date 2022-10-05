@@ -83,8 +83,6 @@ function AfficherMessage(props) {
 
     return (
         <>
-            <BreadcrumbMessage retourMessages={retour} />
-
             <RenderMessage 
                 downloadAction={downloadAction}
                 message={message} 
@@ -110,18 +108,6 @@ function AfficherMessage(props) {
 }
 
 export default AfficherMessage
-
-function BreadcrumbMessage(props) {
-
-    const { retourMessages } = props
-
-    return (
-        <Breadcrumb>
-            <Breadcrumb.Item onClick={retourMessages}>Messages</Breadcrumb.Item>
-            <Breadcrumb.Item active>Afficher</Breadcrumb.Item>
-        </Breadcrumb>
-    )
-}
 
 function RenderMessage(props) {
     console.debug("RenderMessage : %O", props)

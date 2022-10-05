@@ -26,23 +26,25 @@ function Contacts(props) {
     const etatPret = useEtatPret()
     const dispatch = useDispatch()
 
-    const contacts = useSelector(state=>state.contacts.liste)
+    const contacts = useSelector(state=>state.contacts.liste),
+          uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
 
-    const [editerContact, setEditerContact] = useState(false)
+    // const [editerContact, setEditerContact] = useState(false)
     const [colonnes, setColonnes] = useState(preparerColonnes())
 
     const nouveauContact = useCallback(()=>{
         dispatch(contactsAction.setContactActif(''))
-        setEditerContact(true)
-    }, [])
+        // setEditerContact(true)
+        dispatch(contactsAction.setContactActif(''))
+    }, [dispatch])
     const editerContactHandler = useCallback(uuid_contact=>{
         dispatch(contactsAction.setContactActif(uuid_contact))
-        setEditerContact(true)
-    }, [])
+        // setEditerContact(true)
+    }, [dispatch])
     const retourContacts = useCallback(()=>{
         dispatch(contactsAction.setContactActif(null))
-        setEditerContact(false)
-    }, [setEditerContact])
+        // setEditerContact(false)
+    }, [dispatch])
     
     const supprimerContactsCb = useCallback(uuidContacts=>{
         // console.debug("Supprimer contacts %O", uuidContacts)
@@ -80,21 +82,17 @@ function Contacts(props) {
 
     return (
         <>
-            <BreadcrumbContacts 
-                retourMessages={retour} 
-                retourContacts={retourContacts} />
-
             <AfficherListeContacts 
-                show={editerContact?false:true} 
+                show={uuidContactActif===null} 
                 colonnes={colonnes}
                 nouveauContact={nouveauContact}
-                editerContact={editerContactHandler}
+                // editerContact={editerContactHandler}
                 retour={retour} 
                 enteteOnClickCb={enteteOnClickCb} 
                 supprimerContacts={supprimerContactsCb} />
 
             <EditerContact 
-                show={editerContact} 
+                show={uuidContactActif!==null} 
                 supprimerContacts={supprimerContactsCb} 
                 retour={retourContacts} />
 
@@ -167,6 +165,7 @@ function AfficherListeContacts(props) {
         supprimerContacts,
     } = props
 
+    const dispatch = useDispatch()
     const etatAuthentifie = useEtatAuthentifie()
     const contacts = useSelector(state=>state.contacts.liste)
     const compteContacts = contacts.length
@@ -186,9 +185,9 @@ function AfficherListeContacts(props) {
         if(selection.length > 0) {
             const uuid_contact = selection[0]
             console.debug("Ouvrir contact ", uuid_contact)
-            editerContact(uuid_contact)
+            dispatch(contactsAction.setContactActif(uuid_contact))
         }
-    }, [selection, editerContact])
+    }, [selection, dispatch])
 
     if( !contacts || !show ) return ''
 
