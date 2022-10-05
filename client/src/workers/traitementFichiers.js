@@ -39,6 +39,8 @@ async function getFichierChiffre(workers, fuuid, opts) {
     const cleFichierFct = async () => {
         const hachage_bytes = ref_hachage_bytes || fuuid
 
+        // console.debug("Charger cle %s", hachage_bytes)
+
         let cleFichier = null,
             cleSecrete = null
         try {

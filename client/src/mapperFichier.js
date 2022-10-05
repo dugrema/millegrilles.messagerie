@@ -84,7 +84,7 @@ export function mapper(row, workers, opts) {
             }
         
             // Loader du fichier source (principal), supporte thumbnail pour chargement
-            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {ref_hachage_bytes, cles})
+            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {cles})
         }
 
         if(mimetype === 'application/pdf') {
@@ -233,7 +233,7 @@ export function mapDocumentComplet(workers, doc) {
     const { nom, tuuid, date_creation, fuuid_v_courante, mimetype } = doc
     const version_courante = doc.version_courante?{...doc.version_courante}:null
     const copie = {...doc, version_courante}
-    
+    const ref_hachage_bytes = fuuid_v_courante
 
     if(tuuid) {
         // Mapper vers fileId ou folderId
@@ -270,7 +270,7 @@ export function mapDocumentComplet(workers, doc) {
             const imageLoader = imageResourceLoader(
                 traitementFichiers.getFichierChiffre, 
                 images, 
-                {anime, supporteWebp: true, fuuid: fuuid_v_courante, mimetype}
+                {anime, supporteWebp: true, ref_hachage_bytes, fuuid: fuuid_v_courante, mimetype}
             )
             copie.imageLoader = imageLoader
         }
@@ -284,11 +284,11 @@ export function mapDocumentComplet(workers, doc) {
 
             if(Object.keys(video).length > 0) {
                 copie.videoLoader = videoResourceLoader(
-                    traitementFichiers.getFichierChiffre, video, {creerToken, fuuid: fuuid_v_courante, version_courante})
+                    traitementFichiers.getFichierChiffre, video, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
             } else {
                 // Utilisation du video original seulement
                 copie.videoLoader = videoResourceLoader(
-                    traitementFichiers.getFichierChiffre, {}, {creerToken, fuuid: fuuid_v_courante, version_courante})
+                    traitementFichiers.getFichierChiffre, {}, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
             }
         }
     }

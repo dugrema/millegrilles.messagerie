@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, version } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { proxy } from 'comlink'
 
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
-import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import Dropdown from 'react-bootstrap/Dropdown'
 
 import ReactQuill from 'react-quill'
@@ -19,13 +17,11 @@ import useWorkers, {useEtatConnexion, useUsager} from './WorkerContext'
 import messagerieActions from './redux/messagerieSlice'
 import { posterMessage, getClesFormattees } from './messageUtils'
 import { uploaderFichiers } from './fonctionsFichiers'
-// import { getClesAttachments } from './cles'
 
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
 import { mapper } from './mapperFichier'
-// import * as MessageDao from './redux/messageDao'
 
 function NouveauMessage(props) {
 
@@ -286,8 +282,8 @@ function NouveauMessage(props) {
             <Row>
                 <Col className="buttonbar">
                     <Button onClick={envoyerCb} disabled={!attachmentsPrets}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
-                    <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Enregistrer</Button>
-                    <Button variant="secondary" onClick={()=>fermer(true)}><i className="fa fa-trash"/> Supprimer</Button>
+                    <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Draft</Button>
+                    <Button variant="secondary" onClick={()=>fermer(true)}>Annuler</Button>
                 </Col>
             </Row>
 
@@ -425,32 +421,32 @@ function mapperAttachments(attachments, opts) {
                 let videos = {...version_courante.video}
                 let remplacant = null
                 // Filtrer la liste de videos pour retirer les formats indesirables
-                if(optionVideo === 'original') {
+                // if(optionVideo === 'original') {
                     // Retirer tous les formats sauf le basse resolution
-                    videos = Object.keys(videos).reduce((acc, videoKey)=>{
-                        const video = videos[videoKey]
-                        const resolution = calculerResolution(video),
-                              codec = video.codec
-                        if(codec === 'h264' && resolution === 270) acc[videoKey] = video
-                        return acc
-                    }, {})
-                } else {
+                    // videos = Object.keys(videos).reduce((acc, videoKey)=>{
+                    //     const video = videos[videoKey]
+                    //     const resolution = calculerResolution(video),
+                    //           codec = video.codec
+                    //     if(codec === 'h264' && resolution === 270) acc[videoKey] = video
+                    //     return acc
+                    // }, {})
+                // } else {
                     // Remplacer le video 'original' par le format selectionne
                     // Valeurs a remplacer : fuuid, taille, videoCodec, mimetype, height, width
-                    if(optionVideo === 'faible') {
-                        videos = Object.keys(videos).reduce((acc, videoKey)=>{
-                            if(remplacant) return acc  // Rien a faire, deja trouve
-                            const video = videos[videoKey]
-                            const resolution = calculerResolution(video),
-                                  codec = video.codec
-                            if(codec === 'h264' && resolution < 360) {
-                                acc[videoKey] = video
-                                remplacant = video
-                            }
-                            return acc
-                        }, {})
-                    }
-                }
+                    // if(optionVideo === 'faible') {
+                    //     videos = Object.keys(videos).reduce((acc, videoKey)=>{
+                    //         if(remplacant) return acc  // Rien a faire, deja trouve
+                    //         const video = videos[videoKey]
+                    //         const resolution = calculerResolution(video),
+                    //               codec = video.codec
+                    //         if(codec === 'h264' && resolution < 360) {
+                    //             acc[videoKey] = video
+                    //             remplacant = video
+                    //         }
+                    //         return acc
+                    //     }, {})
+                    // }
+                // }
 
                 // Remplacer .video dans version_courante
                 version_courante.video = videos
@@ -719,8 +715,13 @@ function AfficherAttachments(props) {
 
     return (
         <div>
-            <Row>
-                <Col xs={6} md={4} lg={3}>Attachments</Col>
+            <Row className="liste-header">
+                <Col xs={6} md={2} lg={2}>Attachments</Col>
+
+                <Col xs={6} md={1} lg={1}>
+                    <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+                </Col>
+
                 <Col className="buttonbar-right">
                     <span {...getRootProps()}>
                         <input {...getInputProps()}/>
@@ -733,7 +734,7 @@ function AfficherAttachments(props) {
                         <i className="fa fa-folder" />
                             {' '}Collections
                     </Button>
-                    <Dropdown onSelect={event=>setOptionVideo(event)}>
+                    {/* <Dropdown onSelect={event=>setOptionVideo(event)}>
                         <Dropdown.Toggle variant="secondary" id="dropdown-option-video">
                             {optionVideo}
                         </Dropdown.Toggle>
@@ -741,13 +742,7 @@ function AfficherAttachments(props) {
                             <Dropdown.Item eventKey="faible">Video basse resolution</Dropdown.Item>
                             <Dropdown.Item eventKey="original">Video original</Dropdown.Item>
                         </Dropdown.Menu>
-                    </Dropdown>
-                </Col>
-            </Row>
-
-            <Row>
-                <Col>
-                    <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+                    </Dropdown> */}
                 </Col>
             </Row>
 
