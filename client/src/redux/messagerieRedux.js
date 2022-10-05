@@ -351,8 +351,14 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 return acc
             }, new Set())
             const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
-            const cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages)
-            // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+            try {
+                var cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages)
+                // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+            } catch(err) {
+                console.debug("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
+                messagesChiffres = [...getState().listeDechiffrage]
+                continue  // Skip
+            }
 
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)

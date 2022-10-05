@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+
 import Modal from 'react-bootstrap/Modal'
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
@@ -8,29 +10,23 @@ import Container from 'react-bootstrap/Container'
 import { trierString } from '@dugrema/millegrilles.utiljs/src/tri'
 import { ListeFichiers, AlertTimeout } from '@dugrema/millegrilles.reactjs'
 
+import contactsAction from './redux/contactsSlice'
+
 // import * as MessageDao from './redux/messageDao'
 
 const PAGE_LIMIT = 200
 
 function ModalContacts(props) {
 
-    const { workers, show, fermer, ajouterAdresses, userId } = props
+    const { workers, show, fermer, ajouterAdresses, erreurCb } = props
+
+    const contacts = useSelector(state=>state.contacts.liste),
+          userId = useSelector(state=>state.contacts.userId),
+          compteContacts = contacts?contacts.length:0
 
     const [colonnes, setColonnes] = useState(preparerColonnes())
-    const [contacts, setContacts] = useState('')
-    const [compteContacts, setCompteContacts] = useState(0)
     const [uuidContactSelectionne, setUuidContactSelectionne] = useState('')
     const [erreur, setErreur] = useState('')
-
-    const isListeComplete = useMemo(()=>{
-        if(contacts) return contacts.length === compteContacts
-        return false
-    }, [contacts, compteContacts])
-
-    const erreurCb = useCallback((err, message)=>{
-        console.error("Erreur generique %s : %O", err, message)
-        setErreur({err, message})
-    }, [setErreur])
 
     const appliquerCb = useCallback(()=>{
         const contactsSelectionnes = contacts
@@ -42,24 +38,6 @@ function ModalContacts(props) {
         ajouterAdresses(contactsSelectionnes)
         fermer()
     }, [uuidContactSelectionne, contacts, fermer, ajouterAdresses])
-
-    const formatterContactsCb = useCallback(contacts=>{
-        console.debug("formatterContactsCb : %O", contacts)
-        formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb)
-    }, [colonnes, userId, setContacts, setCompteContacts, erreurCb])
-
-    const getContactsSuivants = useCallback(()=>{
-        if(colonnes && userId) {
-            const { colonne, ordre } = colonnes.tri
-            throw new Error("fix me - redux")
-            // MessageDao.getContacts(userId, {colonne, ordre, skip: contacts.length, limit: PAGE_LIMIT})
-            //     .then(liste=>{
-            //         const listeMaj = [...contacts, ...liste]
-            //         return formatterContactsCb(listeMaj)
-            //     })
-            //     .catch(erreurCb)
-        }
-    }, [colonnes, contacts, formatterContactsCb, userId, erreurCb])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -78,17 +56,6 @@ function ModalContacts(props) {
         setColonnes(colonnesCourant)
     }, [colonnes, setColonnes])
 
-    // Charger liste initiale de idb
-    useEffect(()=>{
-        if(show && colonnes && userId) {
-            const { colonne, ordre } = colonnes.tri
-            throw new Error("fix me - redux")
-            // MessageDao.getContacts(userId, {colonne, ordre, limit: PAGE_LIMIT})
-            //     .then(formatterContactsCb)
-            //     .catch(erreurCb)
-        }
-    }, [workers, show, colonnes, userId, formatterContactsCb, erreurCb])
-    
     return (
         <Modal show={show} size="lg">
             <Modal.Header>
@@ -105,8 +72,6 @@ function ModalContacts(props) {
                     contacts={contacts} 
                     compteContacts={compteContacts}
                     setUuidContactSelectionne={setUuidContactSelectionne} 
-                    getContactsSuivants={getContactsSuivants}
-                    isListeComplete={isListeComplete} 
                     enteteOnClickCb={enteteOnClickCb} 
                     userId={userId} 
                     erreurCb={erreurCb} />
@@ -172,39 +137,7 @@ function preparerColonnes() {
             'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 4, md: 3},
         },
         tri: {colonne: 'nom', ordre: 1},
+        idMapper: data => data.uuid_contact,
     }
     return params
-}
-
-function formatterContacts(contacts, colonnes, userId, setContacts, setCompteContacts, erreurCb) {
-    // console.debug("formatterContacts colonnes: %O", colonnes)
-    const {colonne, ordre} = colonnes.tri
-    // let contactsTries = [...contacts]
-
-    let contactsTries = contacts.map(item=>{
-        const fileId = item.uuid_contact
-        const adresse = item.adresses?item.adresses[0]:''
-        const nom = item.nom || 'Vide'
-        return {...item, fileId, nom, adresse}
-    })
-
-    // console.debug("Contacts a trier : %O", contactsTries)
-
-    switch(colonne) {
-        // case 'adresse': contactsTries.sort(trierAdresses); break
-        default: contactsTries.sort(trierNoms)
-    }
-
-    if(ordre < 0) contactsTries = contactsTries.reverse()
-
-    setContacts(contactsTries)
-
-    throw new Error("fix me - redux")
-    // MessageDao.countContacts(userId)
-    //     .then(setCompteContacts)
-    //     .catch(erreurCb)
-}
-
-function trierNoms(a, b) {
-    return trierString('nom', a, b)
 }
