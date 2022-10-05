@@ -184,7 +184,6 @@ function AfficherListeContacts(props) {
         // console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length > 0) {
             const uuid_contact = selection[0]
-            console.debug("Ouvrir contact ", uuid_contact)
             dispatch(contactsAction.setContactActif(uuid_contact))
         }
     }, [selection, dispatch])
@@ -193,9 +192,7 @@ function AfficherListeContacts(props) {
 
     return (
         <div>
-            <h3>Contacts</h3>
-
-            <Row>
+            <Row className="liste-header">
                 <Col xs={12} md={8} className="buttonbar-left">
                     <Button onClick={nouveauContact}><i className="fa fa-user-circle"/>{' '}Nouveau</Button>
                 </Col>

@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next'
 
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import Container from 'react-bootstrap/Container'
+import Dropdown from 'react-bootstrap/Dropdown'
+import Col from 'react-bootstrap/Col'
+import Row from 'react-bootstrap/Row'
 
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 
@@ -301,13 +304,28 @@ function BreadcrumbMessages(props) {
   } else if(uuidMessageActif === '') {
     sousBreadcrumbs.push(<Breadcrumb.Item key="nouveau" active>Nouveau</Breadcrumb.Item>)
   }
-
+      
   const rootActive = sousBreadcrumbs.length === 0
-  let breadcrumbDossier = <Breadcrumb.Item onClick={retourAfficherMessages} active={rootActive}>Reception</Breadcrumb.Item>
+  if(rootActive) {
+    return (
+      <Row className="breadcrumb-dropdown">
+        <Col>
+          <Dropdown>
+            <Dropdown.Toggle>Reception</Dropdown.Toggle>
+            <Dropdown.Menu>
+              <Dropdown.Item active>Reception</Dropdown.Item>
+              <Dropdown.Item>Envoi</Dropdown.Item>
+              <Dropdown.Item>Supprime</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        </Col>
+      </Row>
+    )
+  }
 
   return (
       <Breadcrumb>
-          {breadcrumbDossier}
+          <Breadcrumb.Item onClick={retourAfficherMessages}>Reception</Breadcrumb.Item>
           {sousBreadcrumbs}
       </Breadcrumb>
   )
