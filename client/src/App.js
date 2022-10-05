@@ -9,7 +9,7 @@ import Container from 'react-bootstrap/Container'
 import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
 
 import ErrorBoundary from './ErrorBoundary'
-import useWorkers, {useEtatConnexion, WorkerProvider, useUsager, useEtatPret} from './WorkerContext'
+import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
 import storeSetup from './redux/store'
 
 import { LayoutMillegrilles, ModalErreur, TransfertModal } from '@dugrema/millegrilles.reactjs'
@@ -179,12 +179,6 @@ function LayoutMain() {
     }
   }, [retourAfficherMessages])
 
-  // const repondreMessageCb = useCallback(message => {
-  //   setMessageRepondre({message, conserverAttachments: false})
-  //   setUuidMessage('')
-  //   setAfficherNouveauMessage(true)
-  // }, [setMessageRepondre, setAfficherNouveauMessage])
-
   const menu = (
     <Menu 
         workers={workers}
@@ -288,10 +282,9 @@ function Attente(props) {
 
 function BreadcrumbMessages(props) {
 
-  const { retourAfficherMessages, fermerContactActif, afficherContacts, setAfficherContacts } = props
+  const { retourAfficherMessages, fermerContactActif, afficherContacts } = props
 
-  const listeMessages = useSelector(state=>state.messagerie.liste),
-        uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
+  const uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
         uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
 
   let sousBreadcrumbs = []
@@ -471,8 +464,6 @@ function InitialisationUpload(props) {
       // console.debug("Initialiser uploader")
       uploadFichiersDao.chargerUploads(userId)
           .then(async uploads=>{
-              // console.debug("Uploads trouves : %O", uploads)
-              // uploads.sort(trierListeUpload)
               // Reset etat uploads en cours (incomplets)
 
               const completExpire = new Date().getTime() - CONST_UPLOAD_COMPLET_EXPIRE
@@ -523,22 +514,6 @@ function InitialisationUpload(props) {
 
   // Rien a afficher
   return ''
-}
-
-function trierDate(a, b) {
-  let resultat = trierNombre('date_reception', a, b)
-  if(resultat === 0) {
-    resultat = trierNombre('date_envoi', a, b)
-  }
-  return resultat
-}
-
-function trierSubject(a, b) {
-  return trierString('subject', a, b, {chaine: trierDate})
-}
-
-function trierFrom(a, b) {
-  return trierString('from', a, b, {chaine: trierDate})
 }
 
 function supprimerUploads(workers, dispatch, params, erreurCb) {
