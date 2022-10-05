@@ -286,10 +286,20 @@ function Attente(props) {
 
 function BreadcrumbMessages(props) {
 
+  const workers = useWorkers(),
+        dispatch = useDispatch()
+
   const { retourAfficherMessages, fermerContactActif, afficherContacts } = props
 
   const uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
-        uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
+        uuidContactActif = useSelector(state=>state.contacts.uuidContactActif),
+        sourceMessages = useSelector(state=>state.messagerie.source)
+
+  const changerSourceHandler = useCallback(source=>{
+    console.debug("Changer source pour ", source)
+    dispatch(messagerieThunks.chargerMessages(workers, source))
+      .catch(err=>console.error("BreadcrumbMessages Erreur changer source ", err))
+  }, [workers, dispatch])
 
   let sousBreadcrumbs = []
 
@@ -311,12 +321,12 @@ function BreadcrumbMessages(props) {
     return (
       <Row className="breadcrumb-dropdown">
         <Col>
-          <Dropdown>
+          <Dropdown onSelect={changerSourceHandler}>
             <Dropdown.Toggle>Reception</Dropdown.Toggle>
             <Dropdown.Menu>
-              <Dropdown.Item active>Reception</Dropdown.Item>
-              <Dropdown.Item>Envoi</Dropdown.Item>
-              <Dropdown.Item>Supprime</Dropdown.Item>
+              <Dropdown.Item active={sourceMessages==='reception'} eventKey="reception">Reception</Dropdown.Item>
+              <Dropdown.Item active={sourceMessages==='outbox'} eventKey="outbox">Envoi</Dropdown.Item>
+              <Dropdown.Item active={sourceMessages==='corbeille'} eventKey="corbeille">Corbeille</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
         </Col>
@@ -394,7 +404,7 @@ function InitialiserMessagerie(props) {
   useEffect(()=>{
     if(!userId) return  // Rien a faire
     dispatch(messagerieActions.setUserId(userId))
-    dispatch(messagerieThunks.chargerMessages(workers))
+    dispatch(messagerieThunks.chargerMessages(workers, 'reception'))
       .catch(err=>console.error("Erreur chargement messages ", err))
     dispatch(contactsThunks.chargerProfil(workers, userId, nomUsager, window.location))
       .then(()=>{

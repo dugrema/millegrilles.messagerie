@@ -2,7 +2,7 @@ import { base64 } from 'multiformats/bases/base64'
 import { createSlice, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
 import { dechiffrerMessage } from '../cles'
 
-const SOURCE_INBOX = 'inbox',
+const SOURCE_RECEPTION = 'reception',
       SOURCE_OUTBOX = 'outbox',
       SOURCE_CORBEILLE = 'corbeille'
 
@@ -16,7 +16,7 @@ const initialState = {
     adresseUsager: '',          // Adresse du serveur local, utilise comme source du message
 
     // Liste a l'ecran
-    source: SOURCE_INBOX,       // Source de la requete - inbox, corbeille, outbox, custom
+    source: null,               // Source de la requete - reception, corbeille, outbox, custom
     sortKeys: {key: 'date_reception', ordre: -1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
     selection: null,            // Messages selectionnes
@@ -174,6 +174,11 @@ function preparerTransfererMessageAction(state, action) {
     state.uuidMessageTransfert = uuidMessage
 }
 
+function setSourceMessagesAction(state, action) {
+    const sourceMessages = action.payload
+    state.source = sourceMessages
+}
+
 // Slice collection
 
 export function creerSlice(name) {
@@ -194,6 +199,7 @@ export function creerSlice(name) {
             setUuidMessageActif: setUuidMessageActifAction,
             preparerRepondreMessage: preparerRepondreMessageAction,
             preparerTransfererMessage: preparerTransfererMessageAction,
+            setSourceMessages: setSourceMessagesAction,
         }
     })
 
@@ -202,20 +208,19 @@ export function creerSlice(name) {
 export function creerThunks(actions, nomSlice) {
 
     // Action creators are generated for each case reducer function
-    const { pushMessages, clearMessages, pushMessagesChiffres } = actions
+    const { pushMessages, clearMessages, pushMessagesChiffres, setSourceMessages } = actions
 
     // Async actions
-    function chargerMessages(workers) {
-        return (dispatch, getState) => traiterChargerMessages(workers, dispatch, getState)
+    function chargerMessages(workers, sourceMessages) {
+        return (dispatch, getState) => traiterChargerMessages(workers, dispatch, getState, sourceMessages)
     }
     
-    async function traiterChargerMessages(workers, dispatch, getState) {
-        // const state = getState()[nomSlice]
-        // const sourcePrecedente = state.source,
-        //       uuidPrecedent = state.uuidDossier
+    async function traiterChargerMessages(workers, dispatch, getState, sourceMessages) {
+        const state = getState()[nomSlice]
+        const sourcePrecedente = state.source
     
-        // if(sourcePrecedente === sourceMessages && uuidPrecedent === uuidDossier) return  // Rien a faire, meme source/dossier
-        // dispatch(setSourceMessages(sourceMessages, uuidDossier))
+        if(sourcePrecedente === sourceMessages) return  // Rien a faire, meme source/dossier
+        dispatch(setSourceMessages(sourceMessages))
     
         return traiterRafraichirMessages(workers, dispatch, getState)
     }
@@ -224,15 +229,27 @@ export function creerThunks(actions, nomSlice) {
         const { messagerieDao } = workers
     
         const state = getState()[nomSlice]
-        const { userId } = state
+        const { userId, source } = state
     
         console.debug("Rafraichir messages pour userId", userId)
     
         // Nettoyer la liste
         dispatch(clearMessages())
 
-        // // Charger le contenu de la collection deja connu et dechiffre
-        const contenuIdb = await messagerieDao.getMessages(userId)
+        let contenuIdb = null
+        if(source === SOURCE_RECEPTION) {
+            // // Charger le contenu de la collection deja connu et dechiffre
+            contenuIdb = await messagerieDao.getMessages(userId)
+        } else if(source === SOURCE_OUTBOX) {
+            console.error("TODO outbox")
+            return
+        } else if(source === SOURCE_CORBEILLE) {
+            console.error("TODO corbeille")
+            return
+        } else {
+            throw new Error("Source de messages non supportee : ", source)
+        }
+
         console.debug("traiterRafraichirMessages Messages ", contenuIdb)
         if(contenuIdb && contenuIdb.length > 0) {
             // Remplacer la liste de contacts
@@ -241,7 +258,7 @@ export function creerThunks(actions, nomSlice) {
             // Nettoyer la liste
             dispatch(clearMessages())
         }
-    
+
         const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
 
         try {

@@ -713,6 +713,8 @@ function AfficherAttachments(props) {
 
     // if(!attachments || attachments.length === 0) return ''
 
+    const compteAttachments = attachments?attachments.length:0
+
     return (
         <div>
             <Row className="liste-header">
@@ -746,18 +748,21 @@ function AfficherAttachments(props) {
                 </Col>
             </Row>
 
-            <ListeFichiers 
-                modeView={modeView}
-                colonnes={colonnes}
-                rows={listeAttachments} 
-                // onClick={...pas utilise...} 
-                // onDoubleClick={... pas utilise...}
-                onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                onSelection={onSelectionLignes}
-                onClickEntete={colonne=>{
-                    // console.debug("Entete click : %s", colonne)
-                }}
-            />
+            {compteAttachments>0?
+                <ListeFichiers 
+                    modeView={modeView}
+                    colonnes={colonnes}
+                    rows={listeAttachments} 
+                    // onClick={...pas utilise...} 
+                    // onDoubleClick={... pas utilise...}
+                    onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
+                    onSelection={onSelectionLignes}
+                    onClickEntete={colonne=>{
+                        // console.debug("Entete click : %s", colonne)
+                    }}
+                />
+                :''
+            }
 
             <MenuContextuel
                 workers={workers}
