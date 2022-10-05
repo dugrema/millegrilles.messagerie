@@ -102,7 +102,7 @@ function LayoutMain() {
 
   // Selecteurs de page
   const [afficherContacts, setAfficherContacts] = useState(false)
-  const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
+  // const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   
   const [erreur, setErreur] = useState('')
   const erreurCb = useCallback((err, message)=>{
@@ -112,8 +112,14 @@ function LayoutMain() {
   const handlerCloseErreur = useCallback(()=>setErreur(''), [setErreur])
 
   const fermerContacts = useCallback(()=>setAfficherContacts(false), [setAfficherContacts])
-  const showNouveauMessage = useCallback(()=>setAfficherNouveauMessage(true), [setAfficherNouveauMessage])
-  const fermerNouveauMessage = useCallback(()=>setAfficherNouveauMessage(false), [setAfficherNouveauMessage])
+  const showNouveauMessage = useCallback(()=>{
+    // setAfficherNouveauMessage(true)
+    dispatch(messagerieActions.setUuidMessageActif(''))
+  }, [dispatch])
+  const fermerNouveauMessage = useCallback(()=>{
+    // setAfficherNouveauMessage(false)
+    dispatch(messagerieActions.setUuidMessageActif(null))
+  }, [])
 
   // Modal transfert et actions
   const showTransfertModalOuvrir = useCallback(()=>{ setShowTransfertModal(true) }, [setShowTransfertModal])
@@ -152,15 +158,23 @@ function LayoutMain() {
         setAfficherContacts(true)
         break
       case 'nouveauMessage':
-        setAfficherNouveauMessage(true)
+        // setAfficherNouveauMessage(true)
+        dispatch(messagerieActions.setUuidMessageActif(''))
         break
       case '':
       default:
         // Revenir a la reception de messages
         setAfficherContacts(false)
-        setAfficherNouveauMessage(false)
+        // setAfficherNouveauMessage(false)
+        dispatch(messagerieActions.setUuidMessageActif(null))
     }
-  }, [setAfficherContacts, setAfficherNouveauMessage])
+  }, [dispatch, setAfficherContacts])
+
+  // const repondreMessageCb = useCallback(message => {
+  //   setMessageRepondre({message, conserverAttachments: false})
+  //   setUuidMessage('')
+  //   setAfficherNouveauMessage(true)
+  // }, [setMessageRepondre, setAfficherNouveauMessage])
 
   const menu = (
     <Menu 
@@ -178,7 +192,7 @@ function LayoutMain() {
       <Container className="contenu">
         <Suspense fallback={<Attente />}>
           <Contenu 
-              afficherNouveauMessage={afficherNouveauMessage}
+              // afficherNouveauMessage={afficherNouveauMessage}
               afficherContacts={afficherContacts}
               fermerContacts={fermerContacts}
               showNouveauMessage={showNouveauMessage}
@@ -228,7 +242,8 @@ function Contenu(props) {
   if(afficherContacts) {
     Page = Contacts
     retour = fermerContacts
-  } else if(afficherNouveauMessage) {
+  } else if(afficherNouveauMessage || uuidMessage === '') {
+    // Flag '' est pour repondre ou transferer un message
     Page = NouveauMessage
     retour = fermerNouveauMessage
   } else if(uuidMessage) {

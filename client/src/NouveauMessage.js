@@ -15,7 +15,8 @@ import { useDropzone } from 'react-dropzone'
 
 import { ListeFichiers, FormatteurTaille, AlertTimeout, useDetecterSupport } from '@dugrema/millegrilles.reactjs'
 
-import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
+import useWorkers, {useEtatConnexion, useUsager} from './WorkerContext'
+import messagerieActions from './redux/messagerieSlice'
 import { posterMessage, getClesFormattees } from './messageUtils'
 import { uploaderFichiers } from './fonctionsFichiers'
 // import { getClesAttachments } from './cles'
@@ -28,18 +29,19 @@ import { mapper } from './mapperFichier'
 
 function NouveauMessage(props) {
 
-    const { 
-        fermerNouveauMessage, dnsMessagerie, 
-        showConfirmation, messageRepondre, setMessageRepondre,
-    } = props
+    const { fermerNouveauMessage, showConfirmation, setMessageRepondre } = props
 
     const workers = useWorkers(),
+          dispatch = useDispatch(),
           etatConnexion = useEtatConnexion(),
           usager = useUsager(),
           supportMedia = useDetecterSupport()
 
-    const profil = useSelector(state=>state.contacts.profil)
-    const userId = useSelector(state=>state.contacts.userId)
+    const profil = useSelector(state=>state.contacts.profil),
+          userId = useSelector(state=>state.contacts.userId),
+          uuidMessageRepondre = useSelector(state=>state.messagerie.uuidMessageRepondre),
+          uuidMessageTransfert = useSelector(state=>state.messagerie.uuidMessageTransfert),
+          listeMessages = useSelector(state=>state.messagerie.liste)
 
     const [certificatsMaitredescles, setCertificatsMaitredescles] = useState('')
 
@@ -156,11 +158,17 @@ function NouveauMessage(props) {
     }, [setDrafts, erreurCb])
 
     useEffect(()=>{
-        if(messageRepondre) {
-            preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles)
-            setMessageRepondre('')  // Reset message repondre
+        if(listeMessages && uuidMessageRepondre) {
+            const messageRepondre = listeMessages.filter(item=>item.uuid_transaction===uuidMessageRepondre).pop()
+            if(messageRepondre) {
+                preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, {})
+                dispatch(messagerieActions.setUuidMessageActif(''))  // Clear uuidMessageRepondre
+            } else {
+                console.error("NouveauMessage Erreur preparation repondre : Message %s introuvable ", uuidMessageRepondre)
+                dispatch(messagerieActions.setUuidMessageActif())    // Retour a la liste de messages
+            }
         }
-    }, [workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
+    }, [workers, dispatch, listeMessages, uuidMessageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
 
     useEffect(()=>{
         if(!profil || !usager) return
@@ -858,8 +866,10 @@ function PretFormatteur(props) {
     }
 }
 
-function preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles) {
-    const { message, conserverAttachments, clearTo } = messageRepondre
+function preparerReponse(workers, message, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts) {
+    opts = opts || {}
+    // const { message, conserverAttachments, clearTo } = messageRepondre
+    const { conserverAttachments, clearTo } = opts
     const to = message.replyTo || message.from
     if(clearTo !== true) {
         setTo(to)

@@ -26,7 +26,6 @@ function AfficherMessage(props) {
     console.debug("AfficherMessage proppys: %O", props)
 
     const { 
-        // workers, etatConnexion, etatAuthentifie, 
         downloadAction,
         certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, 
     } = props
@@ -51,10 +50,10 @@ function AfficherMessage(props) {
     const [attachmentACopier, setAttachmentACopier] = useState('')
     const [afficherVideo, setAfficherVideo] = useState(false)
 
-    const retour = useCallback(()=>{
-        dispatch(messagerieActions.setUuidMessageActif(null))
-    }, [dispatch])
+    const retour = useCallback(()=>dispatch(messagerieActions.setUuidMessageActif(null)), [dispatch])
+
     const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
+
     const choisirCollectionCb = useCallback(
         attachment => {
             setAttachmentACopier(attachment)
@@ -73,7 +72,9 @@ function AfficherMessage(props) {
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
     }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, message])
 
-    const repondreCb = useCallback(()=>repondreMessageCb({...message}), [message, repondreMessageCb])
+    const repondreCb = useCallback(()=>{
+        dispatch(messagerieActions.preparerRepondreMessage())
+    }, [dispatch])
     const transfererCb = useCallback(()=>transfererMessageCb({...message}), [message, transfererMessageCb])
 
     useEffect(()=>{

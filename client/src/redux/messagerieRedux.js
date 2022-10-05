@@ -22,6 +22,10 @@ const initialState = {
     selection: null,            // Messages selectionnes
     uuidMessageActif: null,     // Message actif
 
+    // Reponse/transfert message
+    uuidMessageRepondre: null,
+    uuidMessageTransfert: null,
+
     // Travail background
     listeDechiffrage: [],       // Liste de messages a dechiffrer
     mergeVersion: 0,            // Utilise pour flagger les changements
@@ -150,6 +154,24 @@ function supprimerMessagesAction(state, action) {
 
 function setUuidMessageActifAction(state, action) {
     state.uuidMessageActif = action.payload
+    state.uuidMessageRepondre = null
+    state.uuidMessageTransfert = null
+}
+
+// Repondre au message actif
+function preparerRepondreMessageAction(state, action) {
+    const uuidMessage = state.uuidMessageActif || action.payload
+    if(!uuidMessage) return
+    state.uuidMessageActif = ''  // Valeur pour nouveau message
+    state.uuidMessageRepondre = uuidMessage
+}
+
+// Transferer le message actif (conserver attachments)
+function preparerTransfererMessageAction(state, action) {
+    const uuidMessage = state.uuidMessageActif || action.payload
+    if(!uuidMessage) return
+    state.uuidMessageActif = ''  // Valeur pour nouveau message
+    state.uuidMessageTransfert = uuidMessage
 }
 
 // Slice collection
@@ -170,6 +192,8 @@ export function creerSlice(name) {
             selectionMessages: selectionMessagesAction,
             setMessagesChiffres: setMessagesChiffresAction,
             setUuidMessageActif: setUuidMessageActifAction,
+            preparerRepondreMessage: preparerRepondreMessageAction,
+            preparerTransfererMessage: preparerTransfererMessageAction,
         }
     })
 
