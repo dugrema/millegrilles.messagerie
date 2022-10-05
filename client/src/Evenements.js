@@ -79,6 +79,14 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
             await messagerieDao.updateMessage(messageMaj)
             dispatch(messagerieAction.mergeMessagesData(messageMaj))
         }
+    } else if(action === 'messagesSupprimes') {
+        console.debug("traiterMessageEvenement Messages supprimes ", message)
+
+        for await (const uuid_transaction of message.uuid_transactions) {
+            const messageSupprime = {uuid_transaction, user_id: userId, supprime: true}
+            await messagerieDao.updateMessage(messageSupprime)
+            dispatch(messagerieAction.supprimerMessages(messageSupprime))
+        }
 
     } else {
         console.error("Recu evenement message de type inconnu : %O", evenementMessage)

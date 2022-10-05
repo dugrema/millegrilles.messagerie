@@ -96,7 +96,8 @@ function AfficherListeMessages(props) {
           dispatch = useDispatch(),
           etatConnexion = useEtatConnexion(),
           etatAuthentifie = useEtatAuthentifie(),
-          selection = useSelector(state=>state.messagerie.selection)
+          selection = useSelector(state=>state.messagerie.selection),
+          userId = useSelector(state=>state.contacts.userId)
 
     const messages = useSelector(state=>state.messagerie.liste)
 
@@ -120,10 +121,23 @@ function AfficherListeMessages(props) {
         }
     }, [dispatch, selection])
 
-    const supprimerMessages = useCallback( ()=>{ 
-        // supprimerMessagesCb(selection)
-        throw new Error("fix me")
-    }, [supprimerMessagesCb])
+    const supprimerMessages = useCallback( ()=>{
+        const { connexion, messagerieDao } = workers
+        new Promise(async (resolve, reject) => {
+            try {
+                await connexion.supprimerMessages(selection)
+                dispatch(messagerieActions.supprimerMessages(selection))
+                for await (const uuid_transaction of selection) {
+                    const messageSupprime = {uuid_transaction, user_id: userId, supprime: true}
+                    await messagerieDao.updateMessage(messageSupprime)
+                }
+                resolve()
+            } catch(err) {
+                console.error("AfficherListeMessages supprimerMessages Erreur ", err)
+                reject(err)
+            }
+        })
+    }, [workers, dispatch, userId, selection])
 
     if( !messages ) return ''
 

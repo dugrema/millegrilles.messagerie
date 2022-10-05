@@ -139,6 +139,10 @@ function selectionMessagesAction(state, action) {
 function supprimerMessagesAction(state, action) {
     let messages = action.payload
     if(!Array.isArray(messages)) messages = [messages]
+    messages = messages.map(item=>{
+        if(typeof(item) === 'string') return item
+        return item.uuid_transaction
+    })
     state.liste = state.liste.filter(item=>{
         return ! messages.includes(item.uuid_transaction)
     })
@@ -158,7 +162,7 @@ export function creerSlice(name) {
         reducers: {
             setUserId: setUserIdAction,
             pushMessages: pushMessagesAction, 
-            supprimer: supprimerMessagesAction,
+            supprimerMessages: supprimerMessagesAction,
             clearMessages: clearMessagesAction,
             mergeMessagesData: mergeMessagesDataAction,
             setSortKeys: setSortKeysAction,
@@ -174,16 +178,7 @@ export function creerSlice(name) {
 export function creerThunks(actions, nomSlice) {
 
     // Action creators are generated for each case reducer function
-    const { 
-        setUserId, 
-        // setCuuid, 
-        pushMessages, clearMessages, mergeMessagesData,
-        breadcrumbPush, breadcrumbSlice, 
-        setSortKeys, setSourceMessages, setIntervalle,
-        pushMessagesChiffres, clearMessagesChiffres, selectionMessages,
-        setMessagesChiffres,
-        // supprimer, 
-    } = actions
+    const { pushMessages, clearMessages, pushMessagesChiffres } = actions
 
     // Async actions
     function chargerMessages(workers) {
