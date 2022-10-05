@@ -218,7 +218,7 @@ export function creerThunks(actions, nomSlice) {
             dispatch(pushContacts({liste: contenuIdb, clear: true}))
         } else {
             // Nettoyer la liste
-            dispatch(clearContacts())
+            dispatch(pushContacts({liste: [], clear: true}))
         }
     
         const cbChargerContacts = contacts => dispatch(chargerContactsParSyncid(workers, contacts))
