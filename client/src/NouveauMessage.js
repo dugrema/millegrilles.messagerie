@@ -873,6 +873,7 @@ function PretFormatteur(props) {
     }
 }
 
+// Prepare une reponse/transfert de messages
 function preparerReponse(workers, message, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts) {
     opts = opts || {}
     const { conserverAttachments, clearTo } = opts
@@ -896,17 +897,21 @@ function preparerReponse(workers, message, setTo, setContent, setUuidThread, set
     setUuidThread(uuidThread)
 
     if(conserverAttachments && message.attachments) {
+        console.debug("preparerReponse Conserver attachements : ", message.attachments)
         const { cles, fichiers } = message.attachments
         setAttachmentsCles(cles)
 
         const rowsAttachments = fichiers.map(item=>{
             const fuuid = item.fuuid,
-                  fileId = fuuid
-            const itemMappe = {fileId, ...item, version_courante: item}  // Simuler mapping avec version_courante
+                  fileId = fuuid,
+                  metadata = item.metadata || {}
+            const itemMappe = {fileId, ...item, ...metadata.data, version_courante: {...item}}  // Simuler mapping avec version_courante
             let rowAttachment = preparerRowAttachment(workers, itemMappe)
             rowAttachment = {...rowAttachment, fuuid}
             return rowAttachment
         })
+
+        console.debug("preparerReponse Conserver attachements Cles %O, fichiers %O, rowsAttachments %O", cles, fichiers, rowsAttachments)
         setAttachments(rowsAttachments)
     }
 }

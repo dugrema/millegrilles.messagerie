@@ -361,31 +361,35 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 // Dechiffrer message
                 const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
                 // console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
-                const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
-                // console.debug("Contenu dechiffre : ", dataDechiffre)
+                try {
+                    const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
+                    // console.debug("Contenu dechiffre : ", dataDechiffre)
 
-                const validation = dataDechiffre.validation
-                if(validation.valide !== true) {
-                    console.warn("Message invalide %s, skip", message.uuid_transaction)
-                    continue
+                    const validation = dataDechiffre.validation
+                    if(validation.valide !== true) {
+                        console.warn("Message invalide %s, skip", message.uuid_transaction)
+                        continue
+                    }
+
+                    // Ajout/override champs de metadonne avec contenu dechiffre
+                    Object.assign(docCourant, dataDechiffre)
+                    docCourant.dechiffre = 'true'
+
+                    // Cleanup objet dechiffre
+                    delete docCourant.message_chiffre
+                    delete docCourant.hachage_bytes
+                    delete docCourant.certificat_message
+                    delete docCourant.certificat_millegrille
+                    delete docCourant['_signature']
+
+                    // Sauvegarder dans IDB
+                    await messagerieDao.updateMessage(docCourant, {replace: true})
+
+                    // Mettre a jour liste a l'ecran
+                    listenerApi.dispatch(actions.mergeMessagesData(docCourant))
+                } catch(err) {
+                    console.error("Erreur dechiffrage message %O : %O", message, err)
                 }
-
-                // Ajout/override champs de metadonne avec contenu dechiffre
-                Object.assign(docCourant, dataDechiffre)
-                docCourant.dechiffre = 'true'
-
-                // Cleanup objet dechiffre
-                delete docCourant.message_chiffre
-                delete docCourant.hachage_bytes
-                delete docCourant.certificat_message
-                delete docCourant.certificat_millegrille
-                delete docCourant['_signature']
-
-                // Sauvegarder dans IDB
-                await messagerieDao.updateMessage(docCourant, {replace: true})
-
-                // Mettre a jour liste a l'ecran
-                listenerApi.dispatch(actions.mergeMessagesData(docCourant))
             }
 
             messagesChiffres = [...getState().listeDechiffrage]

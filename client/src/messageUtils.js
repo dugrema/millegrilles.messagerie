@@ -85,7 +85,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
             // console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
             const cleDechiffrage = clesAttachmentsPrets[hachage_bytes]
-            if(cleDechiffrage) {
+            if(cleDechiffrage && metadata.data_chiffre) {
                 const data_dechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, cleDechiffrage)
                 // console.debug("Metadata dechiffre %s : %O", hachage_bytes, data_dechiffre)
                 delete metadata.data_chiffre
