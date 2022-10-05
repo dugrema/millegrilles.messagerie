@@ -72,10 +72,8 @@ function AfficherMessage(props) {
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
     }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, message])
 
-    const repondreCb = useCallback(()=>{
-        dispatch(messagerieActions.preparerRepondreMessage())
-    }, [dispatch])
-    const transfererCb = useCallback(()=>transfererMessageCb({...message}), [message, transfererMessageCb])
+    const repondreCb = useCallback(()=>dispatch(messagerieActions.preparerRepondreMessage()), [dispatch])
+    const transfererCb = useCallback(()=>dispatch(messagerieActions.preparerTransfererMessage()), [dispatch])
 
     useEffect(()=>{
         if(etatConnexion && etatAuthentifie && message && !message.lu && !message.date_envoi) {

@@ -157,19 +157,26 @@ function NouveauMessage(props) {
         //     .catch(erreurCb)
     }, [setDrafts, erreurCb])
 
+    // Preparer reponse ou transfert
     useEffect(()=>{
-        if(listeMessages && uuidMessageRepondre) {
-            const messageRepondre = listeMessages.filter(item=>item.uuid_transaction===uuidMessageRepondre).pop()
-            if(messageRepondre) {
-                preparerReponse(workers, messageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, {})
+        if(listeMessages && (uuidMessageRepondre || uuidMessageTransfert)) {
+            const uuidMessage = uuidMessageRepondre || uuidMessageTransfert
+            const messageTrouve = listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop()
+            if(messageTrouve) {
+                let opts = {}
+                if(uuidMessageTransfert) {
+                    // C'est un transfert
+                    opts = {conserverAttachments: true, clearTo: true}
+                }
+                preparerReponse(workers, messageTrouve, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts)
                 dispatch(messagerieActions.setUuidMessageActif(''))  // Clear uuidMessageRepondre
             } else {
                 console.error("NouveauMessage Erreur preparation repondre : Message %s introuvable ", uuidMessageRepondre)
                 dispatch(messagerieActions.setUuidMessageActif())    // Retour a la liste de messages
             }
         }
-    }, [workers, dispatch, listeMessages, uuidMessageRepondre, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
-
+    }, [workers, dispatch, listeMessages, uuidMessageRepondre, uuidMessageTransfert, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
+    
     useEffect(()=>{
         if(!profil || !usager) return
 
@@ -868,7 +875,6 @@ function PretFormatteur(props) {
 
 function preparerReponse(workers, message, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts) {
     opts = opts || {}
-    // const { message, conserverAttachments, clearTo } = messageRepondre
     const { conserverAttachments, clearTo } = opts
     const to = message.replyTo || message.from
     if(clearTo !== true) {
