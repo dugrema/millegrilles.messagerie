@@ -39,24 +39,11 @@ function ListeMessages(props) {
 
     return (
         <div>
-            <Row>
-                <Col xs={12} md={3} className="buttonbar-left">
+            <Row className="liste-header">
+                <Col xs={12} md={8} className="buttonbar-left">
                     <Button onClick={showNouveauMessage}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
                 </Col>
-                <Col xs={12} md={6} className="buttonbar-left">
-                    <Nav variant="tabs" activeKey={filtreMessage} onSelect={setFiltreMessage}>
-                        <Nav.Item>
-                            <Nav.Link eventKey="actifs">Reception</Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link eventKey="envoyes">Envoyes</Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                            <Nav.Link eventKey="supprimes">Supprimes</Nav.Link>
-                        </Nav.Item>
-                    </Nav>
-                </Col>
-                <Col xs={12} md={3} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+                <Col xs={12} md={4} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
             </Row>
 
             <AfficherListeMessages 
