@@ -83,3 +83,11 @@ div.upload {
 .liste-header {
     padding-bottom: 1.5rem;
 }
+
+SPAN.ql-picker-label {
+    color: $fourth-color;
+}
+
+.ql-snow .ql-stroke, .ql-snow .ql-fill {
+    stroke: $fourth-color;
+}
