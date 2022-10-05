@@ -155,8 +155,9 @@ function LayoutMain() {
   const downloadAction = useCallback(fichier=>{
     console.debug("Download action fichier : ", fichier)
 
+    const metadata = fichier.metadata || {}
     const champs = ['cle', 'version_courante', 'fuuid']
-    const copieFichier = {}
+    const copieFichier = {...metadata.data}
     for (const champ of champs) {
       copieFichier[champ] = fichier[champ]
     }

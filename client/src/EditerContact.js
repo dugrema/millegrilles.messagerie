@@ -26,7 +26,7 @@ function EditerContact(props) {
           contact = contacts.filter(item=>item.uuid_contact===uuid_contact).pop(),
           profil = useSelector(state=>state.contacts.profil)
 
-    console.debug("EditerContact selectors contacts : %O, uuid_contact: %O, contact: %O", contacts, uuid_contact, contact)
+    // console.debug("EditerContact selectors contacts : %O, uuid_contact: %O, contact: %O", contacts, uuid_contact, contact)
 
     // Champs data
     const [nom, setNom] = useState('')

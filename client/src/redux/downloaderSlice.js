@@ -346,7 +346,7 @@ async function tacheDownload(workers, listenerApi, forkApi) {
 }
 
 async function downloadFichier(workers, dispatch, fichier, cancelToken) {
-    // console.debug("Upload fichier workers : ", workers)
+    console.debug("Download fichier : ", fichier)
     const { transfertFichiers, clesDao } = workers
     const fuuid = fichier.fuuid
 

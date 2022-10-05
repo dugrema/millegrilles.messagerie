@@ -108,7 +108,7 @@ export async function getMessages(userId, opts) {
     const direction = ordre<0?'prev':'next'
     const messages_envoyes = opts.messages_envoyes?true:false
     const colonne = opts.colonne || (messages_envoyes?'date_envoi':'date_reception')
-    const limit = opts.limit || 40
+    const limit = opts.limit || 1000
     const skipCount = opts.skip || 0
 
     const db = await ouvrirDB()
