@@ -37,6 +37,19 @@ export function MenuContextuelAttacherMultiselect(props) {
     )
 }
 
+export function MenuContextuelAfficherAttachementsMultiselect(props) {
+
+    const { selection, contextuel, fermerContextuel, choisirCollectionCb } = props
+
+    const copierCb = useCallback( () => choisirCollectionCb(selection), [selection, choisirCollectionCb] )
+
+    return (
+        <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
+            <Row><Col><Button variant="link" onClick={copierCb}><i className="fa fa-copy"/> Copier</Button></Col></Row>
+        </MenuContextuel>
+    )
+}
+
 export function MenuContextuelAfficherAttachments(props) {
     console.debug("MenuContextuelAfficherAttachments proppys : %O", props)
     const { 

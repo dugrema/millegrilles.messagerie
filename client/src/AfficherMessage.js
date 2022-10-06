@@ -14,7 +14,7 @@ import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterS
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
 import messagerieActions from './redux/messagerieSlice'
 
-import { MenuContextuelAfficherAttachments, onContextMenu } from './MenuContextuel'
+import { MenuContextuelAfficherAttachments, MenuContextuelAfficherAttachementsMultiselect, onContextMenu } from './MenuContextuel'
 import { mapper, mapperRowAttachment } from './mapperFichier'
 // import { detecterSupport } from './fonctionsFichiers'
 
@@ -49,6 +49,7 @@ function AfficherMessage(props) {
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [attachmentACopier, setAttachmentACopier] = useState('')
     const [afficherVideo, setAfficherVideo] = useState(false)
+    const [selectionAttachments, setSelectionAttachments] = useState('')
 
     const retour = useCallback(()=>dispatch(messagerieActions.setUuidMessageActif(null)), [dispatch])
 
@@ -66,11 +67,15 @@ function AfficherMessage(props) {
         const attachment = attachmentACopier
         setAttachmentACopier('')  // Reset attachment
 
-        const cles = message.attachments.cles
+        const attachments = message.attachments
 
-        copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
-            .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    }, [workers, attachmentACopier, setAttachmentACopier, certificatMaitreDesCles, message])
+        console.debug("copierVersCollection cuuid %s selection %O (ref attachments %O)", cuuid, selectionAttachments, attachments)
+        // const cles = message.attachments.cles
+        // const fuuids = message.attachements.fichiers.map(item=>item.fuuid)
+
+        // copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
+        //     .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
+    }, [workers, selectionAttachments, setAttachmentACopier, certificatMaitreDesCles, message])
 
     const repondreCb = useCallback(()=>dispatch(messagerieActions.preparerRepondreMessage()), [dispatch])
     const transfererCb = useCallback(()=>dispatch(messagerieActions.preparerTransfererMessage()), [dispatch])
@@ -93,7 +98,8 @@ function AfficherMessage(props) {
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
-                certificatMaitreDesCles={certificatMaitreDesCles} 
+                certificatMaitreDesCles={certificatMaitreDesCles}
+                setSelectionAttachments={setSelectionAttachments} 
                 retourMessages={retour} />
 
             <ModalSelectionnerCollection 
@@ -101,7 +107,7 @@ function AfficherMessage(props) {
                 etatConnexion={etatConnexion}
                 workers={workers} 
                 fermer={fermerChoisirCollectionCb} 
-                selectionner={copierVersCollection} />
+                onSelect={copierVersCollection} />
         </>
     )
 
@@ -116,6 +122,7 @@ function RenderMessage(props) {
         // setUuidMessage, 
         repondreCb, transfererCb, retourMessages,
         afficherVideo, supportMedia, setAfficherVideo, certificatMaitreDesCles, 
+        setSelectionAttachments,
     } = props
 
     const workers = useWorkers()
@@ -172,7 +179,8 @@ function RenderMessage(props) {
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
-                certificatMaitreDesCles={certificatMaitreDesCles} />
+                certificatMaitreDesCles={certificatMaitreDesCles} 
+                setSelectionAttachments={setSelectionAttachments} />
 
         </>
     )
@@ -183,6 +191,7 @@ function ContenuMessage(props) {
         downloadAction, content, afficherVideo, 
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
         setAfficherVideo, certificatMaitreDesCles,
+        setSelectionAttachments,
     } = props
 
     const workers = useWorkers(),
@@ -264,7 +273,8 @@ function ContenuMessage(props) {
                 attachments_inline={attachments_inline} 
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
-                setAfficherVideo={setAfficherVideo} />        
+                setAfficherVideo={setAfficherVideo} 
+                setSelectionAttachments={setSelectionAttachments} />        
         </>
     )
 }
@@ -374,7 +384,10 @@ async function marquerMessageLu(workers, uuid_transaction) {
 
 function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
-    const { workers, attachments, etatConnexion, downloadAction, choisirCollectionCb, supportMedia, setAfficherVideo } = props
+    const { 
+        workers, attachments, etatConnexion, downloadAction, 
+        supportMedia, setAfficherVideo, setSelectionAttachments, choisirCollectionCb, 
+    } = props
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -389,17 +402,18 @@ function AfficherAttachments(props) {
     const onSelectionLignes = useCallback(selection=>{
         // console.debug("!!! setSelectioN: %O", selection)
         setSelection(selection)
+        setSelectionAttachments(selection)
     }, [setSelection])
-    const showPreviewCb = useCallback( async fuuid => {
+    const showPreviewCb = useCallback( fuuid => {
         // console.debug("Show preview cb : %O", fuuid)
-        await setFuuidSelectionne(fuuid)
+        setFuuidSelectionne(fuuid)
         setShowPreview(true)
     }, [setShowPreview, setFuuidSelectionne])
-    const showPreviewSelection = useCallback( async () => {
+    const showPreviewSelection = useCallback( () => {
         if(selection && selection.length > 0) {
             let fuuid = [...selection].pop()
             // console.debug("Show preview cb : %O", fuuid)
-            await setFuuidSelectionne(fuuid)
+            setFuuidSelectionne(fuuid)
             // setShowPreview(true)
 
             const fileItem = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
@@ -567,8 +581,7 @@ function MenuContextuel(props) {
     // console.debug("!!! Selection : %s, FICHIERS : %O, mappes : %O", selection, attachments, attachmentsList)
 
     if( selection && selection.length > 1 ) {
-        return ''
-        // return <MenuContextuelAttacherMultiselect {...props} />
+        return <MenuContextuelAfficherAttachementsMultiselect selection={selection} {...props} />
     } else if(selection.length>0 && attachments.fichiers) {
         const fuuid = selection[0]
         const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
@@ -613,11 +626,6 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
     // Va servir de preuve d'acces au fichier
     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
     console.debug("Cles rechiffrees : %O, info originale : %O", clesChiffrees, cles)
-    // const clesRechiffrees = clesChiffrees.reduce((acc, cle, idx)=>{
-    //     const fuuid = listeClesSecrete[idx].fuuid
-    //     acc[fuuid] = cle
-    //     return acc
-    // }, {})
 
     const clesRechiffrees = Object.keys(clesChiffrees.cles).map(fuuid=>{
         const cleRechiffree = clesChiffrees.cles[fuuid]
