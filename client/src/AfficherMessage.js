@@ -10,7 +10,7 @@ import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import ReactQuill from 'react-quill'
 import multibase from 'multibase'
 
-import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport } from '@dugrema/millegrilles.reactjs'
+import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport, hachage } from '@dugrema/millegrilles.reactjs'
 
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
 import messagerieActions from './redux/messagerieSlice'
@@ -606,47 +606,63 @@ function MenuContextuel(props) {
 async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
     console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
-    const certificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
+    const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     // const {fuuid, version_courante} = attachment
 
-    const dictClesSecretes = Object.keys(cles).reduce((acc, fuuid)=>{
-        acc[fuuid] = cles[fuuid].cleSecrete
-        return acc
-    }, {})
-    console.debug("copierAttachmentVersCollection Cles secretes : %O, rechiffrer avec cles maitre des cles %O", dictClesSecretes, certificatMaitreDesCles)
+    // Creer hachage de preuve
+    const {fingerprint} = await connexion.getCertificatFormatteur()
+    console.debug("Certificat signature : ", fingerprint)
+    const dictPreuves = {}, dictClesSecretes = {}
+    for await (const fuuid of Object.keys(cles)) {
+        const cleSecrete = cles[fuuid].cleSecrete
+        const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
+        dictClesSecretes[fuuid] = cleSecrete
+        dictPreuves[fuuid] = {preuve, date}
+    }
+    console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
+        dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
 
-    // Chiffrer la cle secrete pour le certificat de maitre des cles
-    // Va servir de preuve d'acces au fichier
-    const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
-    console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
+    const fichiersCles = {}
+    for await (const certMaitredescles of listeCertificatMaitreDesCles) {
+        // Chiffrer la cle secrete pour le certificat de maitre des cles
+        // Va servir de preuve d'acces au fichier
+        const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: true})
+        console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
-    const clesRechiffrees = Object.keys(clesChiffrees.cles).map(fuuid=>{
-        const cleRechiffree = clesChiffrees.cles[fuuid]
-        const infoCle = {
-            // Default
-            identificateurs_document: {fuuid}, 
-            // Valeurs recues
-            ...cles[fuuid], 
-            // Overrides
-            domaine: 'GrosFichiers', cle: cleRechiffree
-        }
-        
-        delete infoCle.cleSecrete
-        return infoCle
-    })
-
-    console.debug("copierAttachmentVersCollection Cles rechiffrees : %O, info originale : %O", clesRechiffrees, cles)
+        Object.keys(clesChiffrees.cles).forEach(fuuid=>{
+            const cleRechiffree = clesChiffrees.cles[fuuid]
+            const infoCle = {
+                // Default
+                identificateurs_document: {fuuid}, 
+                // Valeurs recues
+                ...cles[fuuid], 
+                // Overrides
+                domaine: 'GrosFichiers', cle: cleRechiffree
+            }
+            delete infoCle.cle
+            
+            delete infoCle.cleSecrete
+            let fuuidInfo = fichiersCles[fuuid]
+            if(!fuuidInfo) {
+                fuuidInfo = {...infoCle, cles: {}}
+                fichiersCles[fuuid] = fuuidInfo
+            }
+            fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
+        })
+    }
+    console.debug("Fichiers cles ", fichiersCles)
 
     // Rechiffrer metadata
     const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
 
     console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
 
-    // const preuveAcces = { 
-    //     // cles: clesChiffrees.cles, 
-    //     preuve: {cles: clesRechiffrees},
-    //     partition: clesChiffrees.partition 
-    // }
+    const commande = { 
+        cles: fichiersCles, 
+        preuve: dictPreuves,
+        fichiers: fichiersCopies,
+    }
+    console.debug("copierAttachmentVersCollection Commande ", commande)
     // const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
     // delete preuveAccesSignee['_certificat']
     // console.debug("Preuve acces : %O", preuveAccesSignee)
@@ -671,6 +687,24 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
     // // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
     // await connexion.copierFichierTiers(commandeCopierVersTiers)
     // // console.debug("Reponse commande copier vers tiers : %O", reponse)
+}
+
+async function hacherPreuveCle(fingerprint, cleSecrete) {
+    const dateNow = Math.floor(new Date().getTime()/1000)
+    const dateBytes = longToByteArray(dateNow)
+    const fingerprintBuffer = multibase.decode(fingerprint)
+
+    if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
+
+    const bufferHachage = new Uint8Array(72)
+    bufferHachage.set(dateBytes, 0)             // Bytes 0-7   Date 64bit
+    bufferHachage.set(fingerprintBuffer, 8)     // Bytes 8-39  Fingerprint certificat
+    bufferHachage.set(cleSecrete, 40)           // Bytes 40-71 Cle secrete
+
+    const preuveHachee = await hachage.hacher(bufferHachage, {hashingCode: 'blake2s-256', encoding: 'base64'})
+    console.debug("hacherPreuveCle buffer %OpreuveHachee %O", bufferHachage, preuveHachee)
+
+    return { preuve: preuveHachee, date: dateNow }
 }
 
 // Converti un attachement en fichier (transaction)
@@ -717,3 +751,17 @@ async function convertirAttachementFichier(workers, attachment, dictClesSecretes
 
     return copie
 }
+
+// https://codetagteam.com/questions/converting-javascript-integer-to-byte-array-and-back
+function longToByteArray( /*long*/ long) {
+    // we want to represent the input as a 8-bytes array
+    var byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
+ 
+    for (var index = 0; index < byteArray.length; index++) {
+       var byte = long & 0xff;
+       byteArray[index] = byte;
+       long = (long - byte) / 256;
+    }
+ 
+    return byteArray;
+ }
