@@ -25,7 +25,7 @@ supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.wa
 export { Icones }
 
 export function mapper(row, workers, opts) {
-    console.trace("Mapper attachment : %O (opts: %O)", row, opts)
+    // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
     opts = opts || {}
     const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
     const { genererToken, creerToken } = opts

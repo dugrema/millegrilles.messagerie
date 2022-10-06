@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { base64 } from 'multiformats/bases/base64'
 
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -23,12 +24,9 @@ import PreviewFichiers from './FilePlayer'
 import AfficherVideo from './AfficherVideo'
 
 function AfficherMessage(props) {
-    console.debug("AfficherMessage proppys: %O", props)
+    // console.debug("AfficherMessage proppys: %O", props)
 
-    const { 
-        downloadAction,
-        certificatMaitreDesCles, repondreMessageCb, transfererMessageCb, 
-    } = props
+    const { downloadAction, certificatMaitreDesCles } = props
 
     const workers = useWorkers(),
           dispatch = useDispatch(),
@@ -39,15 +37,13 @@ function AfficherMessage(props) {
     const listeMessages = useSelector(state=>state.messagerie.liste),
           uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif)
 
-    console.debug("uuid message actif : %O, liste messages %O", uuidMessageActif, listeMessages)
+    // console.debug("uuid message actif : %O, liste messages %O", uuidMessageActif, listeMessages)
 
     const message = useMemo(()=>{
         return listeMessages.filter(item=>item.uuid_transaction===uuidMessageActif).pop()
     }, [uuidMessageActif, listeMessages])
 
-    // const [messageDechiffre, setMessageDechiffre] = useState('')
     const [showChoisirCollection, setChoisirCollection] = useState(false)
-    const [attachmentACopier, setAttachmentACopier] = useState('')
     const [afficherVideo, setAfficherVideo] = useState(false)
     const [selectionAttachments, setSelectionAttachments] = useState('')
 
@@ -55,27 +51,23 @@ function AfficherMessage(props) {
 
     const fermerChoisirCollectionCb = useCallback(event=>setChoisirCollection(false), [setChoisirCollection])
 
-    const choisirCollectionCb = useCallback(
-        attachment => {
-            setAttachmentACopier(attachment)
-            setChoisirCollection(true)
-        },
-        [setChoisirCollection, setAttachmentACopier]
-    )
+    const choisirCollectionCb = useCallback(()=>setChoisirCollection(true), [setChoisirCollection])
 
     const copierVersCollection = useCallback( cuuid => {
-        const attachment = attachmentACopier
-        setAttachmentACopier('')  // Reset attachment
-
         const attachments = message.attachments
 
         console.debug("copierVersCollection cuuid %s selection %O (ref attachments %O)", cuuid, selectionAttachments, attachments)
-        // const cles = message.attachments.cles
-        // const fuuids = message.attachements.fichiers.map(item=>item.fuuid)
+        const fuuids = selectionAttachments
+        const fichiersSelectionnes = attachments.fichiers.filter(item=>fuuids.includes(item.fuuid))
+        const cles = fuuids.reduce((acc, fuuid)=>{
+            acc[fuuid] = attachments.cles[fuuid]
+            return acc
+        }, {})
+        console.debug("copierVersCollection cuuid %s cles %O fichiers %O", cuuid, cles, fichiersSelectionnes)
 
-        // copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles)
-        //     .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    }, [workers, selectionAttachments, setAttachmentACopier, certificatMaitreDesCles, message])
+        copierAttachmentVersCollection(workers, fichiersSelectionnes, cles, cuuid, certificatMaitreDesCles)
+            .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
+    }, [workers, selectionAttachments, certificatMaitreDesCles, message])
 
     const repondreCb = useCallback(()=>dispatch(messagerieActions.preparerRepondreMessage()), [dispatch])
     const transfererCb = useCallback(()=>dispatch(messagerieActions.preparerTransfererMessage()), [dispatch])
@@ -116,7 +108,7 @@ function AfficherMessage(props) {
 export default AfficherMessage
 
 function RenderMessage(props) {
-    console.debug("RenderMessage : %O", props)
+    // console.debug("RenderMessage : %O", props)
     const { 
         downloadAction, choisirCollectionCb, 
         // setUuidMessage, 
@@ -611,21 +603,22 @@ function MenuContextuel(props) {
 //     }
 // }
 
-async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, certificatMaitreDesCles) {
-    console.debug("Copier vers collection %O\nAttachment%O\nCert maitredescles: %O", cuuid, attachment, certificatMaitreDesCles)
-    const {connexion, chiffrage} = workers
-    const {fuuid, version_courante} = attachment
+async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
+    console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
+    const {connexion, chiffrage, clesDao} = workers
+    const certificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
+    // const {fuuid, version_courante} = attachment
 
     const dictClesSecretes = Object.keys(cles).reduce((acc, fuuid)=>{
         acc[fuuid] = cles[fuuid].cleSecrete
         return acc
     }, {})
-    // console.debug("Cles secretes : %O", dictClesSecretes)
+    console.debug("copierAttachmentVersCollection Cles secretes : %O, rechiffrer avec cles maitre des cles %O", dictClesSecretes, certificatMaitreDesCles)
 
     // Chiffrer la cle secrete pour le certificat de maitre des cles
     // Va servir de preuve d'acces au fichier
     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certificatMaitreDesCles, {DEBUG: true})
-    console.debug("Cles rechiffrees : %O, info originale : %O", clesChiffrees, cles)
+    console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
     const clesRechiffrees = Object.keys(clesChiffrees.cles).map(fuuid=>{
         const cleRechiffree = clesChiffrees.cles[fuuid]
@@ -642,31 +635,85 @@ async function copierAttachmentVersCollection(workers, attachment, cles, cuuid, 
         return infoCle
     })
 
-    const preuveAcces = { 
-        // cles: clesChiffrees.cles, 
-        preuve: {cles: clesRechiffrees},
-        partition: clesChiffrees.partition 
-    }
-    const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
-    delete preuveAccesSignee['_certificat']
-    console.debug("Preuve acces : %O", preuveAccesSignee)
+    console.debug("copierAttachmentVersCollection Cles rechiffrees : %O, info originale : %O", clesRechiffrees, cles)
+
+    // Rechiffrer metadata
+    const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
+
+    console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
+
+    // const preuveAcces = { 
+    //     // cles: clesChiffrees.cles, 
+    //     preuve: {cles: clesRechiffrees},
+    //     partition: clesChiffrees.partition 
+    // }
+    // const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
+    // delete preuveAccesSignee['_certificat']
+    // console.debug("Preuve acces : %O", preuveAccesSignee)
 
     // Transaction associerFuuids pour GrosFichiers
-    const fichier = {
-        fuuid, cuuid,
-        mimetype: attachment.mimetype,
-        nom: attachment.nom,
-        taille: attachment.taille,
-        dateFichier: attachment.dateFichier,
-        ...version_courante,
-    }
-    const champsOptionnels = ['width', 'height', 'duration', 'anime', 'videoCodec']
-    champsOptionnels.forEach(champ=>{if(attachment[champ]) fichier[champ] = attachment[champ]})
-    const transactionCopierVersTiersSignee = await connexion.formatterMessage(fichier, 'GrosFichiers', {action: 'copierFichierTiers'})
-    delete transactionCopierVersTiersSignee['_certificat']
+    // const fichier = {
+    //     fuuid, cuuid,
+    //     mimetype: attachment.mimetype,
+    //     nom: attachment.nom,
+    //     taille: attachment.taille,
+    //     dateFichier: attachment.dateFichier,
+    //     ...version_courante,
+    // }
+    // const champsOptionnels = ['width', 'height', 'duration', 'anime', 'videoCodec']
+    // champsOptionnels.forEach(champ=>{if(attachment[champ]) fichier[champ] = attachment[champ]})
 
-    const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
-    // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
-    await connexion.copierFichierTiers(commandeCopierVersTiers)
-    // console.debug("Reponse commande copier vers tiers : %O", reponse)
+
+    // const transactionCopierVersTiersSignee = await connexion.formatterMessage(fichier, 'GrosFichiers', {action: 'copierFichierTiers'})
+    // delete transactionCopierVersTiersSignee['_certificat']
+
+    // const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
+    // // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
+    // await connexion.copierFichierTiers(commandeCopierVersTiers)
+    // // console.debug("Reponse commande copier vers tiers : %O", reponse)
+}
+
+// Converti un attachement en fichier (transaction)
+async function convertirAttachementFichier(workers, attachment, dictClesSecretes) {
+    const { clesDao, chiffrage } = workers
+    const certificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
+
+    const copie = {...attachment}
+    if(copie.images) copie.images = {...copie.images}
+    delete copie.metadata
+
+    const dataNominative = attachment.metadata.data,
+          ref_hachage_bytes = attachment.fuuid
+
+    let cleSecrete = dictClesSecretes[ref_hachage_bytes]
+    console.debug("copierAttachmentVersCollection Fichier rechiffrer fuuid %s metadata %O avec cle %O", ref_hachage_bytes, dataNominative, cleSecrete)
+
+    // Chiffrer metadata
+    const opts = {key: cleSecrete}
+    const identificateurs_document = {}
+    const data_chiffre = await chiffrage.chiffrage.chiffrerDocument(
+        dataNominative, 
+        'GrosFichiers', certificatMaitreDesCles, identificateurs_document, 
+        opts
+    )
+
+    // Chiffrer thumbnail
+    if(copie.images && copie.images.thumb) {
+        const thumb = {...copie.images.thumb}
+        copie.images.thumb = thumb
+        console.debug("Chiffrer thumbnail ", thumb)
+        const data_chiffre_thumb = await chiffrage.chiffrage.chiffrer(multibase.decode(thumb.data), opts)
+        console.debug("thumb data rechiffre : ", data_chiffre_thumb)
+        thumb.data_chiffre = base64.encode(data_chiffre_thumb.ciphertext)
+        thumb.header = data_chiffre_thumb.header
+        thumb.hachage = data_chiffre_thumb.hachage
+        delete thumb.data
+    }
+    
+    console.debug("Metadata rechiffre ", data_chiffre)
+    const metadata = { ...data_chiffre.doc }
+    delete metadata.ref_hachage_bytes
+    copie.metadata = metadata
+
+    return copie
 }
