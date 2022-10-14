@@ -17,6 +17,10 @@ export async function getMessage(userId, uuid_transaction) {
 }
 
 export async function getMessagesChiffres(userId, opts) {
+    opts = opts || {}
+    const messages_envoyes = opts.messages_envoyes?true:false,
+          inclure_supprime = opts.inclure_supprime?true:false
+
     const db = await ouvrirDB()
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index('dechiffre')
     
@@ -24,7 +28,17 @@ export async function getMessagesChiffres(userId, opts) {
     let curseur = await index.openCursor([userId, 'false'])
     while(curseur) {
         const value = curseur.value
-        if(value.supprime !== true) messages.push(curseur.value)
+        
+        // Filtre par type envoye/recu
+        let conserver = true
+        if(messages_envoyes && !value.date_envoi) conserver = false
+        else if(!messages_envoyes && !value.date_reception) conserver = false
+        
+        if(inclure_supprime && value.supprime !== true) conserver = false
+        else if(!inclure_supprime && value.supprime === true) conserver = false
+        
+        if(conserver) messages.push(curseur.value)
+        
         curseur = await curseur.continue()
     }
 
@@ -40,7 +54,7 @@ export async function mergeReferenceMessages(userId, messages) {
         const uuid_transaction = message.uuid_transaction
         const messageExistant = await store.get(uuid_transaction)
         if(!messageExistant) {
-            // console.debug("Conserver nouveau message : %O", message)
+            console.debug("mergeReferenceMessages Conserver nouveau message : %O", message)
             await store.put({user_id: userId, ...message, 'dechiffre': 'false'})
         } else {
             // Verifier si on doit ajouter date_envoi ou date_reception
@@ -48,10 +62,14 @@ export async function mergeReferenceMessages(userId, messages) {
             const { date_envoi: date_envoi_local, date_reception: date_reception_local } = messageExistant
             if(date_reception_ref && !date_reception_local) {
                 // Injecter date reception (le message etait deja dans boite de reception)
+                console.debug("mergeReferenceMessages Injecter date reception %O dans %s", date_reception_ref, uuid_transaction)
                 await store.put({...messageExistant, date_reception: date_reception_ref})
             } else if(date_envoi_ref && !date_envoi_local) {
                 // Injecter date envoi (le message etait deja dans la boite d'envoi)
+                console.debug("mergeReferenceMessages Injecter date envoi %O dans %s", date_envoi_ref, uuid_transaction)
                 await store.put({...messageExistant, date_envoi: date_envoi_ref})
+            } else {
+                console.debug("Rien a merger pour %O", message)
             }
         }
     }

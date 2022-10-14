@@ -9,8 +9,8 @@ function build(workers) {
         getCles(liste_hachage_bytes) {
             return getCles(workers, liste_hachage_bytes)
         },
-        getClesMessages(liste_hachage_bytes, uuid_transaction_messages) {
-            return getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages)
+        getClesMessages(liste_hachage_bytes, uuid_transaction_messages, opts) {
+            return getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages, opts)
         },
         getCertificatsMaitredescles() {
             if(cacheCertificatsMaitredescles) return Promise.resolve(cacheCertificatsMaitredescles)
@@ -64,7 +64,9 @@ async function getCles(workers, liste_hachage_bytes) {
     return clesDechiffrees
 }
 
-async function getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages) {
+async function getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages, opts) {
+    opts = opts || {}
+    const messages_envoyes = opts.messages_envoyes?true:false
 
     if(typeof(liste_hachage_bytes) === 'string') liste_hachage_bytes = [liste_hachage_bytes]
     if(typeof(uuid_transaction_messages) === 'string') uuid_transaction_messages = [uuid_transaction_messages]
@@ -87,7 +89,7 @@ async function getClesMessages(workers, liste_hachage_bytes, uuid_transaction_me
     console.debug("Cles connues : %d, cles manquantes : %d", Object.keys(clesDechiffrees).length, clesManquantes.length)
     if(clesManquantes.length > 0) {
         // Recuperer les cles du serveur
-        const reponseClesChiffrees = await connexion.getPermissionMessages(uuid_transaction_messages)
+        const reponseClesChiffrees = await connexion.getPermissionMessages(uuid_transaction_messages, {messages_envoyes})
         console.debug("Reponse cles chiffrees : ", reponseClesChiffrees)
         const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
         Object.assign(clesDechiffrees, cles)
