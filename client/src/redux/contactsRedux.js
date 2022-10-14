@@ -174,16 +174,16 @@ export function creerThunks(actions, nomSlice) {
         dispatch(setUserId(userId))
         const hostname = locationUrl.hostname
         const adresse = `@${nomUsager}:${hostname}`
-        console.debug("traiterRafraichirContacts userId: %s, adresse : '%s' ", userId, adresse)
+        // console.debug("traiterRafraichirContacts userId: %s, adresse : '%s' ", userId, adresse)
 
         let profil = await connexion.getProfil()
-        console.debug("Profil charge : %O", profil)
+        // console.debug("Profil charge : %O", profil)
         if(profil.ok === false && profil.code === 404) {
             console.info("Profil inexistant, on en initialize un nouveau pour usager ", nomUsager)
             profil = await connexion.initialiserProfil(adresse)
         }
 
-        console.debug("Profil charge : ", profil)
+        // console.debug("Profil charge : ", profil)
         dispatch(setProfil(profil))
 
         const cle_hachage_bytes = profil.cle_ref_hachage_bytes
@@ -192,7 +192,7 @@ export function creerThunks(actions, nomSlice) {
             cleSecrete = cleSecrete.cleSecrete
         } else {
             // Dechiffrer la cle de profil. Conserve dans la DB locale.
-            console.debug("Dechiffrer cle recue dans le profil")
+            // console.debug("Dechiffrer cle recue dans le profil")
             const cles = profil.cles.cles
             let clesSecretes = await clesDao.traiterReponseCles(cles)
             cleSecrete = clesSecretes[cle_hachage_bytes].cleSecrete
@@ -371,7 +371,7 @@ async function syncContacts(workers, limit, skip, cbChargerContacts) {
     // Vieux code sync
     const reponseContacts = await connexion.getReferenceContacts({limit, skip})
     const contacts = reponseContacts.contacts || []
-    console.debug("Reponse sync contacts ", contacts)
+    // console.debug("Reponse sync contacts ", contacts)
     if(contacts.length > 0) {
         cbChargerContacts(contacts)
             .catch(err=>console.error("Erreur traitement chargerContactsParSyncid %O : %O", contacts, err))

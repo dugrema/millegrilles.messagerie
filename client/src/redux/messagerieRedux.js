@@ -29,6 +29,7 @@ const initialState = {
     // Travail background
     listeDechiffrage: [],       // Liste de messages a dechiffrer
     mergeVersion: 0,            // Utilise pour flagger les changements
+    syncEnCours: false,         // Flag qui indique sync/dechiffrage en cours
 }
 
 // Actions
@@ -63,7 +64,7 @@ function pushMessagesAction(state, action) {
 
     // Trier
     liste.sort(genererTriListe(state.sortKeys))
-    console.debug("pushAction liste triee : %O", liste)
+    // console.debug("pushAction liste triee : %O", liste)
 
     state.liste = liste
 }
@@ -76,6 +77,7 @@ function clearMessagesAction(state) {
 function mergeMessagesDataAction(state, action) {
     const mergeVersion = state.mergeVersion
     state.mergeVersion++
+    state.syncEnCours = true
 
     let payload = action.payload
     if(!Array.isArray(payload)) {
@@ -129,8 +131,9 @@ function mergeMessagesDataAction(state, action) {
 // Ajouter des messages a la liste a dechiffrer
 function pushMessagesChiffresAction(state, action) {
     const messages = action.payload
-    console.debug("pushMessagesChiffresAction Dechiffrer ", messages)
+    // console.debug("pushMessagesChiffresAction Dechiffrer ", messages)
     state.listeDechiffrage = [...state.listeDechiffrage, ...messages]
+    state.syncEnCours = true
 }
 
 function setMessagesChiffresAction(state, action) {
@@ -178,6 +181,11 @@ function preparerTransfererMessageAction(state, action) {
 function setSourceMessagesAction(state, action) {
     const sourceMessages = action.payload
     state.source = sourceMessages
+    state.listeDechiffrage = []
+}
+
+function clearSyncEnCoursAction(state, action) {
+    state.syncEnCours = false
 }
 
 // Slice collection
@@ -201,6 +209,7 @@ export function creerSlice(name) {
             preparerRepondreMessage: preparerRepondreMessageAction,
             preparerTransfererMessage: preparerTransfererMessageAction,
             setSourceMessages: setSourceMessagesAction,
+            clearSyncEnCours: clearSyncEnCoursAction,
         }
     })
 
@@ -232,17 +241,18 @@ export function creerThunks(actions, nomSlice) {
         const state = getState()[nomSlice]
         const { userId, source } = state
     
-        console.debug("Rafraichir messages pour userId %s source %s", userId, source)
+        // console.debug("Rafraichir messages pour userId %s source %s", userId, source)
     
         // Nettoyer la liste
         dispatch(clearMessages())
 
-        let contenuIdb = null, inclure_supprime = false, messages_envoyes = false
+        let contenuIdb = null, 
+            inclure_supprime = false, 
+            messages_envoyes = source === SOURCE_OUTBOX
         if(source === SOURCE_RECEPTION) {
             // Charger le contenu de la collection deja connu et dechiffre
             contenuIdb = await messagerieDao.getMessages(userId)
         } else if(source === SOURCE_OUTBOX) {
-            messages_envoyes = true
             contenuIdb = await messagerieDao.getMessages(userId, {messages_envoyes: true})
         } else if(source === SOURCE_CORBEILLE) {
             inclure_supprime = true
@@ -251,7 +261,7 @@ export function creerThunks(actions, nomSlice) {
             throw new Error("Source de messages non supportee : ", source)
         }
 
-        console.debug("traiterRafraichirMessages Messages ", contenuIdb)
+        // console.debug("traiterRafraichirMessages Messages ", contenuIdb)
         if(contenuIdb && contenuIdb.length > 0) {
             // Remplacer la liste de contacts
             dispatch(pushMessages({liste: contenuIdb, clear: true}))
@@ -260,7 +270,7 @@ export function creerThunks(actions, nomSlice) {
             dispatch(clearMessages())
         }
 
-        const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages, {messages_envoyes, inclure_supprime}))
+        const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
 
         try {
             let dateMinimum = 0
@@ -284,47 +294,49 @@ export function creerThunks(actions, nomSlice) {
     
         // Pousser liste a dechiffrer
         const messagesChiffres = await messagerieDao.getMessagesChiffres(userId, {messages_envoyes, inclure_supprime})
-        console.debug("traiterRafraichirMessages Dechiffrer ", messagesChiffres)
+        // console.debug("traiterRafraichirMessages Dechiffrer ", messagesChiffres)
         dispatch(pushMessagesChiffres(messagesChiffres))
     }
 
-    function chargerMessagesParSyncid(workers, messages, opts) {
-        return (dispatch, getState) => traiterChargerMessagesParSyncid(workers, messages, opts, dispatch, getState)
+    function chargerMessagesParSyncid(workers, messages) {
+        return (dispatch, getState) => traiterChargerMessagesParSyncid(workers, messages, dispatch, getState)
     }
 
-    async function traiterChargerMessagesParSyncid(workers, messages, opts, dispatch, getState) {
-        opts = opts || {}
+    async function traiterChargerMessagesParSyncid(workers, messages, dispatch, getState) {
         const { messagerieDao } = workers
         const state = getState()[nomSlice]
-        const userId = state.userId
+        const userId = state.userId,
+              source = state.source
     
-        console.debug("traiterChargerMessagesParSyncid messages ", messages)
+        const messages_envoyes = source === SOURCE_OUTBOX
+
+        // console.debug("traiterChargerMessagesParSyncid messages ", messages)
 
         let batchUuids = new Set()
         for await (const messageSync of messages) {
             const uuid_transaction = messageSync.uuid_transaction
             const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
-            console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
+            // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
             if(messageIdb) {
                 // Message connu, merge flags
                 const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
-                console.debug("Message maj avec sync ", messageMaj)
+                // console.debug("Message maj avec sync ", messageMaj)
                 if(messageMaj.dechiffre === 'true') {
                     // Deja dechiffre, on le guarde
                     dispatch(actions.mergeMessagesData(messageMaj))
                 }
             } else {
                 // Message inconnu, on le charge
-                console.debug("traiterChargerMessagesParSyncid Message inconnu ", uuid_transaction)
+                // console.debug("traiterChargerMessagesParSyncid Message inconnu ", uuid_transaction)
                 batchUuids.add(uuid_transaction)
             }
         }
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            console.debug("Charger messages du serveur ", batchUuids)
-            const listeMessages = await chargerBatchMessages(workers, batchUuids, opts)
-            console.debug("Liste messages recue : ", listeMessages)
+            // console.debug("Charger messages du serveur ", batchUuids)
+            const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
+            // console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -349,7 +361,7 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 }
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
-    console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
+    // console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
     const { clesDao, chiffrage, messagerieDao } = workers
 
     const getState = () => listenerApi.getState()[nomSlice]
@@ -359,7 +371,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
           source = getState().source
     // const cleDechiffrage = await clesDao.getCleLocale(cle_ref_hachage_bytes)
 
-    console.debug("dechiffrageMiddlewareListener Dechiffrer messages source ", source)
+    // console.debug("dechiffrageMiddlewareListener Dechiffrer messages source ", source)
     const messages_envoyes = source === 'outbox'
 
     await listenerApi.unsubscribe()
@@ -382,21 +394,21 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 var cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages, {messages_envoyes})
                 // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
             } catch(err) {
-                console.debug("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
+                // console.debug("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
                 messagesChiffres = [...getState().listeDechiffrage]
                 continue  // Skip
             }
 
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
-                console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                // console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
                 // Dechiffrer message
                 const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
-                console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                // console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 try {
                     const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
-                    console.debug("Contenu dechiffre : ", dataDechiffre)
+                    // console.debug("Contenu dechiffre : ", dataDechiffre)
 
                     const validation = dataDechiffre.validation
                     if(!messages_envoyes && validation.valide !== true) {
@@ -429,6 +441,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
         }
     } finally {
         await listenerApi.subscribe()
+        listenerApi.dispatch(actions.clearSyncEnCours())
     }
 }
 
@@ -438,11 +451,11 @@ async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts
 
     const { messages_envoyes, inclure_supprime } = opts
 
-    console.debug("syncMessages limit %d date min %d, opts %O", limit, dateMinimum, opts)
+    // console.debug("syncMessages limit %d date min %d, opts %O", limit, dateMinimum, opts)
 
     const reponseMessages = await connexion.getReferenceMessages({limit, date_minimum: dateMinimum, messages_envoyes, inclure_supprime})
     const messages = reponseMessages.messages || []
-    console.debug("syncMessages Reponse ", messages)
+    // console.debug("syncMessages Reponse ", messages)
     if(messages.length > 0) {
         await cbChargerMessages(messages)
             // .catch(err=>console.error("Erreur traitement chargeMessagesParSyncid %O : %O", messages, err))

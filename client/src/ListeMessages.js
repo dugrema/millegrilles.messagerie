@@ -23,7 +23,8 @@ function ListeMessages(props) {
           etatAuthentifie = useEtatAuthentifie()
 
     const messages = useSelector(state=>state.messagerie.liste),
-          compteMessages = messages?messages.length:0
+          compteMessages = messages?messages.length:0,
+          syncEnCours = useSelector(state=>state.messagerie.syncEnCours)
 
     const [filtreMessage, setFiltreMessage] = useState('actifs')
 
@@ -43,7 +44,9 @@ function ListeMessages(props) {
                 <Col xs={12} md={8} className="buttonbar-left">
                     <Button onClick={showNouveauMessage}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
                 </Col>
-                <Col xs={12} md={4} className='buttonbar-right'><AfficherNombreMessages value={compteMessages} /></Col>
+                <Col xs={12} md={4} className='buttonbar-right'>
+                    <AfficherNombreMessages value={compteMessages} chargementEnCours={syncEnCours} />
+                </Col>
             </Row>
 
             <AfficherListeMessages 
@@ -63,13 +66,19 @@ export default ListeMessages
 function AfficherNombreMessages(props) {
     const compteMessages = props.value
 
+    const flagSyncEnCours = props.chargementEnCours?'*':''
+
+    let labelMessages = ''
+
     if(compteMessages > 1) {
-        return <p>{compteMessages} messages</p>
+        labelMessages = <span>{compteMessages} messages</span>
     } else if(compteMessages === 1) {
-        return <p>1 message</p>
+        labelMessages = <span>1 message</span>
     } else {
-        return <p>Aucuns messages</p>
+        labelMessages = <span>Aucuns messages</span>
     }
+
+    return <p>{flagSyncEnCours} {labelMessages}</p>
 }
 
 function AfficherListeMessages(props) {
@@ -91,7 +100,7 @@ function AfficherListeMessages(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
 
     const onSelectionLignes = useCallback(selection=>{
-        console.debug("Selection ", selection)
+        // console.debug("Selection ", selection)
         dispatch(messagerieActions.selectionMessages(selection))
     }, [])
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])

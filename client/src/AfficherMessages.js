@@ -1,15 +1,21 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import {  FormatterDate } from '@dugrema/millegrilles.reactjs'
 
+import useWorkers from './WorkerContext'
 import ListeMessages from './ListeMessages'
 
 function AfficherMessages(props) {
 
     const { showNouveauMessage } = props
 
-    const [colonnes, setColonnes] = useState(preparerColonnes())
+    const workers = useWorkers()
+    const dossierSource = useSelector(state=>state.messagerie.source)
+
+    const [colonnes, setColonnes] = useState(preparerColonnes(workers))
+
+    useEffect(()=>setColonnes(preparerColonnes(workers, {source: dossierSource})), [workers, dossierSource, setColonnes])
 
     const enteteOnClickCb = useCallback(colonne=>{
         // console.debug("Click entete nom colonne : %s", colonne)
@@ -61,14 +67,18 @@ function AfficherListe(props) {
 export function preparerColonnes(workers, opts) {
     opts = opts || {}
 
-    const messages_envoyes = opts.messages_envoyes?true:false
-    const colonne_date = messages_envoyes?'date_envoi':'date_reception'
+    const source = opts.source
+
+    const messages_envoyes = source === 'outbox'
+    const colonne_date = messages_envoyes?'date_envoi':'date_reception',
+          colonne_adresse = messages_envoyes?'to':'from'
   
     const params = {
-        ordreColonnes: [colonne_date, 'from', 'subject', 'boutonDetail'],
+        ordreColonnes: [colonne_date, colonne_adresse, 'subject', 'boutonDetail'],
         paramsColonnes: {
             [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
             'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
+            'to': {'label': 'Destinataires', xs: 6, md: 4, lg: 4},
             'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
             'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
         },

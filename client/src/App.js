@@ -293,7 +293,8 @@ function BreadcrumbMessages(props) {
 
   const uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
         uuidContactActif = useSelector(state=>state.contacts.uuidContactActif),
-        sourceMessages = useSelector(state=>state.messagerie.source)
+        sourceMessages = useSelector(state=>state.messagerie.source),
+        syncEnCours = useSelector(state=>state.messagerie.syncEnCours)
 
   const labelBoutonDossier = useMemo(()=>{
     switch(sourceMessages) {
@@ -331,7 +332,7 @@ function BreadcrumbMessages(props) {
       <Row className="breadcrumb-dropdown">
         <Col>
           <Dropdown onSelect={changerSourceHandler}>
-            <Dropdown.Toggle>{labelBoutonDossier}</Dropdown.Toggle>
+            <Dropdown.Toggle disabled={syncEnCours}>{labelBoutonDossier}</Dropdown.Toggle>
             <Dropdown.Menu>
               <Dropdown.Item active={sourceMessages==='reception'} eventKey="reception">Reception</Dropdown.Item>
               <Dropdown.Item active={sourceMessages==='outbox'} eventKey="outbox">Envoi</Dropdown.Item>

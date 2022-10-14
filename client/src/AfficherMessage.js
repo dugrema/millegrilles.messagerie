@@ -626,7 +626,7 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
     for await (const certMaitredescles of listeCertificatMaitreDesCles) {
         // Chiffrer la cle secrete pour le certificat de maitre des cles
         // Va servir de preuve d'acces au fichier
-        const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: true})
+        const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
         console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
         Object.keys(clesChiffrees.cles).forEach(fuuid=>{
