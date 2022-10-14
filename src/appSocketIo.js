@@ -47,7 +47,7 @@ function configurerEvenements(socket) {
       // { eventName: 'getCollection', callback: (params, cb) => traiter(socket, mqdao.getCollection, {params, cb}) },
       // { eventName: 'getDocumentsParFuuid', callback: (params, cb) => traiter(socket, mqdao.getDocumentsParFuuid, {params, cb}) },
       // { eventName: 'getFavoris', callback: (params, cb) => traiter(socket, mqdao.getFavoris, {params, cb}) },
-      // { eventName: 'copierFichierTiers', callback: (params, cb) => traiter(socket, mqdao.copierFichierTiers, {params, cb}) },
+      { eventName: 'copierFichierTiers', callback: (params, cb) => traiter(socket, mqdao.copierFichierTiers, {params, cb}) },
       // { eventName: 'getCollectionUpload', callback: (params, cb) => traiter(socket, mqdao.favorisCreerPath, {params, cb}) },
 
       // Evenements

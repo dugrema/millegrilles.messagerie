@@ -198,9 +198,9 @@ function getPermissionCles(socket, params) {
 //     return transmettreRequete(socket, params, 'contenuCollection', {domaine: CONST_DOMAINE_GROSFICHIERS})
 // }
 
-// function copierFichierTiers(socket, params) {
-//     return transmettreCommande(socket, params, 'copierFichierTiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
-// }
+function copierFichierTiers(socket, params) {
+    return transmettreCommande(socket, params, 'copierFichierTiers', {domaine: CONST_DOMAINE_GROSFICHIERS})
+}
 
 // function favorisCreerPath(socket, params) {
 //     return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
@@ -345,8 +345,8 @@ module.exports = {
     creerTokenStream,
 
     // GrosFichiers
-    syncCollection, getDocuments, getPermissionCles,
-    // getDocumentsParFuuid, getFavoris, getCollection, copierFichierTiers, favorisCreerPath,
+    syncCollection, getDocuments, getPermissionCles, copierFichierTiers,
+    // getDocumentsParFuuid, getFavoris, getCollection, favorisCreerPath,
 
     // Evenements
     enregistrerCallbackEvenementContact, retirerCallbackEvenementContact,

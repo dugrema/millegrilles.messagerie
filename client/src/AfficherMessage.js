@@ -629,8 +629,10 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
         const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
         console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
-        Object.keys(clesChiffrees.cles).forEach(fuuid=>{
+        for await (const fuuid of Object.keys(clesChiffrees.cles)) {
+        //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
             const cleRechiffree = clesChiffrees.cles[fuuid]
+
             const infoCle = {
                 // Default
                 identificateurs_document: {fuuid}, 
@@ -640,20 +642,26 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
                 domaine: 'GrosFichiers', cle: cleRechiffree
             }
             delete infoCle.cle
-            
             delete infoCle.cleSecrete
+            
             let fuuidInfo = fichiersCles[fuuid]
             if(!fuuidInfo) {
-                fuuidInfo = {...infoCle, cles: {}}
+                const { cleSecrete, domaine, identificateurs_document, hachage_bytes } = cles[fuuid]
+                const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
+                    cleSecrete, domaine, identificateurs_document, hachage_bytes)
+                fuuidInfo = {...infoCle, signature_identite, cles: {}}
                 fichiersCles[fuuid] = fuuidInfo
             }
             fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
-        })
+        }
     }
     console.debug("Fichiers cles ", fichiersCles)
 
     // Rechiffrer metadata
     const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
+
+    // Inserer cuuid dans chaque fichier
+    fichiersCopies.forEach(item=>{ item.cuuid = cuuid })
 
     console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
 
@@ -663,30 +671,9 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
         fichiers: fichiersCopies,
     }
     console.debug("copierAttachmentVersCollection Commande ", commande)
-    // const preuveAccesSignee = await connexion.formatterMessage(preuveAcces, 'preuve')
-    // delete preuveAccesSignee['_certificat']
-    // console.debug("Preuve acces : %O", preuveAccesSignee)
 
-    // Transaction associerFuuids pour GrosFichiers
-    // const fichier = {
-    //     fuuid, cuuid,
-    //     mimetype: attachment.mimetype,
-    //     nom: attachment.nom,
-    //     taille: attachment.taille,
-    //     dateFichier: attachment.dateFichier,
-    //     ...version_courante,
-    // }
-    // const champsOptionnels = ['width', 'height', 'duration', 'anime', 'videoCodec']
-    // champsOptionnels.forEach(champ=>{if(attachment[champ]) fichier[champ] = attachment[champ]})
-
-
-    // const transactionCopierVersTiersSignee = await connexion.formatterMessage(fichier, 'GrosFichiers', {action: 'copierFichierTiers'})
-    // delete transactionCopierVersTiersSignee['_certificat']
-
-    // const commandeCopierVersTiers = { preuve: preuveAccesSignee, transaction: transactionCopierVersTiersSignee }
-    // // console.debug("Commande copier vers tiers : %O", commandeCopierVersTiers)
-    // await connexion.copierFichierTiers(commandeCopierVersTiers)
-    // // console.debug("Reponse commande copier vers tiers : %O", reponse)
+    const reponse = await connexion.copierFichierTiers(commande)
+    console.debug("copierFichierTiers Reponse ", reponse)
 }
 
 async function hacherPreuveCle(fingerprint, cleSecrete) {
