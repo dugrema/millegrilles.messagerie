@@ -40,7 +40,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     opts = opts || {}
 
     const {connexion, chiffrage} = workers
-    const {cc, bcc, attachments, attachmentsCles, fuuids, fuuidsCleSeulement} = opts
+    const {cc, bcc, attachments, attachmentsCles, fuuids} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'uuid_thread', 'attachments', 'attachments_inline']
 
     const toFiltre = to.split(';').map(item=>item.trim())
@@ -60,11 +60,11 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
     let fuuidsCles = fuuids
     if(attachments) {
-        // console.debug("signerMessage Message attachments : %O", attachments)
+        console.debug("signerMessage Message attachments : %O", attachments)
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
-        if(fuuidsCleSeulement) {
-            fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
-        }
+        // if(fuuidsCleSeulement) {
+        //     fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
+        // }
 
         // Retirer cles deja connues
         const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])

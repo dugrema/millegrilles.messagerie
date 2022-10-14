@@ -96,7 +96,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
         return acc
     }, {})
 
-    // console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
+    console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
     for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
         const hachage_bytes = liste_hachage_bytes[idx]
         // console.debug("Charger localement cle : %s", hachage_bytes)
@@ -113,7 +113,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
         // console.debug('Toutes les cles ont ete trouvees localement : %O', cles)
         return cles
     } else {
-        // console.debug("Cles manquantes : %O", Object.keys(clesInconnues))
+        console.debug("Cles manquantes : %O", Object.keys(clesInconnues))
     }
 
     const reponseCles = await workers.connexion.getClesFichiers(Object.keys(clesInconnues), usager)

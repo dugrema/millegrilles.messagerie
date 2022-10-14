@@ -404,74 +404,74 @@ function mapperAttachments(attachments, opts) {
         delete mapping.tuuid
         // console.debug("Mapping attachment : %O", mapping)
 
-        if(version_courante) {
-            if(version_courante.images) {
-                const images = version_courante.images
-                // mapping.images = {...images}
-                Object.values(images).forEach(image=>{
-                    if(image.data_chiffre || image.data) {
-                        fuuidsCleSeulement.push(image.hachage)
-                    } else if(image.hachage) {
-                        // console.debug("Attacher image : %O", image)
-                        fuuids.push(image.hachage)
-                    }
-                })
-            }
-            if(version_courante.video) {
-                let videos = {...version_courante.video}
-                let remplacant = null
-                // Filtrer la liste de videos pour retirer les formats indesirables
-                // if(optionVideo === 'original') {
-                    // Retirer tous les formats sauf le basse resolution
-                    // videos = Object.keys(videos).reduce((acc, videoKey)=>{
-                    //     const video = videos[videoKey]
-                    //     const resolution = calculerResolution(video),
-                    //           codec = video.codec
-                    //     if(codec === 'h264' && resolution === 270) acc[videoKey] = video
-                    //     return acc
-                    // }, {})
-                // } else {
-                    // Remplacer le video 'original' par le format selectionne
-                    // Valeurs a remplacer : fuuid, taille, videoCodec, mimetype, height, width
-                    // if(optionVideo === 'faible') {
-                    //     videos = Object.keys(videos).reduce((acc, videoKey)=>{
-                    //         if(remplacant) return acc  // Rien a faire, deja trouve
-                    //         const video = videos[videoKey]
-                    //         const resolution = calculerResolution(video),
-                    //               codec = video.codec
-                    //         if(codec === 'h264' && resolution < 360) {
-                    //             acc[videoKey] = video
-                    //             remplacant = video
-                    //         }
-                    //         return acc
-                    //     }, {})
-                    // }
-                // }
+        // if(version_courante) {
+        //     if(version_courante.images) {
+        //         const images = version_courante.images
+        //         // mapping.images = {...images}
+        //         Object.values(images).forEach(image=>{
+        //             if(image.data_chiffre || image.data) {
+        //                 fuuidsCleSeulement.push(image.hachage)
+        //             } else if(image.hachage) {
+        //                 // console.debug("Attacher image : %O", image)
+        //                 fuuids.push(image.hachage)
+        //             }
+        //         })
+        //     }
+        //     if(version_courante.video) {
+        //         let videos = {...version_courante.video}
+        //         let remplacant = null
+        //         // Filtrer la liste de videos pour retirer les formats indesirables
+        //         // if(optionVideo === 'original') {
+        //             // Retirer tous les formats sauf le basse resolution
+        //             // videos = Object.keys(videos).reduce((acc, videoKey)=>{
+        //             //     const video = videos[videoKey]
+        //             //     const resolution = calculerResolution(video),
+        //             //           codec = video.codec
+        //             //     if(codec === 'h264' && resolution === 270) acc[videoKey] = video
+        //             //     return acc
+        //             // }, {})
+        //         // } else {
+        //             // Remplacer le video 'original' par le format selectionne
+        //             // Valeurs a remplacer : fuuid, taille, videoCodec, mimetype, height, width
+        //             // if(optionVideo === 'faible') {
+        //             //     videos = Object.keys(videos).reduce((acc, videoKey)=>{
+        //             //         if(remplacant) return acc  // Rien a faire, deja trouve
+        //             //         const video = videos[videoKey]
+        //             //         const resolution = calculerResolution(video),
+        //             //               codec = video.codec
+        //             //         if(codec === 'h264' && resolution < 360) {
+        //             //             acc[videoKey] = video
+        //             //             remplacant = video
+        //             //         }
+        //             //         return acc
+        //             //     }, {})
+        //             // }
+        //         // }
 
-                // Remplacer .video dans version_courante
-                version_courante.video = videos
+        //         // Remplacer .video dans version_courante
+        //         version_courante.video = videos
 
-                if(remplacant) {
-                    mapping.fuuid = remplacant.fuuid_video
-                    mapping.height = remplacant.height
-                    mapping.width = remplacant.width
-                    mapping.mimetype = remplacant.mimetype
-                    mapping.videoCodec = remplacant.codec
-                    mapping.taille = remplacant.taille_fichier
-                }
+        //         if(remplacant) {
+        //             mapping.fuuid = remplacant.fuuid_video
+        //             mapping.height = remplacant.height
+        //             mapping.width = remplacant.width
+        //             mapping.mimetype = remplacant.mimetype
+        //             mapping.videoCodec = remplacant.codec
+        //             mapping.taille = remplacant.taille_fichier
+        //         }
 
-                Object.values(videos).forEach(video=>{
-                    if(video.fuuid_video) fuuids.push(video.fuuid_video)
-                })
-            }
-        }
+        //         Object.values(videos).forEach(video=>{
+        //             if(video.fuuid_video) fuuids.push(video.fuuid_video)
+        //         })
+        //     }
+        // }
 
         console.debug("mapperAttachments Attachment %O", mapping)
 
         attachmentsMapping[fuuid] = mapping
     })
 
-    return {attachmentsMapping, fuuids, fuuidsCleSeulement}
+    return {attachmentsMapping, fuuids /*, fuuidsCleSeulement */}
 }
 
 function calculerResolution(video) {
@@ -571,15 +571,16 @@ function AfficherAttachments(props) {
             // tuuidsAttachmentHandler(attachmentsMaj)
 
             // Extraire la liste complete des fuuids de la selection
-            const { fuuids, fuuidsCleSeulement } = mapperAttachments(selection)
-            const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
-            getClesFormattees(workers, listeFuuidsCles, {delaiInitial: 500, tentatives: 2})
+            const { fuuids /*, fuuidsCleSeulement*/ } = mapperAttachments(selection)
+            console.debug("AfficherAttachments Fuuids %O", fuuids)
+            // const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
+            getClesFormattees(workers, fuuids, {delaiInitial: 500, tentatives: 2})
                 .then(cles=>{
                     const clesMaj = {...attachmentsCles, ...cles}
                     setAttachmentsCles(clesMaj)
                 })
                 .catch(err=>{
-                    console.error("Erreur chargement cles fuuids %s (tentative 1): %O", listeFuuidsCles, err)
+                    console.error("Erreur chargement cles fuuids %s (tentative 1): %O", fuuids, err)
                 })
         }
 

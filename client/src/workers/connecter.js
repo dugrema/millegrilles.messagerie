@@ -45,6 +45,7 @@ async function setUsager(workers, nomUsager, setUsagerState, opts) {
 
         // Initialiser le CertificateStore
         await chiffrage.initialiserCertificateStore(caPem, {isPEM: true, DEBUG: false})
+        await connexion.initialiserCertificateStore(caPem)
 
         await x509.init(caPem)
 
