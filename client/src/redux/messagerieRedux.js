@@ -238,14 +238,12 @@ export function creerThunks(actions, nomSlice) {
 
         let contenuIdb = null
         if(source === SOURCE_RECEPTION) {
-            // // Charger le contenu de la collection deja connu et dechiffre
+            // Charger le contenu de la collection deja connu et dechiffre
             contenuIdb = await messagerieDao.getMessages(userId)
         } else if(source === SOURCE_OUTBOX) {
-            console.error("TODO outbox")
-            return
+            contenuIdb = await messagerieDao.getMessages(userId, {messages_envoyes: true})
         } else if(source === SOURCE_CORBEILLE) {
-            console.error("TODO corbeille")
-            return
+            contenuIdb = await messagerieDao.getMessages(userId, {supprime: true})
         } else {
             throw new Error("Source de messages non supportee : ", source)
         }
