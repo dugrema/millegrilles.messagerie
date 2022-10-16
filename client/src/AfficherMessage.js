@@ -667,7 +667,7 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
 
     const commande = { 
         cles: fichiersCles, 
-        preuve: dictPreuves,
+        preuves: dictPreuves,
         fichiers: fichiersCopies,
     }
     console.debug("copierAttachmentVersCollection Commande ", commande)

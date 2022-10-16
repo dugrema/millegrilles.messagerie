@@ -349,6 +349,7 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
 
     if(opts.attachments) {
         // Mapper data attachments
+        // console.debug("Attachments : ", opts.attachments)
         const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments], opts)
 
         // Ajouter attachments et fuuids aux opts
@@ -389,11 +390,13 @@ function mapperAttachments(attachments, opts) {
     let fuuidsCleSeulement = []
 
     attachments.forEach( attachment => {
-        const { version_courante } = attachment
+        // console.debug("mapperAttachments ", attachment)
+        const { version_courante, metadata } = attachment
         const fuuid = attachment.fuuid_v_courante || attachment.fuuid
         fuuids.push(fuuid)
 
         const mapping = {
+            metadata,
             ...version_courante,
             fuuid,
             // nom: attachment.nom,
