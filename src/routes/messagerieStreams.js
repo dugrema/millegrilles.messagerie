@@ -48,6 +48,7 @@ function init(amqpdao, opts) {
 // }
 
 async function verifierAutorisationStream(req, res) {
+    const session = req.session
     try {
         debug("verifierAutorisationFichier Headers %O", req.headers)
 
@@ -76,11 +77,11 @@ async function verifierAutorisationStream(req, res) {
             }
         }
 
-        const userId = req.session.userId
+        const userId = session.userId
         debug("Fuuid a charger pour usager %s : %s", userId, fuuid)
 
         if(!userId) {
-            console.error("Erreur session, userId manquant sur %s", req.url)
+            console.error("messagerieStreams.verifierAutorisationStream Erreur session, userId manquant sur %s (Session %O)", req.url, session)
             return res.sendStatus(401)
         }
 

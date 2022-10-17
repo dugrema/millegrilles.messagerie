@@ -52,6 +52,18 @@ function app(amqpdao, opts) {
 }
 
 function initSession(req, res) {
+    const session = req.session
+    debug("initSession Headers : %O, Session : %O", req.headers, req.session)
+
+    const userId = req.headers['x-user-id'],
+          userName = req.headers['x-user-name'],
+          authScore = req.headers['x-user-authscore']
+
+    // Transferer headers si applicable
+    session.userId = session.userId || userId
+    session.nomUsager = session.userName || userName
+    session.authScore = session.authScore || authScore
+
     return res.sendStatus(200)
 }
 

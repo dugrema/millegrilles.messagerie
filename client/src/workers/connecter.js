@@ -19,7 +19,9 @@ export async function connecter(workers, setUsagerState, setEtatConnexion, setEt
     try {
         const axiosImport = await import('axios')
         const axios = axiosImport.default
+        //const reponse = 
         await axios.get('/messagerie/initSession')
+        // console.info("Info session ", reponse)
     } catch(err) {
         console.error("Erreur init session : %O", err)
     }
