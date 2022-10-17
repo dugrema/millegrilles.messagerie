@@ -1,15 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { proxy as comlinkProxy } from 'comlink'
 
-import useWorkers, {useEtatConnexion, useUsager, useEtatPret} from './WorkerContext'
+import useWorkers, {useEtatPret} from './WorkerContext'
 import contactsAction from './redux/contactsSlice'
 import messagerieAction from './redux/messagerieSlice'
 
 export function EvenementsMessageHandler(_props) {
 
     const workers = useWorkers(),
-          usager = useUsager(),
           dispatch = useDispatch(),
           etatPret = useEtatPret()
 
@@ -47,7 +46,7 @@ export function EvenementsMessageHandler(_props) {
 
 async function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
     console.debug("traiterMessageEvenement ", evenementMessage)
-    const { connexion, chiffrage, messagerieDao } = workers
+    const { connexion, messagerieDao } = workers
   
     // Traiter message
     const routing = evenementMessage.routingKey,

@@ -77,7 +77,6 @@ function clearMessagesAction(state) {
 function mergeMessagesDataAction(state, action) {
     const mergeVersion = state.mergeVersion
     state.mergeVersion++
-    state.syncEnCours = true
 
     let payload = action.payload
     if(!Array.isArray(payload)) {
@@ -185,6 +184,10 @@ function setSourceMessagesAction(state, action) {
     state.listeDechiffrage = []
 }
 
+function setSyncEnCoursAction(state, action) {
+    state.syncEnCours = action.payload
+}
+
 function clearSyncEnCoursAction(state, action) {
     state.syncEnCours = false
 }
@@ -210,6 +213,7 @@ export function creerSlice(name) {
             preparerRepondreMessage: preparerRepondreMessageAction,
             preparerTransfererMessage: preparerTransfererMessageAction,
             setSourceMessages: setSourceMessagesAction,
+            setSyncEnCours: setSyncEnCoursAction,
             clearSyncEnCours: clearSyncEnCoursAction,
         }
     })
@@ -219,7 +223,7 @@ export function creerSlice(name) {
 export function creerThunks(actions, nomSlice) {
 
     // Action creators are generated for each case reducer function
-    const { pushMessages, clearMessages, pushMessagesChiffres, setSourceMessages } = actions
+    const { pushMessages, clearMessages, pushMessagesChiffres, setSourceMessages, setSyncEnCours } = actions
 
     // Async actions
     function chargerMessages(workers, sourceMessages) {
@@ -318,6 +322,8 @@ export function creerThunks(actions, nomSlice) {
               source = state.source
     
         const messages_envoyes = source === SOURCE_OUTBOX
+
+        dispatch(setSyncEnCours(true))
 
         // console.debug("traiterChargerMessagesParSyncid messages ", messages)
 
