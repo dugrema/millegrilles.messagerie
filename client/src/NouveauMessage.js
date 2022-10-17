@@ -62,25 +62,25 @@ function NouveauMessage(props) {
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
-    const supprimerDraftCb = useCallback(idDraft=>{
-        idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
-        console.error("supprimerDraftCb fix me - redux")
-        // MessageDao.supprimerDraft(idDraft).catch(erreurCb)
-        // const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
-        // setDrafts(draftsMaj)
-    }, [drafts, setDrafts, erreurCb])
+    // const supprimerDraftCb = useCallback(idDraft=>{
+    //     idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
+    //     console.error("supprimerDraftCb fix me - redux")
+    //     // MessageDao.supprimerDraft(idDraft).catch(erreurCb)
+    //     // const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
+    //     // setDrafts(draftsMaj)
+    // }, [drafts, setDrafts, erreurCb])
 
     const fermer = useCallback( supprimerDraft => {
-        if(supprimerDraft === true) supprimerDraftCb(idDraft)
+        // if(supprimerDraft === true) supprimerDraftCb(idDraft)
         fermerNouveauMessage()
-    }, [fermerNouveauMessage, supprimerDraftCb, idDraft])
+    }, [fermerNouveauMessage, /* supprimerDraftCb, */ idDraft])
 
     const envoyerCb = useCallback(()=>{
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
         envoyer(workers, userId, certificatsMaitredescles, from, to, content, opts)
             .then(()=>{
                 // showConfirmation("Message envoye")
-                supprimerDraftCb(idDraft)
+                // supprimerDraftCb(idDraft)
                 fermer(true)
             })
             .catch(err=>{
@@ -90,7 +90,7 @@ function NouveauMessage(props) {
     }, [
         workers, userId, showConfirmation, certificatsMaitredescles, 
         from, to, replyTo, content, uuidThread, attachments, attachmentsCles, optionVideo,
-        fermer, supprimerDraftCb, idDraft, erreurCb,
+        fermer, /* supprimerDraftCb, */ idDraft, erreurCb,
     ])
 
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
@@ -143,15 +143,15 @@ function NouveauMessage(props) {
             .catch(err=>erreurCb(err, "Erreur chargement du certificat de maitre des cles"))
     }, [workers, setCertificatsMaitredescles])
 
-    useEffect(()=>{
-        console.error("getListeDrafts() fix me")
-        // MessageDao.getListeDrafts()
-        //     .then(drafts=>{
-        //         // console.debug("Drafts : %O", drafts)
-        //         setDrafts(drafts)
-        //     })
-        //     .catch(erreurCb)
-    }, [setDrafts, erreurCb])
+    // useEffect(()=>{
+    //     console.error("getListeDrafts() fix me")
+    //     // MessageDao.getListeDrafts()
+    //     //     .then(drafts=>{
+    //     //         // console.debug("Drafts : %O", drafts)
+    //     //         setDrafts(drafts)
+    //     //     })
+    //     //     .catch(erreurCb)
+    // }, [setDrafts, erreurCb])
 
     // Preparer reponse ou transfert
     useEffect(()=>{
@@ -190,44 +190,44 @@ function NouveauMessage(props) {
         setReplyTo(replyTo)
     }, [workers, profil, usager, setReplyTo])
 
-    useEffect(()=>{
-        if(!idDraft) {
-            if(to || content || attachments) {  // Champs modifiables par l'usager
-                // Creer un nouveau draft
-                //throw new Error("fix me - redux")
-                // MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
-            }
-        } else {
-            // Conserver information draft
-            let attachmentsMapping = null
-            if(attachments) {
-                const fieldsConserver = [
-                    'fileId', 'fuuid', 
-                    'duration', 'mimetype', 'width', 'height', 'anime', 'nom', 'taille', 
-                    'pret', 'version_courante'
-                ]
-                attachmentsMapping = attachments.map(item=>{
-                    const attach = {}
-                    fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
-                    // console.debug("attach : %O", attach)
-                    return attach
-                })
-            }
-            throw new Error("fix me - redux")
-            // MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
-        }
-    }, [idDraft, from, to, replyTo, content, attachments, attachmentsCles, setIdDraft, erreurCb])
+    // useEffect(()=>{
+    //     if(!idDraft) {
+    //         if(to || content || attachments) {  // Champs modifiables par l'usager
+    //             // Creer un nouveau draft
+    //             //throw new Error("fix me - redux")
+    //             // MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
+    //         }
+    //     } else {
+    //         // Conserver information draft
+    //         let attachmentsMapping = null
+    //         if(attachments) {
+    //             const fieldsConserver = [
+    //                 'fileId', 'fuuid', 
+    //                 'duration', 'mimetype', 'width', 'height', 'anime', 'nom', 'taille', 
+    //                 'pret', 'version_courante'
+    //             ]
+    //             attachmentsMapping = attachments.map(item=>{
+    //                 const attach = {}
+    //                 fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
+    //                 // console.debug("attach : %O", attach)
+    //                 return attach
+    //             })
+    //         }
+    //         throw new Error("fix me - redux")
+    //         // MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
+    //     }
+    // }, [idDraft, from, to, replyTo, content, attachments, attachmentsCles, setIdDraft, erreurCb])
 
     return (
         <>
             <AlertTimeout value={erreur} setValue={setErreur} titre="Erreur" variant="danger" />
 
-            <AfficherDrafts 
+            {/* <AfficherDrafts 
                 drafts={drafts} 
                 setDrafts={setDrafts} 
                 chargerDraft={chargerDraft} 
                 supprimerCb={supprimerDraftCb}
-                erreurCb={erreurCb} />
+                erreurCb={erreurCb} /> */}
 
             <Form.Label htmlFor="inputTo">To</Form.Label>
             <Row>
@@ -282,7 +282,7 @@ function NouveauMessage(props) {
             <Row>
                 <Col className="buttonbar">
                     <Button onClick={envoyerCb} disabled={!attachmentsPrets}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
-                    <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Draft</Button>
+                    {/* <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Draft</Button> */}
                     <Button variant="secondary" onClick={()=>fermer(true)}>Annuler</Button>
                 </Col>
             </Row>

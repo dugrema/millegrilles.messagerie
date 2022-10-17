@@ -47,7 +47,7 @@ export function EvenementsMessageHandler(_props) {
 
 async function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
     console.debug("traiterMessageEvenement ", evenementMessage)
-    const { x509, chiffrage, messagerieDao } = workers
+    const { connexion, chiffrage, messagerieDao } = workers
   
     // Traiter message
     const routing = evenementMessage.routingKey,
@@ -55,8 +55,12 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
     const message = evenementMessage.message
 
     // const verificationMessage = await x509.verifierMessage(message)
-    // console.debug("Message verification ", verificationMessage)
-    console.warn("TODO verifier message")
+    const resultatVerification = await connexion.verifierMessage(message)
+    console.debug("Message verification ", resultatVerification)
+    if(resultatVerification !== true) {
+        console.error("Message invalide (signature/cert) : ", message)
+        return  // Message rejete, on ne traite pas l'evenement
+    }
   
     if(action === 'nouveauMessage') {
         console.debug("traiterMessageEvenement Nouveau message ", message)
