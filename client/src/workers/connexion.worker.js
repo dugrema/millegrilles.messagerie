@@ -88,7 +88,7 @@ function supprimerMessages(uuidTransactions) {
     uuidTransactions = [uuidTransactions]
   }
   const commande = { uuid_transactions: uuidTransactions }
-  return ConnexionClient.emitBlocking('supprimerMessages', commande, {domaine: 'Messagerie', action: 'supprimerMessages', ajouterCertificat: true})
+  return ConnexionClient.emitBlocking('supprimerMessages', commande, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'supprimerMessages', ajouterCertificat: true})
 }
 
 function supprimerContacts(uuidContacts) {

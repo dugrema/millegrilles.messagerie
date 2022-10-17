@@ -19,7 +19,7 @@ export async function getMessage(userId, uuid_transaction) {
 export async function getMessagesChiffres(userId, opts) {
     opts = opts || {}
     const messages_envoyes = opts.messages_envoyes?true:false,
-          inclure_supprime = opts.inclure_supprime?true:false
+          supprime = opts.supprime?true:false
 
     const db = await ouvrirDB()
     const index = db.transaction(STORE_MESSAGES, 'readwrite').store.index('dechiffre')
@@ -34,8 +34,7 @@ export async function getMessagesChiffres(userId, opts) {
         if(messages_envoyes && !value.date_envoi) conserver = false
         else if(!messages_envoyes && !value.date_reception) conserver = false
         
-        if(inclure_supprime && value.supprime !== true) conserver = false
-        else if(!inclure_supprime && value.supprime === true) conserver = false
+        if(supprime !== value.supprime?true:false) conserver = false
         
         if(conserver) messages.push(curseur.value)
         

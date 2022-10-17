@@ -85,6 +85,7 @@ function mergeMessagesDataAction(state, action) {
     }
 
     let doitTrier = false
+    let supprime = state.source === SOURCE_CORBEILLE
     let liste = state.liste || []
 
     for (const payloadMessage of payload) {
@@ -95,7 +96,7 @@ function mergeMessagesDataAction(state, action) {
         const data = {...payloadMessage}
         data['_mergeVersion'] = mergeVersion
         
-        let retirer = data.supprime === true,
+        let retirer = (data.supprime?true:false) !== supprime,
             peutAppend = !retirer
 
         // Recuperer version courante (en memoire)
@@ -247,7 +248,7 @@ export function creerThunks(actions, nomSlice) {
         dispatch(clearMessages())
 
         let contenuIdb = null, 
-            inclure_supprime = false, 
+            supprime = false, 
             messages_envoyes = source === SOURCE_OUTBOX
         if(source === SOURCE_RECEPTION) {
             // Charger le contenu de la collection deja connu et dechiffre
@@ -255,7 +256,7 @@ export function creerThunks(actions, nomSlice) {
         } else if(source === SOURCE_OUTBOX) {
             contenuIdb = await messagerieDao.getMessages(userId, {messages_envoyes: true})
         } else if(source === SOURCE_CORBEILLE) {
-            inclure_supprime = true
+            supprime = true
             contenuIdb = await messagerieDao.getMessages(userId, {supprime: true})
         } else {
             throw new Error("Source de messages non supportee : ", source)
@@ -277,7 +278,7 @@ export function creerThunks(actions, nomSlice) {
             for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
                 let resultatSync = await syncMessages(
                     workers, CONST_SYNC_BATCH_SIZE, dateMinimum, cbChargerMessages, 
-                    {messages_envoyes, inclure_supprime}
+                    {messages_envoyes, supprime}
                   )
                 if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
                 if( resultatSync.complete ) break
@@ -293,7 +294,7 @@ export function creerThunks(actions, nomSlice) {
         }
     
         // Pousser liste a dechiffrer
-        const messagesChiffres = await messagerieDao.getMessagesChiffres(userId, {messages_envoyes, inclure_supprime})
+        const messagesChiffres = await messagerieDao.getMessagesChiffres(userId, {messages_envoyes, supprime})
         // console.debug("traiterRafraichirMessages Dechiffrer ", messagesChiffres)
         dispatch(pushMessagesChiffres(messagesChiffres))
     }
@@ -334,9 +335,9 @@ export function creerThunks(actions, nomSlice) {
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            // console.debug("Charger messages du serveur ", batchUuids)
+            console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            // console.debug("Liste messages recue : ", listeMessages)
+            console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -449,11 +450,13 @@ async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts
     opts = opts || {}
     const { connexion } = workers
 
-    const { messages_envoyes, inclure_supprime } = opts
+    const { messages_envoyes, supprime, inclure_supprime } = opts
 
     // console.debug("syncMessages limit %d date min %d, opts %O", limit, dateMinimum, opts)
 
-    const reponseMessages = await connexion.getReferenceMessages({limit, date_minimum: dateMinimum, messages_envoyes, inclure_supprime})
+    const reponseMessages = await connexion.getReferenceMessages(
+        {limit, date_minimum: dateMinimum, messages_envoyes, supprime, inclure_supprime}
+    )
     const messages = reponseMessages.messages || []
     // console.debug("syncMessages Reponse ", messages)
     if(messages.length > 0) {
@@ -467,8 +470,10 @@ async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts
 async function chargerBatchMessages(workers, batchUuids, opts) {
     opts = opts || {}
     const { connexion } = workers
-    const { messages_envoyes, inclure_supprime } = opts
-    const reponse = await connexion.getMessages({uuid_transactions: batchUuids, limit: batchUuids.length, messages_envoyes, inclure_supprime})
+    const { messages_envoyes } = opts
+    const reponse = await connexion.getMessages(
+        {uuid_transactions: batchUuids, limit: batchUuids.length, messages_envoyes}
+    )
     if(!reponse.err) {
         const messages = reponse.messages
         return messages
@@ -476,7 +481,6 @@ async function chargerBatchMessages(workers, batchUuids, opts) {
         throw reponse.err
     }
 }
-
 
 function genererTriListe(sortKeys) {
     
