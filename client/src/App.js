@@ -9,8 +9,6 @@ import Dropdown from 'react-bootstrap/Dropdown'
 import Col from 'react-bootstrap/Col'
 import Row from 'react-bootstrap/Row'
 
-import { trierString, trierNombre } from '@dugrema/millegrilles.utiljs/src/tri'
-
 import ErrorBoundary from './ErrorBoundary'
 import useWorkers, {useEtatConnexion, WorkerProvider, useUsager} from './WorkerContext'
 import storeSetup from './redux/store'
@@ -302,11 +300,10 @@ function BreadcrumbMessages(props) {
       case 'corbeille': return 'Corbeille'
       default: return 'Reception'
     }
-    return 'Reception'
   }, [sourceMessages])
       
   const changerSourceHandler = useCallback(source=>{
-    console.debug("Changer source pour ", source)
+    // console.debug("Changer source pour ", source)
     dispatch(messagerieThunks.chargerMessages(workers, source))
       .catch(err=>console.error("BreadcrumbMessages Erreur changer source ", err))
   }, [workers, dispatch])

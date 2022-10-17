@@ -274,19 +274,27 @@ export function creerThunks(actions, nomSlice) {
         const cbChargerMessages = messages => dispatch(chargerMessagesParSyncid(workers, messages))
 
         try {
-            let dateMinimum = 0
+            // let dateMinimum = 0
+            const dateMaximum = Math.floor(new Date().getTime() / 1000)  // Charger messages plus vieux que maintenant
+            let skipCount = 0
             for(var cycle=0; cycle<SAFEGUARD_BATCH_MAX; cycle++) {
                 let resultatSync = await syncMessages(
-                    workers, CONST_SYNC_BATCH_SIZE, dateMinimum, cbChargerMessages, 
+                    workers, CONST_SYNC_BATCH_SIZE, dateMaximum, skipCount, cbChargerMessages, 
                     {messages_envoyes, supprime}
                   )
-                if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
+                // if( ! resultatSync || ! resultatSync.messages || resultatSync.messages.length < CONST_SYNC_BATCH_SIZE ) break
+
+                // Incrementer compteur
+                const messages = resultatSync.messages || []
+                const compteBatch = messages.length
+                skipCount += compteBatch
+                if(compteBatch < CONST_SYNC_BATCH_SIZE) break  // Complete
                 if( resultatSync.complete ) break
 
-                dateMinimum = resultatSync.messages.reduce(
-                    (acc, item) => acc < item.date_reception ?item.date_reception:acc,   // Garder date la plus elevee
-                    0  // Commencer a la date 0
-                )
+                // dateMinimum = resultatSync.messages.reduce(
+                //     (acc, item) => acc < item.date_reception ?item.date_reception:acc,   // Garder date la plus elevee
+                //     0  // Commencer a la date 0
+                // )
             }
             if(cycle === SAFEGUARD_BATCH_MAX) throw new Error("Detection boucle infinie dans syncCollection")
         } catch(err) {
@@ -335,9 +343,9 @@ export function creerThunks(actions, nomSlice) {
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            console.debug("Charger messages du serveur ", batchUuids)
+            // console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            console.debug("Liste messages recue : ", listeMessages)
+            // console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -363,7 +371,7 @@ export function creerMiddleware(workers, actions, thunks, nomSlice) {
 
 async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice, action, listenerApi) {
     // console.debug("dechiffrageMiddlewareListener running effect, action : %O, listener : %O", action, listenerApi)
-    const { clesDao, chiffrage, messagerieDao } = workers
+    const { clesDao, messagerieDao } = workers
 
     const getState = () => listenerApi.getState()[nomSlice]
 
@@ -446,7 +454,8 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
     }
 }
 
-async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts) {
+// async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts) {
+async function syncMessages(workers, limit, dateMaximum, skipCount, cbChargerMessages, opts) {
     opts = opts || {}
     const { connexion } = workers
 
@@ -455,7 +464,8 @@ async function syncMessages(workers, limit, dateMinimum, cbChargerMessages, opts
     // console.debug("syncMessages limit %d date min %d, opts %O", limit, dateMinimum, opts)
 
     const reponseMessages = await connexion.getReferenceMessages(
-        {limit, date_minimum: dateMinimum, messages_envoyes, supprime, inclure_supprime}
+        // {limit, date_minimum: dateMinimum, messages_envoyes, supprime, inclure_supprime}
+        {limit, date_maximum: dateMaximum, skip: skipCount, messages_envoyes, supprime, inclure_supprime}
     )
     const messages = reponseMessages.messages || []
     // console.debug("syncMessages Reponse ", messages)
