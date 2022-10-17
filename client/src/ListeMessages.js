@@ -66,7 +66,10 @@ export default ListeMessages
 function AfficherNombreMessages(props) {
     const compteMessages = props.value
 
-    const flagSyncEnCours = props.chargementEnCours?'*':''
+    let flagSyncEnCours = ''
+    if(props.chargementEnCours) {
+        flagSyncEnCours = <i className="fa fa-spinner fa-spin"/>
+    }
 
     let labelMessages = ''
 
