@@ -197,7 +197,7 @@ export function creerThunks(actions, nomSlice) {
             let clesSecretes = await clesDao.traiterReponseCles(cles)
             cleSecrete = clesSecretes[cle_hachage_bytes].cleSecrete
         }
-        // console.debug("Cle secrete : ", cleSecrete)
+        // console.debug("traiterChargerProfil Cle secrete hachage bytes %s = %O", cle_hachage_bytes, cleSecrete)
     }
     
     function chargerContacts(workers) {
@@ -246,7 +246,7 @@ export function creerThunks(actions, nomSlice) {
         const userId = state.userId
 
         const { messagerieDao } = workers
-        const batchUuids = contacts.map(item=>item.uuid_contact)
+        const batchUuids = contacts.filter(item=>item.supprime!==true).map(item=>item.uuid_contact)
 
         const listeContacts = await chargerBatchContacts(workers, batchUuids)
 
@@ -283,7 +283,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
           profil = getState().profil,
           cle_ref_hachage_bytes = profil.cle_ref_hachage_bytes
     const cleDechiffrage = await clesDao.getCleLocale(cle_ref_hachage_bytes)
-
+    // console.debug("dechiffrageMiddlewareListener cle dechiffrage ", cleDechiffrage)
     await listenerApi.unsubscribe()
     try {
         let contactsChiffres = [...getState().listeDechiffrage]
@@ -292,7 +292,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             const batchContacts = contactsChiffres.slice(0, 50)  // Batch de 20 fichiers a la fois
             contactsChiffres = contactsChiffres.slice(50)  // Clip 
             listenerApi.dispatch(actions.setContactsChiffres(contactsChiffres))
-            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchContacts.length, contactsChiffres.length)
+            // console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchContacts.length, contactsChiffres.length)
 
             for await (const contact of batchContacts) {
                 const docCourant = {...contact}  // Copie du proxy contact (read-only)
@@ -300,23 +300,27 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 if(ref_hachage_bytes === cle_ref_hachage_bytes) {
                     const cleDechiffrageContact = {...cleDechiffrage, ...contact}
                     // console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
-                    const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact)
-                    // console.debug("Contenu dechiffre : ", dataDechiffre)
-                    
-                    // Ajout/override champs de metadonne avec contenu dechiffre
-                    Object.assign(docCourant, dataDechiffre)
-                    docCourant.dechiffre = 'true'
-                    docCourant.uuid_contact = contact.uuid_contact
-                    
-                    // Cleanup objet dechiffre
-                    delete docCourant.data_chiffre
-                    delete docCourant.ref_hachage_bytes
-                    delete docCourant.header
-                    delete docCourant.format
-                    
-                    // Conserver contact dechiffre
-                    await messagerieDao.updateContact(userId, docCourant, {replace: true})
-                    listenerApi.dispatch(actions.mergeContactsData(docCourant))
+                    try {
+                        const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact, {DEBUG: true})
+                        // console.debug("Contenu dechiffre : ", dataDechiffre)
+                        
+                        // Ajout/override champs de metadonne avec contenu dechiffre
+                        Object.assign(docCourant, dataDechiffre)
+                        docCourant.dechiffre = 'true'
+                        docCourant.uuid_contact = contact.uuid_contact
+                        
+                        // Cleanup objet dechiffre
+                        delete docCourant.data_chiffre
+                        delete docCourant.ref_hachage_bytes
+                        delete docCourant.header
+                        delete docCourant.format
+                        
+                        // Conserver contact dechiffre
+                        await messagerieDao.updateContact(userId, docCourant, {replace: true})
+                        listenerApi.dispatch(actions.mergeContactsData(docCourant))
+                    } catch(err) {
+                        console.warn("Erreur dechiffrage contact %s : %O", contact.uuid_contact, err)
+                    }
                 } else {
                     console.error("ref_hachage_bytes : %O, cle : %O", ref_hachage_bytes, cle_ref_hachage_bytes)
                     throw new Error("Contact avec mauvais cle - TODO")
@@ -382,7 +386,9 @@ async function syncContacts(workers, limit, skip, cbChargerContacts) {
 
 async function chargerBatchContacts(workers, batchUuids) {
     const { connexion } = workers
+    // console.debug("chargerBatchContacts ", batchUuids)
     const reponse = await connexion.getContacts({uuid_contacts: batchUuids, limit: batchUuids.length})
+    // console.debug("chargerBatchContacts reponse ", reponse)
     if(!reponse.err) {
         const contacts = reponse.contacts
         return contacts
