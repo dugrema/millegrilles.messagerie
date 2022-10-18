@@ -151,7 +151,7 @@ function LayoutMain() {
   }, [workers])
   
   const downloadAction = useCallback(fichier=>{
-    console.debug("Download action fichier : ", fichier)
+    // console.debug("Download action fichier : ", fichier)
 
     const metadata = fichier.metadata || {}
     const champs = ['cle', 'version_courante', 'fuuid']
@@ -415,7 +415,7 @@ function InitialiserMessagerie(props) {
       .catch(err=>console.error("Erreur chargement messages ", err))
     dispatch(contactsThunks.chargerProfil(workers, userId, nomUsager, window.location))
       .then(()=>{
-        console.debug("Profil charger, faire les contacts")
+        // console.debug("Profil charger, faire les contacts")
         return dispatch(contactsThunks.chargerContacts(workers))
       })
       .catch(err=>console.error("Erreur chargement profil/contacts ", err))

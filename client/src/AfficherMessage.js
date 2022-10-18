@@ -203,7 +203,7 @@ function ContenuMessage(props) {
 
             const creerToken = async fuuid => {
                 if(Array.isArray(fuuid)) fuuid = fuuid.pop()
-                console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+                // console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
                 const {chiffrage, connexion} = workers
                 const cleDechiffree = attachments.cles[fuuid]
                 // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
@@ -228,10 +228,10 @@ function ContenuMessage(props) {
                     partition: clesChiffrees.partition, 
                     // domaine: 'GrosFichiers' 
                 }
-                console.debug("Preuve acces : %O", preuveAcces)
+                // console.debug("Preuve acces : %O", preuveAcces)
             
                 const reponse = await connexion.creerTokenStream(preuveAcces)
-                console.debug("Reponse preuve acces : %O", reponse)
+                // console.debug("Reponse preuve acces : %O", reponse)
                 return reponse.token
             }
 
@@ -242,7 +242,7 @@ function ContenuMessage(props) {
     }, [afficherVideo, certificatMaitreDesCles, fichiers])
 
     if(afficherVideo && attachmentMappe) {
-        console.debug("ContenuMessage PROPPIES : %O", props)
+        // console.debug("ContenuMessage PROPPIES : %O", props)
         return (
             <AfficherVideo
                 workers={workers}

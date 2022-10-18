@@ -729,13 +729,13 @@ function AfficherAttachments(props) {
                 </Col>
 
                 <Col className="buttonbar-right">
-                    <span {...getRootProps()}>
+                    {/* <span {...getRootProps()}>
                         <input {...getInputProps()}/>
                         <Button variant="secondary">
                             <i className="fa fa-plus" />
                             {' '}Upload
                         </Button>
-                    </span>
+                    </span> */}
                     <Button variant="secondary" onClick={choisirFichiersAttaches}>
                         <i className="fa fa-folder" />
                             {' '}Collections

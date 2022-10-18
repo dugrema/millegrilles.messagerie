@@ -113,7 +113,7 @@ function AfficherListeMessages(props) {
         event.preventDefault()
         event.stopPropagation()
 
-        console.debug("Ouvrir event : %O, selection: %O", event, selection)
+        // console.debug("Ouvrir event : %O, selection: %O", event, selection)
         if(selection.length === 1) {
             const uuid_message = selection[0]
             dispatch(messagerieActions.setUuidMessageActif(uuid_message))
