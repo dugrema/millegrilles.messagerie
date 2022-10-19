@@ -58,13 +58,27 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         if(opts[nomChamp]) message[nomChamp] = opts[nomChamp]
     })
 
-    let fuuidsCles = fuuids
+    let fuuidsCles = fuuids,
+        fuuidAttachmentsTransfert = null
     if(attachments) {
         console.debug("signerMessage Message attachments : %O", attachments)
         // Preparer l'information de dechiffrage (cle) pour tous les attachements
         // if(fuuidsCleSeulement) {
         //     fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
         // }
+
+        // Faire une liste des fuuids d'attachments a transferer (pour l'enveloppe postmaster)
+        fuuidAttachmentsTransfert = attachments.reduce((acc, attachment) =>{
+            const hachage_bytes = attachment.fuuid
+            acc.push(hachage_bytes)
+            const images = attachment.images || {},
+                  videos = attachment.video || {}
+            Object.values(images).filter(item=>!item.data).forEach(image=>{
+                acc.push(image.hachage)
+            })
+            Object.values(videos).forEach(video=>acc.push(video.fuuid_video))
+            return acc
+        }, [])
 
         // Retirer cles deja connues
         const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])
@@ -131,8 +145,11 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         fingerprint_certificat: messageSigne['en-tete']['fingerprint_certificat'],
     }
    
-    if(attachments) {
-        enveloppeMessage.attachments = fuuids
+    // if(attachments) {
+    //     enveloppeMessage.attachments = fuuids
+    // }
+    if(fuuidAttachmentsTransfert) {
+        enveloppeMessage.attachments = fuuidAttachmentsTransfert
     }
 
     const enveloppeMessageSigne = await connexion.formatterMessage(enveloppeMessage, 'Messagerie')
