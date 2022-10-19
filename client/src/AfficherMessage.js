@@ -26,13 +26,14 @@ import AfficherVideo from './AfficherVideo'
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
-    const { downloadAction, certificatMaitreDesCles } = props
+    const { downloadAction } = props
 
     const workers = useWorkers(),
           dispatch = useDispatch(),
           supportMedia = useDetecterSupport(),
           etatConnexion = useEtatConnexion(),
-          etatAuthentifie = useEtatAuthentifie()
+          etatAuthentifie = useEtatAuthentifie(),
+          usager = useUsager()
 
     const listeMessages = useSelector(state=>state.messagerie.liste),
           uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif)
@@ -65,9 +66,9 @@ function AfficherMessage(props) {
         }, {})
         console.debug("copierVersCollection cuuid %s cles %O fichiers %O", cuuid, cles, fichiersSelectionnes)
 
-        copierAttachmentVersCollection(workers, fichiersSelectionnes, cles, cuuid, certificatMaitreDesCles)
+        copierAttachmentVersCollection(workers, fichiersSelectionnes, cles, cuuid, usager)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
-    }, [workers, selectionAttachments, certificatMaitreDesCles, message])
+    }, [workers, selectionAttachments, message, usager])
 
     const repondreCb = useCallback(()=>dispatch(messagerieActions.preparerRepondreMessage()), [dispatch])
     const transfererCb = useCallback(()=>dispatch(messagerieActions.preparerTransfererMessage()), [dispatch])
@@ -90,7 +91,6 @@ function AfficherMessage(props) {
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
-                certificatMaitreDesCles={certificatMaitreDesCles}
                 setSelectionAttachments={setSelectionAttachments} 
                 retourMessages={retour} />
 
@@ -218,7 +218,8 @@ function ContenuMessage(props) {
                         // Valeurs recues
                         ...cleChiffree,
                         // Overrides
-                        domaine: 'GrosFichiers', cle: clesChiffrees.cles[fuuid]
+                        domaine: 'GrosFichiers', 
+                        cle: clesChiffrees.cles[fuuid]
                     }
                 ]
                 const preuveAcces = { 
@@ -603,10 +604,15 @@ function MenuContextuel(props) {
 //     }
 // }
 
-async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
+async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, usager) {
     console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
+    const caPem = usager.ca
+    listeCertificatMaitreDesCles.push(caPem)
+
+    console.debug("copierAttachmentVersCollection Certificats chiffrage")
+
     // const {fuuid, version_courante} = attachment
 
     // Creer hachage de preuve
@@ -633,23 +639,24 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid) {
         //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
             const cleRechiffree = clesChiffrees.cles[fuuid]
 
+            const domaine = 'GrosFichiers'
+            const identificateurs_document = {fuuid}
+
             const infoCle = {
-                // Default
-                identificateurs_document: {fuuid}, 
                 // Valeurs recues
                 ...cles[fuuid], 
-                // Overrides
-                domaine: 'GrosFichiers', cle: cleRechiffree
             }
-            delete infoCle.cle
+            // delete infoCle.cle
             delete infoCle.cleSecrete
             
             let fuuidInfo = fichiersCles[fuuid]
             if(!fuuidInfo) {
-                const { cleSecrete, domaine, identificateurs_document, hachage_bytes } = cles[fuuid]
+                const { cleSecrete } = cles[fuuid]
+                const cleSecreteBytes = multibase.decode(cleSecrete)
+                // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
                 const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
-                    cleSecrete, domaine, identificateurs_document, hachage_bytes)
-                fuuidInfo = {...infoCle, signature_identite, cles: {}}
+                    cleSecreteBytes, domaine, identificateurs_document, fuuid)
+                fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
                 fichiersCles[fuuid] = fuuidInfo
             }
             fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
