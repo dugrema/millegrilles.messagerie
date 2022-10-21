@@ -26,15 +26,14 @@ function ListeMessages(props) {
           compteMessages = messages?messages.length:0,
           syncEnCours = useSelector(state=>state.messagerie.syncEnCours)
 
-    const [filtreMessage, setFiltreMessage] = useState('actifs')
-
-    // useEffect(()=>{
-    //     if(filtreMessage === 'supprimes') setDossier('supprimes')
-    //     else if (filtreMessage === 'envoyes') setDossier('envoyes')
-    //     else setDossier('')
-    // }, [filtreMessage, setDossier])
-
-    if(!messages || messages.length === 0) return <p>Aucun message disponible.</p>
+    if(!messages || messages.length === 0) return (
+        <div>
+            <div>
+                <Button onClick={showNouveauMessage}><i className="fa fa-send-o"/>{' '}Nouveau</Button>
+            </div>
+            <p>Aucun message disponible.</p>
+        </div>
+    )
     
     const titre = props.titre || 'Messages'
 

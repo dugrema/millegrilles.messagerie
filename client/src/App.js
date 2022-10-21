@@ -234,7 +234,6 @@ function LayoutMain() {
 
 function Contenu(props) {
   const workers = useWorkers()
-  const dispatch = useDispatch()
   const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
 
   if(!workers) return <Attente />
