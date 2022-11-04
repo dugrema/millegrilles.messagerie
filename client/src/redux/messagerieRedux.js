@@ -351,7 +351,7 @@ export function creerThunks(actions, nomSlice) {
         if(batchUuids.length > 0) {
             // console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            // console.debug("Liste messages recue : ", listeMessages)
+            console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -416,7 +416,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
 
             for await (const message of batchMessages) {
                 const docCourant = {...message}  // Copie du proxy contact (read-only)
-                // console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
                 // Dechiffrer message
                 const cleDechiffrageMessage = cles[docCourant.hachage_bytes]

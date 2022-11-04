@@ -125,6 +125,8 @@ function RenderMessage(props) {
     const entete = message['en-tete'] || {},
           estampille = entete.estampille
     const { uuid_transaction, date_reception } = infoMessage
+    const attachments_status = message.attachments_status || {}
+    const attachments_traites = message.attachments_traites || false
 
     const dateEstampille = new Date(estampille)
 
@@ -141,6 +143,10 @@ function RenderMessage(props) {
             })
             .catch(erreurCb)
     }, [workers, retourMessages, uuid_transaction, erreurCb])
+
+    useEffect(()=>{
+        console.debug("Message ", message)
+    }, [message])
 
     if(!props.message) return ''
 
@@ -172,7 +178,9 @@ function RenderMessage(props) {
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
                 certificatMaitreDesCles={certificatMaitreDesCles} 
-                setSelectionAttachments={setSelectionAttachments} />
+                setSelectionAttachments={setSelectionAttachments} 
+                attachments_status={attachments_status}
+                attachments_traites={attachments_traites} />
 
         </>
     )
@@ -184,6 +192,7 @@ function ContenuMessage(props) {
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
         setAfficherVideo, certificatMaitreDesCles,
         setSelectionAttachments,
+        attachments_status, attachments_traites,
     } = props
 
     const workers = useWorkers(),
@@ -267,7 +276,9 @@ function ContenuMessage(props) {
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
                 setAfficherVideo={setAfficherVideo} 
-                setSelectionAttachments={setSelectionAttachments} />        
+                setSelectionAttachments={setSelectionAttachments}
+                attachments_status={attachments_status}
+                attachments_traites={attachments_traites} />        
         </>
     )
 }
@@ -380,6 +391,7 @@ function AfficherAttachments(props) {
     const { 
         workers, attachments, etatConnexion, downloadAction, 
         supportMedia, setAfficherVideo, setSelectionAttachments, choisirCollectionCb, 
+        attachments_status, attachments_traites,
     } = props
 
     const [colonnes, setColonnes] = useState('')
@@ -446,6 +458,9 @@ function AfficherAttachments(props) {
                     mimetype: attachment.mimetype || 'application/bytes',
                     taille: attachment.taille,
                 }
+
+                const traite = attachments_traites || attachments_status[fuuid] || false
+
                 if(attachment.images) {
                     version_courante.images = {...attachment.images}
                     delete attachment.images
@@ -463,15 +478,19 @@ function AfficherAttachments(props) {
                     ...attachment, 
                     fileId: fuuid, fuuid_v_courante: fuuid, 
                     version_courante,
+                    traite,
+                    disabled: !traite,
                 }
             })
 
-            // console.debug("Dict attachments combines : %O", dictAttachments)
+            console.debug("Dict attachments combines : %O", dictAttachments)
 
             const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
             const listeMappee = liste.map(item=>{
                 return mapper(item, workers, {ref_hachage_bytes: item.fuuid, cles, supportMedia})
             })
+
+            console.debug("Liste mappee ", listeMappee)
 
             setAttachmentsList(listeMappee)
         }

@@ -27,7 +27,7 @@ export { Icones }
 export function mapper(row, workers, opts) {
     // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
     opts = opts || {}
-    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris } = row
+    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris, disabled } = row
     const { genererToken, creerToken } = opts
     const cles = opts.cles || {}
     // const supportMedia = opts.supportMedia || {},
@@ -127,6 +127,7 @@ export function mapper(row, workers, opts) {
         fuuid: fuuid_v_courante,
         version_courante,
         favoris,
+        disabled,
     }
 }
 

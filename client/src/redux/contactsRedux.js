@@ -74,7 +74,7 @@ function mergeContactsDataAction(state, action) {
 
     for (const payloadMessage of payload) {
         let { uuid_contact } = payloadMessage
-        console.debug("mergeContactsDataAction action: %O, uuid_contact : %O", action, payloadMessage.uuid_contact)
+        // console.debug("mergeContactsDataAction action: %O, uuid_contact : %O", action, payloadMessage.uuid_contact)
 
         // Ajout flag _mergeVersion pour rafraichissement ecran
         const data = {...payloadMessage}

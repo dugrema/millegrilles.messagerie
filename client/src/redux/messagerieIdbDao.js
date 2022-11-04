@@ -52,9 +52,11 @@ export async function mergeReferenceMessages(userId, messages) {
     for await (let message of messages) {
         const uuid_transaction = message.uuid_transaction
         const messageExistant = await store.get(uuid_transaction)
+        const attachments_status = message.attachments || {}
+        const attachments_traites = message.attachments_traites || false
         if(!messageExistant) {
             // console.debug("mergeReferenceMessages Conserver nouveau message : %O", message)
-            await store.put({user_id: userId, ...message, 'dechiffre': 'false'})
+            await store.put({user_id: userId, ...message, attachments_status, attachments_traites, 'dechiffre': 'false'})
         } else {
             // Verifier si on doit ajouter date_envoi ou date_reception
             const { date_envoi: date_envoi_ref, date_reception: date_reception_ref } = message
@@ -62,11 +64,11 @@ export async function mergeReferenceMessages(userId, messages) {
             if(date_reception_ref && !date_reception_local) {
                 // Injecter date reception (le message etait deja dans boite de reception)
                 // console.debug("mergeReferenceMessages Injecter date reception %O dans %s", date_reception_ref, uuid_transaction)
-                await store.put({...messageExistant, date_reception: date_reception_ref})
+                await store.put({...messageExistant, attachments_status, attachments_traites, date_reception: date_reception_ref})
             } else if(date_envoi_ref && !date_envoi_local) {
                 // Injecter date envoi (le message etait deja dans la boite d'envoi)
                 // console.debug("mergeReferenceMessages Injecter date envoi %O dans %s", date_envoi_ref, uuid_transaction)
-                await store.put({...messageExistant, date_envoi: date_envoi_ref})
+                await store.put({...messageExistant, attachments_status, attachments_traites, date_envoi: date_envoi_ref})
             } else {
                 // console.debug("Rien a merger pour %O", message)
             }
@@ -227,11 +229,11 @@ export async function mergeReferenceContacts(userId, contacts) {
                 if(date_modification_locale < contact.date_modification) {
                     // Indiquer que le contact doit etre maj
                     const contactStale = {...contactExistant, ...contact}
-                    console.debug("Contact doit etre maj : %O", contactStale)
+                    // console.debug("Contact doit etre maj : %O", contactStale)
                     await store.put(contactStale)
                 }
             } else {
-                console.debug("Conserver nouveau contact : %O", contact)
+                // console.debug("Conserver nouveau contact : %O", contact)
                 await store.put({user_id: userId, ...contact, dechiffre: 'false'})
             }
         }
@@ -290,7 +292,7 @@ export async function getContacts(userId, opts) {
     const contacts = []
     const keyRange = IDBKeyRange.only([userId, 'true'])
     // let curseur = await index.openCursor(keyRange, direction)
-    console.debug("KeyRange : ", keyRange)
+    // console.debug("KeyRange : ", keyRange)
     let curseur = await index.openCursor(keyRange, 'next')
 
     while(curseur) {
@@ -370,7 +372,7 @@ export async function getDraft(idDraft) {
 }
 
 export async function supprimerDraft(idDraft) {
-    console.debug("Supprimer draft : %O", idDraft)
+    // console.debug("Supprimer draft : %O", idDraft)
     const db = await ouvrirDB()
     const store = db.transaction(STORE_DRAFTS, 'readwrite').store
     await store.delete(idDraft)
