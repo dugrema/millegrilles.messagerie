@@ -13,7 +13,7 @@ import multibase from 'multibase'
 import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport, hachage } from '@dugrema/millegrilles.reactjs'
 
 import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
-import messagerieActions from './redux/messagerieSlice'
+import messagerieActions, { thunks as messagerieThunks } from './redux/messagerieSlice'
 
 import { MenuContextuelAfficherAttachments, MenuContextuelAfficherAttachementsMultiselect, onContextMenu } from './MenuContextuel'
 import { mapper, mapperRowAttachment } from './mapperFichier'
@@ -144,10 +144,6 @@ function RenderMessage(props) {
             .catch(erreurCb)
     }, [workers, retourMessages, uuid_transaction, erreurCb])
 
-    useEffect(()=>{
-        console.debug("Message ", message)
-    }, [message])
-
     if(!props.message) return ''
 
     return (
@@ -171,6 +167,7 @@ function RenderMessage(props) {
             <ContenuMessage 
                 content={content}
                 downloadAction={downloadAction}
+                uuid_transaction={uuid_transaction}
                 attachments={attachments} 
                 attachments_inline={attachments_inline} 
                 choisirCollectionCb={choisirCollectionCb} 
@@ -192,6 +189,7 @@ function ContenuMessage(props) {
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
         setAfficherVideo, certificatMaitreDesCles,
         setSelectionAttachments,
+        uuid_transaction,
         attachments_status, attachments_traites,
     } = props
 
@@ -271,6 +269,7 @@ function ContenuMessage(props) {
                 workers={workers} 
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
+                uuid_transaction={uuid_transaction}
                 attachments={attachments} 
                 attachments_inline={attachments_inline} 
                 choisirCollectionCb={choisirCollectionCb} 
@@ -392,7 +391,11 @@ function AfficherAttachments(props) {
         workers, attachments, etatConnexion, downloadAction, 
         supportMedia, setAfficherVideo, setSelectionAttachments, choisirCollectionCb, 
         attachments_status, attachments_traites,
+        uuid_transaction,
     } = props
+
+    const dispatch = useDispatch()
+    const userId = useSelector(state=>state.messagerie.userId)
 
     const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
@@ -495,6 +498,29 @@ function AfficherAttachments(props) {
             setAttachmentsList(listeMappee)
         }
     }, [workers, attachments, supportMedia, setAttachmentsList])
+
+    const verifierAttachments = (attachments && !attachments_traites)
+    console.debug("Verifier attachments %O, status %O", verifierAttachments, attachments_status)
+
+    // Recharger le message si les attachements ne sont pas tous traites
+    useEffect(()=>{
+        if(!verifierAttachments) return     // Rien a faire
+        const { connexion, messagerieDao } = workers
+        console.debug("Reload message - voir si attachements ont ete recus ")
+        connexion.getMessages({uuid_transactions: [uuid_transaction]})
+            .then(async reponseMessages=>{
+                const message = reponseMessages.messages.pop()
+                console.debug("Message recu ", message)
+                const { attachments, attachments_traites } = message
+                const messageMaj = {uuid_transaction, attachments_status: attachments, attachments_traites}
+                console.debug("Message maj ", messageMaj)
+                await messagerieDao.updateMessage(messageMaj, {userId})
+                const syncIds = [{uuid_transaction}]
+                await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
+                console.debug("Message reloade pour attachments")
+            })
+            .catch(err=>console.error("Erreur maj message pour attachements incomplets : ", err))
+    }, [workers, dispatch, userId, uuid_transaction, verifierAttachments])
 
     if(!attachmentsList) return ''
 

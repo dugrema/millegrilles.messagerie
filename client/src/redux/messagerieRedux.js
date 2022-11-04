@@ -331,7 +331,7 @@ export function creerThunks(actions, nomSlice) {
         for await (const messageSync of messages) {
             const uuid_transaction = messageSync.uuid_transaction
             const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
-            // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
+            console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
             if(messageIdb) {
                 // Message connu, merge flags
                 const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
@@ -357,7 +357,7 @@ export function creerThunks(actions, nomSlice) {
     }
     
     const thunks = { 
-        chargerMessages,
+        chargerMessages, chargerMessagesParSyncid,
     }
 
     return thunks
