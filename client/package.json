@@ -6,6 +6,7 @@
   "homepage": "/messagerie",
   "dependencies": {
     "@babel/plugin-syntax-object-rest-spread": "^7.8.3",
+    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#aa07b47fc9cd7eaf1d36adca6b93687d79b0fe83",
     "buffer": "^6.0.3",
     "comlink": "^4.3.1",
     "crypto-browserify": "^3.12.0",
@@ -16,14 +17,13 @@
     "path-browserify": "^1.0.1",
     "react-app-rewired": "^2.2.1",
     "react-i18next": "^12.0.0",
-    "react-scripts": "^5",
     "react-quill": "^2.0.0",
+    "react-scripts": "^5",
     "react-transition-group": "^4.4.5",
     "sass": "^1.55.0",
     "stream-browserify": "^3.0.0"
   },
   "peerDependencies": {
-    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#2022.8",
     "@reduxjs/toolkit": "^1.8",
     "bootstrap": "^5.1",
     "font-awesome": "^4",

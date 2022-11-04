@@ -86,7 +86,7 @@ async function getFichierChiffre(workers, fuuid, opts) {
                 method: 'GET',
                 url: `/messagerie/fichiers/${fuuid}`,
                 responseType: 'arraybuffer',
-                timeout: 20000,
+                timeout: 300000,
                 progress,
                 // signal,
             })
