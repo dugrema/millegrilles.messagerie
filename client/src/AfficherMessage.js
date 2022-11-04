@@ -23,6 +23,8 @@ import ModalSelectionnerCollection from './ModalSelectionnerCollection'
 import PreviewFichiers from './FilePlayer'
 import AfficherVideo from './AfficherVideo'
 
+const CONST_INTERVALLE_VERIFICATION_ATTACHMENTS = 20_000
+
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
 
@@ -486,40 +488,42 @@ function AfficherAttachments(props) {
                 }
             })
 
-            console.debug("Dict attachments combines : %O", dictAttachments)
+            // console.debug("Dict attachments combines : %O", dictAttachments)
 
             const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
             const listeMappee = liste.map(item=>{
                 return mapper(item, workers, {ref_hachage_bytes: item.fuuid, cles, supportMedia})
             })
 
-            console.debug("Liste mappee ", listeMappee)
+            // console.debug("Liste mappee ", listeMappee)
 
             setAttachmentsList(listeMappee)
         }
     }, [workers, attachments, supportMedia, setAttachmentsList])
 
-    const verifierAttachments = (attachments && !attachments_traites)
-    console.debug("Verifier attachments %O, status %O", verifierAttachments, attachments_status)
+    let verifierAttachments = (attachments && !attachments_traites)
+    if(!attachments_traites && attachments_status && Object.keys(attachments_status).length > 0) {
+        // S'assurer qu'on a au moins 1 attachement manquant
+        verifierAttachments = Object.values(attachments_status).reduce((acc, item)=>{
+            acc = acc || !item
+            return acc
+        }, false)
+    }
+    // console.debug("Verifier attachments %O, status %O", verifierAttachments, attachments_status)
 
     // Recharger le message si les attachements ne sont pas tous traites
     useEffect(()=>{
         if(!verifierAttachments) return     // Rien a faire
-        const { connexion, messagerieDao } = workers
-        console.debug("Reload message - voir si attachements ont ete recus ")
-        connexion.getMessages({uuid_transactions: [uuid_transaction]})
-            .then(async reponseMessages=>{
-                const message = reponseMessages.messages.pop()
-                console.debug("Message recu ", message)
-                const { attachments, attachments_traites } = message
-                const messageMaj = {uuid_transaction, attachments_status: attachments, attachments_traites}
-                console.debug("Message maj ", messageMaj)
-                await messagerieDao.updateMessage(messageMaj, {userId})
-                const syncIds = [{uuid_transaction}]
-                await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
-                console.debug("Message reloade pour attachments")
-            })
+        reloadMessage(workers, dispatch, uuid_transaction, userId)
             .catch(err=>console.error("Erreur maj message pour attachements incomplets : ", err))
+        
+        // Reload message
+        const interval = setInterval(()=>{
+            reloadMessage(workers, dispatch, uuid_transaction, userId)
+                .catch(err=>console.error("Erreur maj message pour attachements incomplets : ", err))
+        }, CONST_INTERVALLE_VERIFICATION_ATTACHMENTS)
+        
+        return () => clearInterval(interval)  // Cleanup interval
     }, [workers, dispatch, userId, uuid_transaction, verifierAttachments])
 
     if(!attachmentsList) return ''
@@ -650,19 +654,19 @@ function MenuContextuel(props) {
 // }
 
 async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, usager) {
-    console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
+    // console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     const caPem = usager.ca
     listeCertificatMaitreDesCles.push(caPem)
 
-    console.debug("copierAttachmentVersCollection Certificats chiffrage")
+    // console.debug("copierAttachmentVersCollection Certificats chiffrage")
 
     // const {fuuid, version_courante} = attachment
 
     // Creer hachage de preuve
     const {fingerprint} = await connexion.getCertificatFormatteur()
-    console.debug("Certificat signature : ", fingerprint)
+    // console.debug("Certificat signature : ", fingerprint)
     const dictPreuves = {}, dictClesSecretes = {}
     for await (const fuuid of Object.keys(cles)) {
         const cleSecrete = cles[fuuid].cleSecrete
@@ -670,15 +674,15 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, us
         dictClesSecretes[fuuid] = cleSecrete
         dictPreuves[fuuid] = {preuve, date}
     }
-    console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
-        dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
+    // console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
+    //     dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
 
     const fichiersCles = {}
     for await (const certMaitredescles of listeCertificatMaitreDesCles) {
         // Chiffrer la cle secrete pour le certificat de maitre des cles
         // Va servir de preuve d'acces au fichier
         const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
-        console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
+        // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
         for await (const fuuid of Object.keys(clesChiffrees.cles)) {
         //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
@@ -707,7 +711,7 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, us
             fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
         }
     }
-    console.debug("Fichiers cles ", fichiersCles)
+    // console.debug("Fichiers cles ", fichiersCles)
 
     // Rechiffrer metadata
     const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
@@ -715,17 +719,17 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, us
     // Inserer cuuid dans chaque fichier
     fichiersCopies.forEach(item=>{ item.cuuid = cuuid })
 
-    console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
+    // console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
 
     const commande = { 
         cles: fichiersCles, 
         preuves: dictPreuves,
         fichiers: fichiersCopies,
     }
-    console.debug("copierAttachmentVersCollection Commande ", commande)
+    // console.debug("copierAttachmentVersCollection Commande ", commande)
 
     const reponse = await connexion.copierFichierTiers(commande)
-    console.debug("copierFichierTiers Reponse ", reponse)
+    // console.debug("copierFichierTiers Reponse ", reponse)
 }
 
 async function hacherPreuveCle(fingerprint, cleSecrete) {
@@ -741,7 +745,7 @@ async function hacherPreuveCle(fingerprint, cleSecrete) {
     bufferHachage.set(cleSecrete, 40)           // Bytes 40-71 Cle secrete
 
     const preuveHachee = await hachage.hacher(bufferHachage, {hashingCode: 'blake2s-256', encoding: 'base64'})
-    console.debug("hacherPreuveCle buffer %OpreuveHachee %O", bufferHachage, preuveHachee)
+    // console.debug("hacherPreuveCle buffer %OpreuveHachee %O", bufferHachage, preuveHachee)
 
     return { preuve: preuveHachee, date: dateNow }
 }
@@ -759,7 +763,7 @@ async function convertirAttachementFichier(workers, attachment, dictClesSecretes
           ref_hachage_bytes = attachment.fuuid
 
     let cleSecrete = dictClesSecretes[ref_hachage_bytes]
-    console.debug("copierAttachmentVersCollection Fichier rechiffrer fuuid %s metadata %O avec cle %O", ref_hachage_bytes, dataNominative, cleSecrete)
+    // console.debug("copierAttachmentVersCollection Fichier rechiffrer fuuid %s metadata %O avec cle %O", ref_hachage_bytes, dataNominative, cleSecrete)
 
     // Chiffrer metadata
     const opts = {key: cleSecrete}
@@ -774,16 +778,16 @@ async function convertirAttachementFichier(workers, attachment, dictClesSecretes
     if(copie.images && copie.images.thumb) {
         const thumb = {...copie.images.thumb}
         copie.images.thumb = thumb
-        console.debug("Chiffrer thumbnail ", thumb)
+        // console.debug("Chiffrer thumbnail ", thumb)
         const data_chiffre_thumb = await chiffrage.chiffrage.chiffrer(multibase.decode(thumb.data), opts)
-        console.debug("thumb data rechiffre : ", data_chiffre_thumb)
+        // console.debug("thumb data rechiffre : ", data_chiffre_thumb)
         thumb.data_chiffre = base64.encode(data_chiffre_thumb.ciphertext)
         thumb.header = data_chiffre_thumb.header
         thumb.hachage = data_chiffre_thumb.hachage
         delete thumb.data
     }
     
-    console.debug("Metadata rechiffre ", data_chiffre)
+    // console.debug("Metadata rechiffre ", data_chiffre)
     const metadata = { ...data_chiffre.doc }
     delete metadata.ref_hachage_bytes
     copie.metadata = metadata
@@ -803,4 +807,25 @@ function longToByteArray( /*long*/ long) {
     }
  
     return byteArray;
+ }
+
+ async function reloadMessage(workers, dispatch, uuid_transaction, userId) {
+    const { connexion, messagerieDao } = workers
+
+    // console.debug("Reload message - voir si attachements ont ete recus ")
+    // const reponseMessages = await connexion.getMessages({uuid_transactions: [uuid_transaction]})
+    const reponseMessages = await connexion.getMessagesAttachments({uuid_transactions: [uuid_transaction]})
+    const message = reponseMessages.messages.pop()
+
+    // console.debug("Message recu ", message)
+    const { attachments, attachments_traites } = message
+    const messageMaj = {uuid_transaction, attachments_status: attachments, attachments_traites}
+
+    // console.debug("Message maj ", messageMaj)
+    await messagerieDao.updateMessage(messageMaj, {userId})
+
+    const syncIds = [{uuid_transaction}]
+    await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
+    // console.debug("Message reloade pour attachments")
+    dispatch(messagerieActions.clearSyncEnCours())
  }

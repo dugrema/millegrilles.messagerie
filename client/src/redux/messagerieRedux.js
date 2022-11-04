@@ -331,7 +331,7 @@ export function creerThunks(actions, nomSlice) {
         for await (const messageSync of messages) {
             const uuid_transaction = messageSync.uuid_transaction
             const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
-            console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
+            // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
             if(messageIdb) {
                 // Message connu, merge flags
                 const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
@@ -351,7 +351,7 @@ export function creerThunks(actions, nomSlice) {
         if(batchUuids.length > 0) {
             // console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            console.debug("Liste messages recue : ", listeMessages)
+            // console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }

@@ -27,6 +27,7 @@ function configurerEvenements(socket) {
       { eventName: 'getProfil', callback: (params, cb) => traiter(socket, mqdao.getProfil, {params, cb}) },
       { eventName: 'getMessages', callback: (params, cb) => traiter(socket, mqdao.getMessages, {params, cb}) },
       { eventName: 'getReferenceMessages', callback: (params, cb) => traiter(socket, mqdao.getReferenceMessages, {params, cb}) },
+      { eventName: 'getMessagesAttachments', callback: (params, cb) => traiter(socket, mqdao.getMessagesAttachments, {params, cb}) },
       { eventName: 'getClesFichiers', callback: (params, cb) => traiter(socket, mqdao.getClesFichiers, {params, cb}) },
       { eventName: 'getPermissionMessages', callback: (params, cb) => traiter(socket, mqdao.getPermissionMessages, {params, cb}) },
       { eventName: 'posterMessage', callback: (params, cb) => traiter(socket, mqdao.posterMessage, {params, cb}) },
