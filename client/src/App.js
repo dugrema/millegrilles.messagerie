@@ -417,7 +417,9 @@ function InitialiserMessagerie(props) {
         // console.debug("Profil charger, faire les contacts")
         return dispatch(contactsThunks.chargerContacts(workers))
       })
-      .catch(err=>console.error("Erreur chargement profil/contacts ", err))
+      .catch(err=>{
+        console.error("Erreur chargement profil/contacts ", err)
+      })
   }, [workers, userId, nomUsager])
 
 }

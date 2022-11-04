@@ -278,18 +278,20 @@ export async function getContacts(userId, opts) {
     opts = opts || {}
     const skip = opts.skip || 0
     const limit = opts.limit || 100
-    const colonne = opts.colonne || 'nom'
+    // const colonne = opts.colonne || 'nom'
     const ordre = opts.ordre || 1
     const direction = ordre<0?'prev':'next'
     const inclure_supprime = opts.inclure_supprime || false
 
     const db = await ouvrirDB()
-    const index = db.transaction(STORE_CONTACTS, 'readwrite').store.index(colonne)
+    const index = db.transaction(STORE_CONTACTS, 'readwrite').store.index('dechiffre')
 
     let position = 0
     const contacts = []
-    const keyRange = IDBKeyRange.lowerBound([userId, 'true'], false);
-    let curseur = await index.openCursor(keyRange, direction)
+    const keyRange = IDBKeyRange.only([userId, 'true'])
+    // let curseur = await index.openCursor(keyRange, direction)
+    console.debug("KeyRange : ", keyRange)
+    let curseur = await index.openCursor(keyRange, 'next')
 
     while(curseur) {
         const value = curseur.value

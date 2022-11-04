@@ -180,7 +180,9 @@ export function creerThunks(actions, nomSlice) {
         // console.debug("Profil charge : %O", profil)
         if(profil.ok === false && profil.code === 404) {
             console.info("Profil inexistant, on en initialize un nouveau pour usager ", nomUsager)
-            profil = await connexion.initialiserProfil(adresse)
+            await connexion.initialiserProfil(adresse)
+            // Recharger profil avec cles
+            profil = await connexion.getProfil()
         }
 
         // console.debug("Profil charge : ", profil)
