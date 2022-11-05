@@ -6,7 +6,7 @@
   "homepage": "/messagerie",
   "dependencies": {
     "@babel/plugin-syntax-object-rest-spread": "^7.8.3",
-    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#aa07b47fc9cd7eaf1d36adca6b93687d79b0fe83",
+    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#2022.8",
     "buffer": "^6.0.3",
     "comlink": "^4.3.1",
     "crypto-browserify": "^3.12.0",
