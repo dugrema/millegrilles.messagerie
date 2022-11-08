@@ -105,7 +105,7 @@ function attachmentsRequis(socket, fuuids) {
     return socket.amqpdao.transmettreRequete(
         DOMAINE_MESSAGERIE, 
         {fuuids}, 
-        {action: 'attachmentRequis', exchange: L2Prive, noformat: false, decoder: true}
+        {action: 'attachmentRequis', ajouterCertificat: true, exchange: L2Prive, noformat: false, decoder: true}
     )
 }
 
