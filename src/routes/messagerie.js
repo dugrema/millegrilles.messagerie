@@ -17,17 +17,18 @@ function app(amqpdao, opts) {
 
     let fichierUploadUrl = process.env['MG_CONSIGNATION_URL']
     if(fichierUploadUrl) {
-        fichierUploadUrl = new URL(fichierUploadUrl)  // Validation du format
-    } else {
-        // Mettre url par defaut pour upload sur instance protegee (MQ_HOST, port 444)
-        const hostMQ = process.env['MQ_HOST']
-        fichierUploadUrl = new URL(`https://${hostMQ}:${CONST_PORT_TRANSFERT}/fichiers_transfert`)
-    }
+        new URL(fichierUploadUrl)  // Validation du format
+    } 
+    // else {
+    //     // Mettre url par defaut pour upload sur instance protegee (MQ_HOST, port 444)
+    //     const hostMQ = process.env['MQ_HOST']
+    //     fichierUploadUrl = new URL(`https://${hostMQ}:${CONST_PORT_TRANSFERT}/fichiers_transfert`)
+    // }
 
     debug("IDMG: %s, AMQPDAO : %s", idmg, amqpdao !== undefined)
 
     debug("messagerieFichiers url upload consignation : %s", fichierUploadUrl)
-    fichiersBackingStore.configurerThreadPutFichiersConsignation(''+fichierUploadUrl, amqpdao)
+    fichiersBackingStore.configurerThreadPutFichiersConsignation(amqpdao, {url: fichierUploadUrl})
 
     const route = express.Router()
 

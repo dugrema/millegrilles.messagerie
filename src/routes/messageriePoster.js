@@ -12,12 +12,15 @@ const MESSAGE_LIMIT = 5 * 1024 * 1024,
 
 const jsonParser = express.json({limit: MESSAGE_LIMIT})
 
-var _urlFichiers = null,
-    _httpsAgent = null,
-    _pathStaging = '/tmp/messagerieStaging'
+//var _urlFichiers = null,
+var _httpsAgent = null,
+    _pathStaging = '/tmp/messagerieStaging',
+    _backingStore = null
 
 function init(amqpdao, backingStore, opts) {
     opts = opts || {}
+    _backingStore = backingStore
+
     // Conserver fingerprint du certificat CA
     // Utilise pour ignorer lors de la creation de la commande MaitreDesCles
     const pki = amqpdao.pki
@@ -27,16 +30,16 @@ function init(amqpdao, backingStore, opts) {
           ca = pki.ca
     debug("route Chargement certificat CA, fingerprint : %s", _fingerprintCA)
 
-    let urlFichiers = process.env.MG_CONSIGNATION_URL
-    if(!urlFichiers) {
-        if(process.env.MG_FICHIERS_URL) {
-            urlFichiers = process.env.MG_FICHIERS_URL + '/fichiers_transfert'
-        } else {
-            throw new Error("env MG_CONSIGNATION_URL et MG_FICHIERS_URL manquants - au moins un requis pour upload attachments")
-        }
-    }
+    // let urlFichiers = process.env.MG_CONSIGNATION_URL
+    // if(!urlFichiers) {
+    //     if(process.env.MG_FICHIERS_URL) {
+    //         urlFichiers = process.env.MG_FICHIERS_URL + '/fichiers_transfert'
+    //     } else {
+    //         throw new Error("env MG_CONSIGNATION_URL et MG_FICHIERS_URL manquants - au moins un requis pour upload attachments")
+    //     }
+    // }
 
-    _urlFichiers = new URL(urlFichiers)
+    // _urlFichiers = new URL(urlFichiers)
     _httpsAgent = new https.Agent({
         keepAlive: true,
         rejectUnauthorized: false,
@@ -82,7 +85,8 @@ function verifierPermissionUploadAttachment(req, res, next) {
           position = req.params.position
     debug("verifierPermissionUploadAttachment %s, position", fuuid, position)
 
-    const urlFichiers = new URL(''+_urlFichiers)
+    // const urlFichiers = new URL(''+_urlFichiers)
+    const urlFichiers = new URL(_backingStore.getUrlTransfert())
     urlFichiers.pathname = urlFichiers.pathname + '/' + fuuid
 
     debug("Verifier existance de %O", urlFichiers)
