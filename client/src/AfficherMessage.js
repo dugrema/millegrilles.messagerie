@@ -809,7 +809,6 @@ function longToByteArray( /*long*/ long) {
     const { connexion, messagerieDao } = workers
 
     // console.debug("Reload message - voir si attachements ont ete recus ")
-    // const reponseMessages = await connexion.getMessages({uuid_transactions: [uuid_transaction]})
     const reponseMessages = await connexion.getMessagesAttachments({uuid_transactions: [uuid_transaction]})
     const message = reponseMessages.messages.pop()
 
@@ -822,12 +821,12 @@ function longToByteArray( /*long*/ long) {
 
     const syncIds = [{uuid_transaction}]
     await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
+
     // console.debug("Message reloade pour attachments")
     dispatch(messagerieActions.clearSyncEnCours())
  }
  
  // Conserver les cles pour les videos
- //(workers, cles, usager)
 async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager) {
     console.debug("fournirPreuveClesVideos Conserver cle video %O", cleFuuid)
     const {connexion, chiffrage, clesDao} = workers
@@ -835,20 +834,15 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
     const caPem = usager.ca
     listeCertificatMaitreDesCles.push(caPem)
 
-    // console.debug("copierAttachmentVersCollection Certificats chiffrage")
-
-    // const {fuuid, version_courante} = attachment
-
     // Creer hachage de preuve
     const {fingerprint} = await connexion.getCertificatFormatteur()
     // console.debug("Certificat signature : ", fingerprint)
+
     const dictPreuves = {}, dictClesSecretes = {}
     const cleSecrete = cleFuuid.cleSecrete
     const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
     dictClesSecretes[fuuidFichier] = cleSecrete
     dictPreuves[fuuidFichier] = {preuve, date}
-    // console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
-    //     dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
 
     const fichiersCles = {}
     for await (const certMaitredescles of listeCertificatMaitreDesCles) {
@@ -883,18 +877,13 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
             fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
         }
     }
+
     // console.debug("Fichiers cles ", fichiersCles)
-
-    // Rechiffrer metadata
-    // const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
-
-    // console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
 
     const commandeVerifierCles = { 
         fingerprint,
         cles: fichiersCles, 
         preuves: dictPreuves,
-        // fichiers: fichiersCopies,
         fuuidVideo,
     }
     console.debug("fournirPreuveClesVideos Commande verifier preuve cles ", commandeVerifierCles)

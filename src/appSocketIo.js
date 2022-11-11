@@ -39,7 +39,8 @@ function configurerEvenements(socket) {
       { eventName: 'marquerLu', callback: (params, cb) => traiter(socket, mqdao.marquerLu, {params, cb}) },
       { eventName: 'supprimerMessages', callback: (params, cb) => traiter(socket, mqdao.supprimerMessages, {params, cb}) },
       { eventName: 'supprimerContacts', callback: (params, cb) => traiter(socket, mqdao.supprimerContacts, {params, cb}) },
-      { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
+      // { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
+      { eventName: 'creerTokensStreaming', callback: (params, cb) => traiter(socket, mqdao.creerTokensStreaming, {params, cb}) },
 
       // GrosFichiers pour attachements
       { eventName: 'syncCollection', callback: (params, cb) => traiter(socket, mqdao.syncCollection, {params, cb}) },
@@ -50,7 +51,6 @@ function configurerEvenements(socket) {
       // { eventName: 'getFavoris', callback: (params, cb) => traiter(socket, mqdao.getFavoris, {params, cb}) },
       { eventName: 'copierFichierTiers', callback: (params, cb) => traiter(socket, mqdao.copierFichierTiers, {params, cb}) },
       // { eventName: 'getCollectionUpload', callback: (params, cb) => traiter(socket, mqdao.favorisCreerPath, {params, cb}) },
-      { eventName: 'creerTokensStreaming', callback: (params, cb) => traiter(socket, mqdao.creerTokensStreaming, {params, cb}) },
 
       // Evenements
       {eventName: 'enregistrerCallbackEvenementContact', callback: (params, cb) => {mqdao.enregistrerCallbackEvenementContact(socket, params, cb)}},

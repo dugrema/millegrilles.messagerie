@@ -31,8 +31,6 @@ async function verifierAutorisationStream(req, res) {
         const matches = reFuuid.exec(urlVideo.pathname)
         debug("Matches : %O", matches)
         const fuuid = matches[1]
-        let token = null
-        if(matches.length>2) token = matches[3]
 
         // const redisClient = req.redisClient
         // if(token) {
@@ -84,7 +82,7 @@ async function verifierAutorisationStream(req, res) {
 
         if(!fuuid || !userId) return res.sendStatus(400)
 
-        return res.sendStatus(200)
+        // return res.sendStatus(200)
 
         // // Verifier si l'usager a deja commence a utiliser ce stream
         // const cleStream = `streamtoken:${fuuid}:${userId}`
@@ -96,8 +94,17 @@ async function verifierAutorisationStream(req, res) {
 
         // Requete pour savoir si l'usager a acces
         // const mq = req.amqpdao
-        // const requete = { user_id: userId, fuuids: [fuuid] }
-        // const resultat = await mq.transmettreRequete('Messagerie', requete, {action: 'verifierAccesFuuids', exchange: '2.prive', attacherCertificat: true})
+        const requete = { user_id: userId, fuuids: [fuuid] }
+        const resultat = await mq.transmettreRequete('Messagerie', requete, {action: 'getUsagerAccesAttachments', exchange: '2.prive', attacherCertificat: true})
+        debug("verifierAutorisationStream Resultats ", resultat)
+        const fuuids = resultat.fuuids || {}
+        if(fuuids[fuuid] === true) {
+            return res.sendStatus(200)
+        } else {
+            debug("verifierAutorisationStream Acces stream refuse")
+            return res.sendStatus(403)
+        }
+
         // if(resultat.acces_tous === true) {
         //     debug("verifierAutorisationStream Acces stream OK")
 
