@@ -3,6 +3,7 @@ const { pki: pkiForge } = require('@dugrema/node-forge')
 const { extraireExtensionsMillegrille } = require('@dugrema/millegrilles.utiljs/src/forgecommon')
 const { getRandom } = require('@dugrema/millegrilles.utiljs/src/random')
 const { hacher } = require('@dugrema/millegrilles.nodejs/src/hachage')
+const { signerTokenFichier } = require('@dugrema/millegrilles.nodejs/src/jwt')
 
 const debug = require('debug')('mqdao')
 
@@ -210,6 +211,35 @@ function copierFichierTiers(socket, params) {
 //     return transmettreCommande(socket, params, 'favorisCreerPath', {domaine: CONST_DOMAINE_GROSFICHIERS})
 // }
 
+async function creerTokensStreaming(socket, params) {
+    try {
+        const reponse = await transmettreCommande(socket, params, 'conserverClesAttachments')
+
+        const fuuids = []
+        for(const fuuid of Object.keys(reponse.resultat)) {
+            const ok = reponse.resultat[fuuid]
+            if(ok === true) fuuids.push(fuuid)
+        }
+
+        const pki = socket.amqpdao.pki
+        const { cle: clePriveePem, fingerprint } = pki
+        const userId = socket.userId
+
+        const jwts = {}
+        if(params.fuuidVideo) fuuids.push(params.fuuidVideo)
+        for await (const fuuid of fuuids) {
+            const jwt = await signerTokenFichier(fingerprint, clePriveePem, userId, fuuid)
+            debug("JWT cree pour userId %s sur fuuid %s : %O", userId, fuuid, jwt)
+            jwts[fuuid] = jwt
+        }
+
+        return {ok: true, jwts}
+    } catch(err) {
+        console.error("creerTokensStreaming ERROR ", err)
+        return {ok: false, err: ''+err}
+    }
+}
+
 // Listeners
 
 const CONST_ROUTINGKEYS_EVENEMENT_CONTACT = [
@@ -349,7 +379,7 @@ module.exports = {
     creerTokenStream,
 
     // GrosFichiers
-    syncCollection, getDocuments, getPermissionCles, copierFichierTiers,
+    syncCollection, getDocuments, getPermissionCles, copierFichierTiers, creerTokensStreaming,
     // getDocumentsParFuuid, getFavoris, getCollection, favorisCreerPath,
 
     // Evenements

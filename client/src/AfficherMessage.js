@@ -196,7 +196,8 @@ function ContenuMessage(props) {
     } = props
 
     const workers = useWorkers(),
-          etatConnexion = useEtatConnexion()
+          etatConnexion = useEtatConnexion(),
+          usager = useUsager()
 
     const fichiers = attachments?attachments.fichiers:null
 
@@ -209,47 +210,58 @@ function ContenuMessage(props) {
 
         let attachmentMappe = null
         if(fileItem) {
-
-            const creerToken = async fuuid => {
-                if(Array.isArray(fuuid)) fuuid = fuuid.pop()
-                // console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
-                const {chiffrage, connexion} = workers
-                const cleDechiffree = attachments.cles[fuuid]
-                // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
-                const dictCle = {[fuuid]: multibase.decode(cleDechiffree.cleSecrete)}
-                const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
-                const cleChiffree = {...cleDechiffree}
-                delete cleChiffree.cleSecrete
-                const listeCles = [
-                    {
-                        // Default
-                        identificateurs_document: {fuuid}, 
-                        // Valeurs recues
-                        ...cleChiffree,
-                        // Overrides
-                        domaine: 'GrosFichiers', 
-                        cle: clesChiffrees.cles[fuuid]
-                    }
-                ]
-                const preuveAcces = { 
-                    fuuid, 
-                    // cles: clesChiffrees.cles, 
-                    cles: listeCles,
-                    partition: clesChiffrees.partition, 
-                    // domaine: 'GrosFichiers' 
-                }
-                // console.debug("Preuve acces : %O", preuveAcces)
             
-                const reponse = await connexion.creerTokenStream(preuveAcces)
-                // console.debug("Reponse preuve acces : %O", reponse)
-                return reponse.token
+            const fuuidFichier = fileItem.fuuid
+
+            const creerToken = async fuuidVideo => {
+                if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
+                console.debug("!!! usager : ", usager)
+                // console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+
+                const cleFuuid = attachments.cles[fuuidFichier]
+
+                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager)
+                console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
+                return jwts
+                // return jwts[fuuid]
+
+                // const {chiffrage, connexion} = workers
+                // const cleDechiffree = attachments.cles[fuuid]
+                // // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
+                // const dictCle = {[fuuid]: multibase.decode(cleDechiffree.cleSecrete)}
+                // const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
+                // const cleChiffree = {...cleDechiffree}
+                // delete cleChiffree.cleSecrete
+                // const listeCles = [
+                //     {
+                //         // Default
+                //         identificateurs_document: {fuuid}, 
+                //         // Valeurs recues
+                //         ...cleChiffree,
+                //         // Overrides
+                //         domaine: 'GrosFichiers', 
+                //         cle: clesChiffrees.cles[fuuid]
+                //     }
+                // ]
+                // const preuveAcces = { 
+                //     fuuid, 
+                //     // cles: clesChiffrees.cles, 
+                //     cles: listeCles,
+                //     partition: clesChiffrees.partition, 
+                //     // domaine: 'GrosFichiers' 
+                // }
+                // // console.debug("Preuve acces : %O", preuveAcces)
+            
+                // const reponse = await connexion.creerTokenStream(preuveAcces)
+                // // console.debug("Reponse preuve acces : %O", reponse)
+                // return reponse.token
             }
 
             attachmentMappe = mapperRowAttachment(fileItem, workers, {genererToken: true, creerToken})
         }
 
         return attachmentMappe
-    }, [afficherVideo, certificatMaitreDesCles, fichiers])
+    }, [workers, afficherVideo, certificatMaitreDesCles, fichiers, usager])
 
     if(afficherVideo && attachmentMappe) {
         // console.debug("ContenuMessage PROPPIES : %O", props)
@@ -637,22 +649,6 @@ function MenuContextuel(props) {
     return ''
 }
 
-// async function chargerFichiers(workers, attachments, setFichiersCharges) {
-//     if(!attachments || attachments.length === 0) return  // Rien a faire
-
-//     const fuuids = attachments.map(item=>item.fuuid)
-//     console.debug("Charges fichiers avec fuuids : %O", fuuids)
-//     if(!fuuids || fuuids.length === 0) return  // Rien a faire
-//     try {
-//         const reponse = await workers.connexion.getDocumentsParFuuid(fuuids)
-//         console.debug("Reponse chargerFichiers : %O", reponse)
-//         if(reponse.fichiers) setFichiersCharges(reponse.fichiers)
-//         else console.warn("Erreur chargement fichiers par fuuid : %O", reponse)
-//     } catch(err) {
-//         console.error("Erreur chargement fichiers par fuuid : %O", err)
-//     }
-// }
-
 async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, usager) {
     // console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
@@ -829,3 +825,81 @@ function longToByteArray( /*long*/ long) {
     // console.debug("Message reloade pour attachments")
     dispatch(messagerieActions.clearSyncEnCours())
  }
+ 
+ // Conserver les cles pour les videos
+ //(workers, cles, usager)
+async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager) {
+    console.debug("fournirPreuveClesVideos Conserver cle video %O", cleFuuid)
+    const {connexion, chiffrage, clesDao} = workers
+    const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
+    const caPem = usager.ca
+    listeCertificatMaitreDesCles.push(caPem)
+
+    // console.debug("copierAttachmentVersCollection Certificats chiffrage")
+
+    // const {fuuid, version_courante} = attachment
+
+    // Creer hachage de preuve
+    const {fingerprint} = await connexion.getCertificatFormatteur()
+    // console.debug("Certificat signature : ", fingerprint)
+    const dictPreuves = {}, dictClesSecretes = {}
+    const cleSecrete = cleFuuid.cleSecrete
+    const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
+    dictClesSecretes[fuuidFichier] = cleSecrete
+    dictPreuves[fuuidFichier] = {preuve, date}
+    // console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
+    //     dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
+
+    const fichiersCles = {}
+    for await (const certMaitredescles of listeCertificatMaitreDesCles) {
+        // Chiffrer la cle secrete pour le certificat de maitre des cles
+        // Va servir de preuve d'acces au fichier
+        const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
+        // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
+
+        for await (const fuuid of Object.keys(clesChiffrees.cles)) {
+            const cleRechiffree = clesChiffrees.cles[fuuid]
+
+            const domaine = 'Messagerie'
+            const identificateurs_document = {type: 'attachment', fuuid}
+
+            const infoCle = {
+                // Valeurs recues
+                ...cleFuuid, 
+            }
+            // delete infoCle.cle
+            delete infoCle.cleSecrete
+            
+            let fuuidInfo = fichiersCles[fuuid]
+            if(!fuuidInfo) {
+                const { cleSecrete } = cleFuuid
+                const cleSecreteBytes = multibase.decode(cleSecrete)
+                // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
+                const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
+                    cleSecreteBytes, domaine, identificateurs_document, fuuid)
+                fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
+                fichiersCles[fuuid] = fuuidInfo
+            }
+            fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
+        }
+    }
+    // console.debug("Fichiers cles ", fichiersCles)
+
+    // Rechiffrer metadata
+    // const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
+
+    // console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
+
+    const commandeVerifierCles = { 
+        fingerprint,
+        cles: fichiersCles, 
+        preuves: dictPreuves,
+        // fichiers: fichiersCopies,
+        fuuidVideo,
+    }
+    console.debug("fournirPreuveClesVideos Commande verifier preuve cles ", commandeVerifierCles)
+    const reponseVerifierPreuve = await connexion.creerTokensStreaming(commandeVerifierCles)
+    console.debug("fournirPreuveClesVideos Reponse ", reponseVerifierPreuve)
+
+    return reponseVerifierPreuve.jwts || {}
+}

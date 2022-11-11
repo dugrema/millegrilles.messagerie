@@ -29,7 +29,7 @@ function AfficherVideo(props) {
     const [selecteur, setSelecteur] = useState('')
     const [srcVideo, setSrcVideo] = useState('')
     const [posterObj, setPosterObj] = useState('')
-    const [genererToken, setGenererToken] = useState(false)
+    // const [genererToken, setGenererToken] = useState(false)
     const [timeStamp, setTimeStamp] = useState(0)
 
     useEffect(()=>{
@@ -52,10 +52,10 @@ function AfficherVideo(props) {
         }
     }, [selecteur, videoLoader, setSelecteur])
 
-    const genererTokenToggle = useCallback(event => {
-        // console.debug("Toggle check de %O", genererToken)
-        setGenererToken(!genererToken)
-    }, [genererToken, setGenererToken])
+    // const genererTokenToggle = useCallback(event => {
+    //     // console.debug("Toggle check de %O", genererToken)
+    //     setGenererToken(!genererToken)
+    // }, [genererToken, setGenererToken])
 
     const videoTimeUpdateHandler = useCallback(event=>{
         // console.debug("Video time update event : %O", event)
@@ -83,7 +83,7 @@ function AfficherVideo(props) {
     useEffect(()=>{
         if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
         // console.debug("Video utiliser selecteur %s", selecteur)
-        fichier.videoLoader.load(selecteur, {genererToken})
+        fichier.videoLoader.load(selecteur, {genererToken: true})
             .then(src=>{
                 // console.debug("Source video : %O", src)
                 setSrcVideo(src)
@@ -91,7 +91,7 @@ function AfficherVideo(props) {
             .catch(err=>{
                 console.error("AfficherVideo erreur chargement video : %O", err)
             })
-    }, [fichier, selecteur, genererToken, setSrcVideo])
+    }, [fichier, selecteur, /*genererToken,*/ setSrcVideo])
 
     return (
         <div>
@@ -123,13 +123,13 @@ function AfficherVideo(props) {
                             <Button variant="secondary" onClick={showInfoModalOuvrir}>Convertir</Button>
                         </Col>
                     </Row>
-                    <Row>
+                    {/* <Row>
                         <Col>
                             <Form.Check type="switch" id="token-switch" label="Generer token" 
                                 checked={genererToken?true:false} 
                                 onChange={genererTokenToggle} />
                         </Col>
-                    </Row>
+                    </Row> */}
 
                     <h3>Afficher</h3>
                     <SelecteurResolution 
@@ -141,7 +141,7 @@ function AfficherVideo(props) {
 
             </Row>
 
-            <AfficherLiensVideo srcVideo={srcVideo} show={!!genererToken} />
+            {/* <AfficherLiensVideo srcVideo={srcVideo} show={!!genererToken} /> */}
 
         </div>
     )

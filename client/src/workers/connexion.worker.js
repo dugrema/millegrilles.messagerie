@@ -75,6 +75,10 @@ function copierFichierTiers(commande) {
   return ConnexionClient.emitBlocking('copierFichierTiers', commande, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'copierFichierTiers', ajouterCertificat: true})
 }
 
+function creerTokensStreaming(commande) {
+  return ConnexionClient.emitBlocking('creerTokensStreaming', commande, {domaine: CONST_DOMAINE_MESSAGERIE, action: 'conserverClesAttachments', ajouterCertificat: true})
+}
+
 function getCollectionUpload() {
   const dateFormattee = formatterDateString({format: 'YYYY-MM-DD'})
   const commande = {
@@ -190,7 +194,7 @@ expose({
     initialiserProfil, creerTokenStream,
 
     // GrosFichiers pour attachements
-    syncCollection, getDocuments, getClesFichiers,
+    syncCollection, getDocuments, getClesFichiers, creerTokensStreaming,
     // getCollection, getDocumentsParFuuid, getFavoris,
 
     // Listeners
