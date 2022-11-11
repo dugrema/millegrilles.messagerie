@@ -24,6 +24,7 @@ import PreviewFichiers from './FilePlayer'
 import AfficherVideo from './AfficherVideo'
 
 const CONST_INTERVALLE_VERIFICATION_ATTACHMENTS = 20_000
+const CONST_CHAMPS_CHIFFRAGE = ['format', 'header', 'iv', 'tag']
 
 function AfficherMessage(props) {
     // console.debug("AfficherMessage proppys: %O", props)
@@ -215,12 +216,19 @@ function ContenuMessage(props) {
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
-                console.debug("!!! usager : ", usager)
+                console.debug("!!! usager : %O\nfileItem : %O", usager, fileItem)
                 // console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+
+                const infoVideo = Object.values(fileItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
+                const paramsChiffrage = {}
+                for (const champ of CONST_CHAMPS_CHIFFRAGE) {
+                    if(infoVideo[champ]) paramsChiffrage[champ] = infoVideo[champ]
+                }
+                const mimetype = infoVideo.mimetype
 
                 const cleFuuid = attachments.cles[fuuidFichier]
 
-                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager)
+                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage, mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
                 return jwts
                 // return jwts[fuuid]
@@ -827,7 +835,11 @@ function longToByteArray( /*long*/ long) {
  }
  
  // Conserver les cles pour les videos
-async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager) {
+async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, dechiffrageVideo, opts) {
+    opts = opts || {}
+
+    const mimetype = opts.mimetype
+
     console.debug("fournirPreuveClesVideos Conserver cle video %O", cleFuuid)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
@@ -885,7 +897,11 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
         cles: fichiersCles, 
         preuves: dictPreuves,
         fuuidVideo,
+        dechiffrageVideo,
     }
+
+    if(mimetype) commandeVerifierCles.mimetype = mimetype
+
     console.debug("fournirPreuveClesVideos Commande verifier preuve cles ", commandeVerifierCles)
     const reponseVerifierPreuve = await connexion.creerTokensStreaming(commandeVerifierCles)
     console.debug("fournirPreuveClesVideos Reponse ", reponseVerifierPreuve)

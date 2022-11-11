@@ -212,6 +212,18 @@ function copierFichierTiers(socket, params) {
 // }
 
 async function creerTokensStreaming(socket, params) {
+
+    const fuuidVideo = params.fuuidVideo,
+          mimetype = params.mimetype,
+          dechiffrageVideo = params.dechiffrageVideo || {}
+
+    // const paramsCles = {}
+    // for(const champ of ['format', 'header', 'iv', 'tag']) {
+    //     if(params[champ]) paramsCles[champ] = params[champ]
+    // }
+
+    debug("creerTokensStreaming Params ", params)
+
     try {
         const reponse = await transmettreCommande(socket, params, 'conserverClesAttachments')
 
@@ -226,11 +238,23 @@ async function creerTokensStreaming(socket, params) {
         const userId = socket.userId
 
         const jwts = {}
-        if(params.fuuidVideo) fuuids.push(params.fuuidVideo)
         for await (const fuuid of fuuids) {
+            // const cle = cles[fuuid]
+
+            // const format = cle.format,
+            //       header = cle.header,
+            //       iv = cle.iv,
+            //       tag = cle.tag
+
             const jwt = await signerTokenFichier(fingerprint, clePriveePem, userId, fuuid)
             debug("JWT cree pour userId %s sur fuuid %s : %O", userId, fuuid, jwt)
             jwts[fuuid] = jwt
+
+            if(fuuidVideo) {
+                const jwt = await signerTokenFichier(fingerprint, clePriveePem, userId, fuuidVideo, {ref: fuuid, mimetype, ...dechiffrageVideo})
+                debug("JWT cree pour userId %s sur video %s (fuuid %s) : %O", userId, fuuidVideo, fuuid, jwt)
+                jwts[fuuidVideo] = jwt
+            }
         }
 
         return {ok: true, jwts}
