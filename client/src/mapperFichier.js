@@ -1,4 +1,6 @@
-import {loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader} from '@dugrema/millegrilles.reactjs/src/imageLoading'
+import {
+    loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader, audioResourceLoader
+} from '@dugrema/millegrilles.reactjs/src/imageLoading'
 import {supporteFormatWebp, /*supporteFormatWebm*/} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
 
 const ICONE_FOLDER = <i className="fa fa-folder fa-lg"/>
@@ -33,7 +35,7 @@ export function mapper(row, workers, opts) {
     // const supportMedia = opts.supportMedia || {},
     //       supporteWebp = true  // !!supportMedia.webp
 
-    // console.debug("!!! MAPPER %O, opts: %O", row, opts)
+    console.debug("!!! MAPPER %O, opts: %O", row, opts)
 
     let date_version = '', 
         mimetype_fichier = '',
@@ -45,7 +47,8 @@ export function mapper(row, workers, opts) {
         smallThumbnailLoader = null,
         loader = null,
         imageLoader = null,
-        videoLoader = null
+        videoLoader = null,
+        audioLoader = null
     if(!version_courante) {
         ids.folderId = tuuid  // Collection, tuuid est le folderId
         thumbnailIcon = Icones.ICONE_FOLDER
@@ -81,6 +84,8 @@ export function mapper(row, workers, opts) {
                     fuuid: fuuid_v_courante, 
                     baseUrl: '/messagerie/streams', 
                 })
+            } else if(mimetypeBase === 'audio') {
+                audioLoader = audioResourceLoader(fuuid, {creerToken, version_courante, baseUrl: '/messagerie/streams'})
             }
         
             // Loader du fichier source (principal), supporte thumbnail pour chargement
@@ -123,6 +128,7 @@ export function mapper(row, workers, opts) {
         loader,
         imageLoader,
         videoLoader,
+        audioLoader,
         duree,
         fuuid: fuuid_v_courante,
         version_courante,

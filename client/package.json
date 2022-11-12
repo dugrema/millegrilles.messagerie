@@ -1,6 +1,6 @@
 {
   "name": "millegrilles.messagerie-client",
-  "version": "2022.8.1",
+  "version": "2022.8.2",
   "private": true,
   "proxy": "https://localhost:3039",
   "homepage": "/messagerie",

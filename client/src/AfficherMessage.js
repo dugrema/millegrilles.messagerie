@@ -22,6 +22,7 @@ import { mapper, mapperRowAttachment } from './mapperFichier'
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
 import PreviewFichiers from './FilePlayer'
 import AfficherVideo from './AfficherVideo'
+import AfficherAudio from './AfficherAudio'
 
 const CONST_INTERVALLE_VERIFICATION_ATTACHMENTS = 20_000
 const CONST_CHAMPS_CHIFFRAGE = ['format', 'header', 'iv', 'tag']
@@ -49,6 +50,7 @@ function AfficherMessage(props) {
 
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [afficherVideo, setAfficherVideo] = useState(false)
+    const [afficherAudio, setAfficherAudio] = useState(false)
     const [selectionAttachments, setSelectionAttachments] = useState('')
 
     const retour = useCallback(()=>dispatch(messagerieActions.setUuidMessageActif(null)), [dispatch])
@@ -94,6 +96,8 @@ function AfficherMessage(props) {
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
+                afficherAudio={afficherAudio}
+                setAfficherAudio={setAfficherAudio} 
                 setSelectionAttachments={setSelectionAttachments} 
                 retourMessages={retour} />
 
@@ -116,7 +120,9 @@ function RenderMessage(props) {
         downloadAction, choisirCollectionCb, 
         // setUuidMessage, 
         repondreCb, transfererCb, retourMessages,
-        afficherVideo, supportMedia, setAfficherVideo, certificatMaitreDesCles, 
+        afficherVideo, setAfficherVideo, 
+        afficherAudio, setAfficherAudio, 
+        supportMedia, certificatMaitreDesCles, 
         setSelectionAttachments,
     } = props
 
@@ -177,6 +183,8 @@ function RenderMessage(props) {
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
                 setAfficherVideo={setAfficherVideo} 
+                afficherAudio={afficherAudio}
+                setAfficherAudio={setAfficherAudio} 
                 certificatMaitreDesCles={certificatMaitreDesCles} 
                 setSelectionAttachments={setSelectionAttachments} 
                 attachments_status={attachments_status}
@@ -188,9 +196,10 @@ function RenderMessage(props) {
 
 function ContenuMessage(props) {
     const { 
-        downloadAction, content, afficherVideo, 
+        downloadAction, content, certificatMaitreDesCles,
         attachments, attachments_inline, choisirCollectionCb, supportMedia, 
-        setAfficherVideo, certificatMaitreDesCles,
+        afficherVideo, setAfficherVideo, 
+        afficherAudio, setAfficherAudio, 
         setSelectionAttachments,
         uuid_transaction,
         attachments_status, attachments_traites,
@@ -203,23 +212,25 @@ function ContenuMessage(props) {
     const fichiers = attachments?attachments.fichiers:null
 
     const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
+    const fermerAfficherAudio = useCallback(()=>setAfficherAudio(false))
 
     const attachmentMappe = useMemo(()=>{
+        console.debug('ContenuMessage attachmentMappe fichiers: %O, afficherAudio: %O', fichiers, afficherAudio)
         if(!fichiers) return
 
-        const fileItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
+        const videoItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
+        const audioItem = fichiers.filter(item=>item.fuuid===afficherAudio).pop()
 
         let attachmentMappe = null
-        if(fileItem) {
-            
-            const fuuidFichier = fileItem.fuuid
+        if(videoItem) {
+            const fuuidFichier = videoItem.fuuid
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
-                console.debug("!!! usager : %O\nfileItem : %O", usager, fileItem)
-                // console.debug("Creer token video fuuid : %O (fileItem: %O, cles: %O)", fuuid, fileItem, attachments.cles)
+                console.debug("!!! usager : %O\nvideoItem : %O", usager, videoItem)
+                // console.debug("Creer token video fuuid : %O (videoItem: %O, cles: %O)", fuuid, videoItem, attachments.cles)
 
-                const infoVideo = Object.values(fileItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
+                const infoVideo = Object.values(videoItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
                     if(infoVideo[champ]) paramsChiffrage[champ] = infoVideo[champ]
@@ -231,45 +242,30 @@ function ContenuMessage(props) {
                 const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage, mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
                 return jwts
-                // return jwts[fuuid]
-
-                // const {chiffrage, connexion} = workers
-                // const cleDechiffree = attachments.cles[fuuid]
-                // // const cleDechiffree = await usagerDao.getCleDechiffree(fuuid)
-                // const dictCle = {[fuuid]: multibase.decode(cleDechiffree.cleSecrete)}
-                // const clesChiffrees = await chiffrage.chiffrerSecret(dictCle, certificatMaitreDesCles, {DEBUG: false})
-                // const cleChiffree = {...cleDechiffree}
-                // delete cleChiffree.cleSecrete
-                // const listeCles = [
-                //     {
-                //         // Default
-                //         identificateurs_document: {fuuid}, 
-                //         // Valeurs recues
-                //         ...cleChiffree,
-                //         // Overrides
-                //         domaine: 'GrosFichiers', 
-                //         cle: clesChiffrees.cles[fuuid]
-                //     }
-                // ]
-                // const preuveAcces = { 
-                //     fuuid, 
-                //     // cles: clesChiffrees.cles, 
-                //     cles: listeCles,
-                //     partition: clesChiffrees.partition, 
-                //     // domaine: 'GrosFichiers' 
-                // }
-                // // console.debug("Preuve acces : %O", preuveAcces)
-            
-                // const reponse = await connexion.creerTokenStream(preuveAcces)
-                // // console.debug("Reponse preuve acces : %O", reponse)
-                // return reponse.token
             }
 
-            attachmentMappe = mapperRowAttachment(fileItem, workers, {genererToken: true, creerToken})
+            attachmentMappe = mapperRowAttachment(videoItem, workers, {genererToken: true, creerToken})
+        } else if(audioItem) {
+            const fuuidFichier = audioItem.fuuid
+            const mimetype = audioItem.mimetype
+
+            const creerToken = async fuuidAudio => {
+                if(Array.isArray(fuuidAudio)) fuuidAudio = fuuidAudio.pop()
+                console.debug("!!! usager : %O\nfuuidAudio : %O", usager, fuuidAudio)
+                // console.debug("Creer token video fuuid : %O (fuuidAudio: %O, cles: %O)", fuuid, fuuidAudio, attachments.cles)
+
+                const cleFuuid = attachments.cles[fuuidFichier]
+
+                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidFichier, usager, {mimetype})
+                console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
+                return jwts
+            }
+
+            attachmentMappe = mapperRowAttachment(audioItem, workers, {genererToken: true, creerToken})
         }
 
         return attachmentMappe
-    }, [workers, afficherVideo, certificatMaitreDesCles, fichiers, usager])
+    }, [workers, afficherVideo, afficherAudio, certificatMaitreDesCles, fichiers, usager])
 
     if(afficherVideo && attachmentMappe) {
         // console.debug("ContenuMessage PROPPIES : %O", props)
@@ -280,6 +276,16 @@ function ContenuMessage(props) {
                 fichier={attachmentMappe}
                 certificatMaitreDesCles={certificatMaitreDesCles}
                 fermer={fermerAfficherVideo} />
+        )
+    } else if(afficherAudio && attachmentMappe) {
+        // console.debug("ContenuMessage PROPPIES : %O", props)
+        return (
+            <AfficherAudio
+                workers={workers}
+                support={supportMedia}
+                fichier={attachmentMappe}
+                certificatMaitreDesCles={certificatMaitreDesCles}
+                fermer={fermerAfficherAudio} />
         )
     }
 
@@ -297,6 +303,7 @@ function ContenuMessage(props) {
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
                 setAfficherVideo={setAfficherVideo} 
+                setAfficherAudio={setAfficherAudio} 
                 setSelectionAttachments={setSelectionAttachments}
                 attachments_status={attachments_status}
                 attachments_traites={attachments_traites} />        
@@ -411,7 +418,8 @@ function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
     const { 
         workers, attachments, etatConnexion, downloadAction, 
-        supportMedia, setAfficherVideo, setSelectionAttachments, choisirCollectionCb, 
+        supportMedia, setSelectionAttachments, choisirCollectionCb, 
+        setAfficherVideo, setAfficherAudio,
         attachments_status, attachments_traites,
         uuid_transaction,
     } = props
@@ -452,13 +460,16 @@ function AfficherAttachments(props) {
             if(mimetype.startsWith('video/')) {
                 // Page Video
                 setAfficherVideo(fuuid)
+            } else if(mimetype.startsWith('audio/')) {
+                // Page Video
+                setAfficherAudio(fuuid)
             } else {
                 // Preview/carousel
                 setShowPreview(true)
             }
 
         }
-    }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo])
+    }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio])
 
     // useEffect(()=>detecterSupport(setSupport), [setSupport])
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])

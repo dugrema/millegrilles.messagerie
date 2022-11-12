@@ -191,7 +191,7 @@ expose({
     copierFichierTiers, getCollectionUpload,
     supprimerMessages, supprimerContacts,
 
-    initialiserProfil, creerTokenStream,
+    initialiserProfil, // creerTokenStream,
 
     // GrosFichiers pour attachements
     syncCollection, getDocuments, getClesFichiers, creerTokensStreaming,
