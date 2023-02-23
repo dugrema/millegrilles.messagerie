@@ -1,8 +1,7 @@
 # FROM node:18
-FROM docker.maceroc.com/millegrilles_webappbase:2022.8.0
+FROM docker.maceroc.com/millegrilles_webappbase:2023.2.0
 
-ENV MG_CONSIGNATION_HTTP=https://fichiers \
-    APP_FOLDER=/usr/src/app \
+ENV APP_FOLDER=/usr/src/app \
     NODE_ENV=production \
     PORT=443 \
     MG_MQ_URL=amqps://mq:5673

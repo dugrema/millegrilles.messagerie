@@ -47,6 +47,7 @@ function Menu(props) {
   const handlerChangerLangue = eventKey => {i18n.changeLanguage(eventKey)}
 
   const handlerSelect = eventKey => {
+    console.debug("!handlerSelect ", eventKey)
     switch(eventKey) {
       case 'information': setShowModalInfo(true); break
       case 'portail': window.location = '/millegrilles'; break
@@ -82,6 +83,8 @@ function Menu(props) {
             {t('menu.information')}
         </Nav.Link>
 
+        <DropDownOptions onSelect={handlerSelect} />
+
         <DropDownLanguage title={t('menu.language')} onSelect={handlerChangerLangue}>
             <NavDropdown.Item eventKey="en-US">English</NavDropdown.Item>
             <NavDropdown.Item eventKey="fr-CA">Francais</NavDropdown.Item>
@@ -108,6 +111,20 @@ function Menu(props) {
 }
 
 export default Menu
+
+function DropDownOptions(props) {
+
+  const { onSelect } = props
+
+  return (
+      <NavDropdown title="Options" id="basic-nav-dropdown-options" drop="down" className="menu-item" onSelect={onSelect}>
+        <NavDropdown.Item title="Notifications" eventKey='configurationNotifications'>
+          <i className="fa fa-exclamation-circle" /> {' '} Notifications
+        </NavDropdown.Item>
+      </NavDropdown>
+  )
+
+}
 
 // function Menu(props) {
 

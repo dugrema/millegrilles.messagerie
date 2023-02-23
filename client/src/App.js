@@ -62,6 +62,7 @@ const AfficherMessages = lazy(() => import('./AfficherMessages'))
 const AfficherMessage = lazy(() => import('./AfficherMessage'))
 const Contacts = lazy(() => import('./Contacts'))
 const NouveauMessage = lazy(() => import('./NouveauMessage'))
+const ConfigurationNotifications = lazy(() => import('./ConfigurationNotifications'))
 
 function App() {
 
@@ -105,6 +106,7 @@ function LayoutMain() {
 
   // Selecteurs de page
   const [afficherContacts, setAfficherContacts] = useState(false)
+  const [pageConfiguration, setPageConfiguration] = useState('')
   // const [afficherNouveauMessage, setAfficherNouveauMessage] = useState(false)
   
   const [erreur, setErreur] = useState('')
@@ -166,6 +168,7 @@ function LayoutMain() {
 
   const retourAfficherMessages = useCallback(()=>{
     setAfficherContacts(false)
+    setPageConfiguration('')
     dispatch(messagerieActions.setUuidMessageActif(null))
   }, [dispatch, setAfficherContacts])
 
@@ -174,12 +177,15 @@ function LayoutMain() {
       case 'contacts':
         setAfficherContacts(true)
         break
+      case 'configurationNotifications':
+        setPageConfiguration(eventKey)
+        break
       case '':
       default:
         // Revenir a la reception de messages
         retourAfficherMessages()
     }
-  }, [retourAfficherMessages])
+  }, [retourAfficherMessages, setPageConfiguration])
 
   const menu = (
     <Menu 
@@ -200,6 +206,8 @@ function LayoutMain() {
               // afficherNouveauMessage={afficherNouveauMessage}
               afficherContacts={afficherContacts}
               setAfficherContacts={setAfficherContacts}
+              pageConfiguration={pageConfiguration}
+              setPageConfiguration={setPageConfiguration}
               fermerContacts={fermerContacts}
               fermerContactActif={fermerContactActif}
               showNouveauMessage={showNouveauMessage}
@@ -233,20 +241,26 @@ function LayoutMain() {
 }
 
 function Contenu(props) {
-  const workers = useWorkers()
-  const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
-
-  if(!workers) return <Attente />
-
   const { 
     afficherNouveauMessage, afficherContacts, setAfficherContacts,
     fermerContactActif, fermerContacts, showNouveauMessage, 
     fermerNouveauMessage, retourAfficherMessages, 
+    pageConfiguration, setPageConfiguration,
   } = props
+
+  const workers = useWorkers()
+  const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
+
+  const retourConfiguration = useCallback(()=>setPageConfiguration(''))
+
+  if(!workers) return <Attente />
 
   // Selection de la page a afficher
   let Page, retour = null
-  if(afficherContacts) {
+  if(pageConfiguration === 'configurationNotifications') {
+    Page = ConfigurationNotifications
+    retour = retourConfiguration
+  } else if(afficherContacts) {
     Page = Contacts
     retour = fermerContacts
   } else if(afficherNouveauMessage || uuidMessage === '') {
@@ -267,7 +281,8 @@ function Contenu(props) {
               retourAfficherMessages={retourAfficherMessages} 
               fermerContactActif={fermerContactActif}
               afficherContacts={afficherContacts}
-              setAfficherContacts={setAfficherContacts} />
+              setAfficherContacts={setAfficherContacts} 
+              pageConfiguration={pageConfiguration} />
             <Page {...props} retour={retour} showNouveauMessage={showNouveauMessage} />
           </Suspense>
 
@@ -286,7 +301,7 @@ function BreadcrumbMessages(props) {
   const workers = useWorkers(),
         dispatch = useDispatch()
 
-  const { retourAfficherMessages, fermerContactActif, afficherContacts } = props
+  const { retourAfficherMessages, fermerContactActif, afficherContacts, pageConfiguration } = props
 
   const uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
         uuidContactActif = useSelector(state=>state.contacts.uuidContactActif),
@@ -309,7 +324,9 @@ function BreadcrumbMessages(props) {
 
   let sousBreadcrumbs = []
 
-  if(afficherContacts) {
+  if(pageConfiguration === 'configurationNotifications') {
+    sousBreadcrumbs.push(<Breadcrumb.Item key="configuration" active>Configuration Notifications</Breadcrumb.Item>)
+  } else if(afficherContacts) {
     if(uuidContactActif) {
       sousBreadcrumbs.push(<Breadcrumb.Item key="contacts" onClick={fermerContactActif}>Contacts</Breadcrumb.Item>)
       sousBreadcrumbs.push(<Breadcrumb.Item key="contact" active>Contact</Breadcrumb.Item>)
