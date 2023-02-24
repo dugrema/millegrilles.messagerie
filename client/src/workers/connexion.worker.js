@@ -111,6 +111,15 @@ function creerTokenStream(commande) {
   return ConnexionClient.emitBlocking('creerTokenStream', commande, {domaine: CONST_DOMAINE_MAITREDESCLES, action: 'verifierPreuve', ajouterCertificat: true})
 }
 
+async function getClepubliqueWebpush(params) {
+  params = params || {}
+  return ConnexionClient.emitBlocking(
+    'getClepubliqueWebpush', 
+    params, 
+    {domaine: CONST_DOMAINE_MESSAGERIE, action: 'getClepubliqueWebpush', ajouterCertificat: true}
+  )
+}
+
 async function enregistrerCallbackEvenementContact(params, cb) { 
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
@@ -191,7 +200,8 @@ expose({
     copierFichierTiers, getCollectionUpload,
     supprimerMessages, supprimerContacts,
 
-    initialiserProfil, // creerTokenStream,
+    initialiserProfil, getClepubliqueWebpush,
+    // creerTokenStream,
 
     // GrosFichiers pour attachements
     syncCollection, getDocuments, getClesFichiers, creerTokensStreaming,

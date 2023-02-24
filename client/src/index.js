@@ -2,6 +2,8 @@ import {StrictMode, Suspense, lazy} from 'react';
 import {createRoot} from 'react-dom/client';
 import ErrorBoundary from './ErrorBoundary';
 
+import * as serviceWorkerRegistration from './workers/serviceWorkerRegistration';
+
 const App = lazy(()=>import('./App'))
 
 const root = createRoot(document.getElementById('root'));
@@ -35,6 +37,7 @@ function Loading(props) {
   )
 }
 
+serviceWorkerRegistration.register();
 
 // import React from 'react';
 // import ReactDOM from 'react-dom';

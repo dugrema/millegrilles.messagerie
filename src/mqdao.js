@@ -7,7 +7,8 @@ const { signerTokenFichier } = require('@dugrema/millegrilles.nodejs/src/jwt')
 
 const debug = require('debug')('mqdao')
 
-const L2Prive = '2.prive',
+const L1Public = '1.public',
+      L2Prive = '2.prive',
       L3Protege = '3.protege'
 
 const DOMAINE_MESSAGERIE = 'Messagerie',
@@ -176,6 +177,9 @@ function supprimerContacts(socket, params) {
     return transmettreCommande(socket, params, 'supprimerContacts')
 }
 
+function getClepubliqueWebpush(socket, params) {
+    return transmettreRequete(socket, params, 'getClepubliqueWebpush', {exchange: L1Public})
+}
 
 // Section GrosFichiers pour attachements
 
@@ -401,6 +405,7 @@ module.exports = {
     getDomainesMessagerie,
     initialiserProfil,
     // creerTokenStream,
+    getClepubliqueWebpush,
 
     // GrosFichiers
     syncCollection, getDocuments, getPermissionCles, copierFichierTiers, creerTokensStreaming,

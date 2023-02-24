@@ -41,6 +41,7 @@ function configurerEvenements(socket) {
       { eventName: 'supprimerContacts', callback: (params, cb) => traiter(socket, mqdao.supprimerContacts, {params, cb}) },
       // { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
       { eventName: 'creerTokensStreaming', callback: (params, cb) => traiter(socket, mqdao.creerTokensStreaming, {params, cb}) },
+      { eventName: 'getClepubliqueWebpush', callback: (params, cb) => traiter(socket, mqdao.getClepubliqueWebpush, {params, cb}) },
 
       // GrosFichiers pour attachements
       { eventName: 'syncCollection', callback: (params, cb) => traiter(socket, mqdao.syncCollection, {params, cb}) },
