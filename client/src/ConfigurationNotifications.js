@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 import Alert from 'react-bootstrap/Alert'
 import Button from 'react-bootstrap/Button'
@@ -7,21 +8,45 @@ import Row from 'react-bootstrap/Row'
 import Form from 'react-bootstrap/Form'
 import FormControl from 'react-bootstrap/FormControl'
 
+import contactsActions, {thunks as contactsThunks} from './redux/contactsSlice'
 import useWorkers from './WorkerContext'
 
 function ConfigurationNotifications(props) {
 
     const { retour } = props
 
+    const workers = useWorkers(),
+          dispatch = useDispatch(),
+          profil = useSelector(state=>state.contacts.profil)
+
     const [emailActif, setEmailActif] = useState(false)
     const [emailAdresse, setEmailAdresse] = useState('')
 
     const sauvegarderHandler = useCallback(()=>{
-        const commande = {
-            emailActif, emailAdresse
-        }
-        console.debug("Sauvegarder ", commande)
-    }, [emailActif, emailAdresse])
+        Promise.resolve()
+            .then(async () => {
+                const emailChiffre = await chiffrerData(workers, profil, {email_adresse: emailAdresse})
+                const commande = {
+                    email_actif: emailActif, 
+                    email_chiffre: emailChiffre,
+                }
+                console.debug("Sauvegarder ", commande)
+                const reponse = await workers.connexion.sauvegarderUsagerConfigNotifications(commande)
+                console.debug("sauvegarderUsagerConfigNotifications ", reponse)
+
+                const profilMaj = {...profil, ...commande, email_adresse: emailAdresse}
+                dispatch(contactsActions.setProfil(profilMaj))
+
+                retour()
+            })
+            .catch(err=>console.error("Erreur sauvegarde configuration notifications ", err))
+    }, [workers, emailActif, emailAdresse, retour])
+
+    useEffect(()=>{
+        console.debug("Profil ", profil)
+        setEmailActif(!!profil.email_actif)
+        setEmailAdresse(profil.email_adresse)
+    }, [profil, setEmailActif, setEmailAdresse])
 
     return (
         <div>
@@ -286,4 +311,18 @@ function urlBase64ToUint8Array(base64String) {
       outputArray[i] = rawData.charCodeAt(i);
     }
     return outputArray;
+}
+
+async function chiffrerData(workers, profil, data) {
+    console.debug("Chiffrer configuration email profil %O, %O", profil, data)
+    const { chiffrage, clesDao } = workers
+
+    // Recuperer cle de chiffrage
+    const ref_hachage_bytes = profil.cle_ref_hachage_bytes
+    const cle = await clesDao.getCleLocale(ref_hachage_bytes)
+    const cleSecrete = cle.cleSecrete
+
+    const champsChiffres = await chiffrage.chiffrage.updateChampsChiffres(data, cleSecrete)
+    champsChiffres.ref_hachage_bytes = ref_hachage_bytes
+    return champsChiffres
 }

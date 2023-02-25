@@ -181,6 +181,18 @@ function getClepubliqueWebpush(socket, params) {
     return transmettreRequete(socket, params, 'getClepubliqueWebpush', {exchange: L1Public})
 }
 
+function sauvegarderUsagerConfigNotifications(socket, params) {
+    return transmettreCommande(socket, params, 'sauvegarderUsagerConfigNotifications', {exchange: L2Prive})
+}
+
+function sauvegarderSubscriptionWebpush(socket, params) {
+    return transmettreCommande(socket, params, 'sauvegarderSubscriptionWebpush', {exchange: L2Prive})
+}
+
+function retirerSubscriptionWebpush(socket, params) {
+    return transmettreCommande(socket, params, 'retirerSubscriptionWebpush', {exchange: L2Prive})
+}
+
 // Section GrosFichiers pour attachements
 
 function getDocuments(socket, params) {
@@ -406,6 +418,7 @@ module.exports = {
     initialiserProfil,
     // creerTokenStream,
     getClepubliqueWebpush,
+    sauvegarderUsagerConfigNotifications, sauvegarderSubscriptionWebpush, retirerSubscriptionWebpush,
 
     // GrosFichiers
     syncCollection, getDocuments, getPermissionCles, copierFichierTiers, creerTokensStreaming,

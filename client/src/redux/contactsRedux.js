@@ -169,7 +169,7 @@ export function creerThunks(actions, nomSlice) {
     }
 
     async function traiterChargerProfil(workers, userId, nomUsager, locationUrl, dispatch, getState) {
-        const { connexion, clesDao } = workers
+        const { connexion, chiffrage, clesDao } = workers
 
         dispatch(setUserId(userId))
         const hostname = locationUrl.hostname
@@ -185,21 +185,27 @@ export function creerThunks(actions, nomSlice) {
             profil = await connexion.getProfil()
         }
 
-        // console.debug("Profil charge : ", profil)
+        console.debug("Profil charge : ", profil)
         dispatch(setProfil(profil))
 
         const cle_hachage_bytes = profil.cle_ref_hachage_bytes
-        let cleSecrete = await clesDao.getCleLocale(cle_hachage_bytes)
-        if(cleSecrete) {
-            cleSecrete = cleSecrete.cleSecrete
-        } else {
+        let cle = await clesDao.getCleLocale(cle_hachage_bytes)
+        if(!cle) {
             // Dechiffrer la cle de profil. Conserve dans la DB locale.
             // console.debug("Dechiffrer cle recue dans le profil")
             const cles = profil.cles.cles
             let clesSecretes = await clesDao.traiterReponseCles(cles)
-            cleSecrete = clesSecretes[cle_hachage_bytes].cleSecrete
+            cle = clesSecretes[cle_hachage_bytes]
         }
         // console.debug("traiterChargerProfil Cle secrete hachage bytes %s = %O", cle_hachage_bytes, cleSecrete)
+
+        if(profil.email_chiffre) {
+            console.debug("Dechiffrer champs email chiffres")
+            const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {DEBUG: true})
+            console.debug("Champs email dechiffres ", dataDechiffre)
+            profil = {...profil, ...dataDechiffre}
+            dispatch(setProfil(profil))
+        }
     }
     
     function chargerContacts(workers) {

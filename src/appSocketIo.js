@@ -42,6 +42,9 @@ function configurerEvenements(socket) {
       // { eventName: 'creerTokenStream', callback: (params, cb) => traiter(socket, mqdao.creerTokenStream, {params, cb}) },
       { eventName: 'creerTokensStreaming', callback: (params, cb) => traiter(socket, mqdao.creerTokensStreaming, {params, cb}) },
       { eventName: 'getClepubliqueWebpush', callback: (params, cb) => traiter(socket, mqdao.getClepubliqueWebpush, {params, cb}) },
+      { eventName: 'sauvegarderUsagerConfigNotifications', callback: (params, cb) => traiter(socket, mqdao.sauvegarderUsagerConfigNotifications, {params, cb}) },
+      { eventName: 'sauvegarderSubscriptionWebpush', callback: (params, cb) => traiter(socket, mqdao.sauvegarderSubscriptionWebpush, {params, cb}) },
+      { eventName: 'retirerSubscriptionWebpush', callback: (params, cb) => traiter(socket, mqdao.retirerSubscriptionWebpush, {params, cb}) },
 
       // GrosFichiers pour attachements
       { eventName: 'syncCollection', callback: (params, cb) => traiter(socket, mqdao.syncCollection, {params, cb}) },

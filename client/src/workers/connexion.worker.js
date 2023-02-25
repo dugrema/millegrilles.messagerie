@@ -120,6 +120,33 @@ async function getClepubliqueWebpush(params) {
   )
 }
 
+async function sauvegarderUsagerConfigNotifications(params) {
+  params = params || {}
+  return ConnexionClient.emitBlocking(
+    'sauvegarderUsagerConfigNotifications', 
+    params, 
+    {domaine: CONST_DOMAINE_MESSAGERIE, action: 'sauvegarderUsagerConfigNotifications', ajouterCertificat: true}
+  )
+}
+
+async function sauvegarderSubscriptionWebpush(params) {
+  params = params || {}
+  return ConnexionClient.emitBlocking(
+    'sauvegarderSubscriptionWebpush', 
+    params, 
+    {domaine: CONST_DOMAINE_MESSAGERIE, action: 'sauvegarderSubscriptionWebpush', ajouterCertificat: true}
+  )
+}
+
+async function retirerSubscriptionWebpush(params) {
+  params = params || {}
+  return ConnexionClient.emitBlocking(
+    'retirerSubscriptionWebpush', 
+    params, 
+    {domaine: CONST_DOMAINE_MESSAGERIE, action: 'retirerSubscriptionWebpush', ajouterCertificat: true}
+  )
+}
+
 async function enregistrerCallbackEvenementContact(params, cb) { 
   return ConnexionClient.subscribe('enregistrerCallbackEvenementContact', cb, params)
 }
@@ -202,6 +229,7 @@ expose({
 
     initialiserProfil, getClepubliqueWebpush,
     // creerTokenStream,
+    sauvegarderUsagerConfigNotifications, sauvegarderSubscriptionWebpush, retirerSubscriptionWebpush,
 
     // GrosFichiers pour attachements
     syncCollection, getDocuments, getClesFichiers, creerTokensStreaming,
