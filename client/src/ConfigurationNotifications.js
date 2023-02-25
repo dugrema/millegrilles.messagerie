@@ -120,7 +120,9 @@ function NotificationsWebpush(props) {
 
     // const { webpushActif, setWebpushActif } = props
     const workers = useWorkers()
-    
+
+    const profil = useSelector(state=>state.contacts.profil)
+
     const [webpushActif, setWebpushActif] = useState('')
     const [notificationPermission, setNotificationPermission] = useState(Notification.permission)
 
@@ -139,7 +141,7 @@ function NotificationsWebpush(props) {
                             await enregistrerWebpush(workers)
                             setWebpushActif(true)
                         } else {
-                            const resultat = await retirerWebpush()
+                            const resultat = await retirerWebpush(workers)
                             setWebpushActif(!resultat)
                         }
                     }
@@ -173,7 +175,6 @@ function NotificationsWebpush(props) {
             <p>Fonctionne sur Android, iOS 16.4+ et navigateur PC.</p>
             
             <Row>
-
                 <Col>
                     <Form.Check id="webpushActif" aria-describedby="webpushActif"
                         type="switch"
@@ -256,11 +257,17 @@ async function enregistrerWebpush(workers) {
         })
     
         console.debug("Reponse subscription ", subscription)
+
+        // Ajouter le endpoint au profil usager
+        const commande = {endpoint: subscription.endpoint}
+        const reponse = await workers.connexion.sauvegarderSubscriptionWebpush(commande)
+        console.debug("Reponse subscription webpush ", reponse)
+
         return true
     }
 }
 
-async function retirerWebpush() {
+async function retirerWebpush(workers) {
 
     const registration = await trouverServiceWorker()
 
@@ -269,6 +276,12 @@ async function retirerWebpush() {
     if(subscription) {
         // Retirer subscription
         const resultat = await subscription.unsubscribe()
+
+        // Ajouter le endpoint au profil usager
+        const commande = {endpoint: subscription.endpoint}
+        const reponse = await workers.connexion.retirerSubscriptionWebpush(commande)
+        console.debug("Reponse subscription webpush ", reponse)
+
         return resultat
     }
 
