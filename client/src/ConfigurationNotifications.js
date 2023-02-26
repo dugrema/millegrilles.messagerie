@@ -257,9 +257,16 @@ async function enregistrerWebpush(workers) {
         })
     
         console.debug("Reponse subscription ", subscription)
+        const subscriptionJson = JSON.parse(JSON.stringify(subscription))
+        console.debug("Reponse subscription json ", subscriptionJson)
 
         // Ajouter le endpoint au profil usager
-        const commande = {endpoint: subscription.endpoint}
+        const commande = {
+            endpoint: subscription.endpoint,
+            expiration_time: subscription.expirationTime,
+            keys_auth: subscriptionJson.keys.auth,
+            keys_p256dh: subscriptionJson.keys.p256dh,
+        }
         const reponse = await workers.connexion.sauvegarderSubscriptionWebpush(commande)
         console.debug("Reponse subscription webpush ", reponse)
 
