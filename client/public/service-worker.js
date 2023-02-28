@@ -24,17 +24,23 @@ self.addEventListener('message', async m => {
 // Register event listener for the 'push' event.
 self.addEventListener('push', function(event) {
     // Keep the service worker alive until the notification is created.
-    const res = JSON.parse(event.data.text());
-    const { title, body, url, icon } = res.payload;
-    const options = {
-      body,
-      icon,
-      vibrate: [100],
-      data: { url }
-    };
-    console.info("Message push recu %s : %O", title, options)
+    console.info("Message push recu : ", event)
 
-    self.registration.showNotification(title, options)
+    try {
+        const res = JSON.parse(event.data.text());
+        const { title, body, url, icon } = res.payload;
+        const options = {
+        body,
+        icon,
+        vibrate: [100],
+        data: { url }
+        };
+        console.info("Message push recu %s : %O", title, options)
+
+        self.registration.showNotification(title, options)
+    } catch(err) {
+        console.error("Erreur traitement message push ", err)
+    }
 })
 
 const cacheFirst = async (request) => {

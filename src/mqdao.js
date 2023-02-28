@@ -190,7 +190,7 @@ function sauvegarderSubscriptionWebpush(socket, params) {
 }
 
 function retirerSubscriptionWebpush(socket, params) {
-    return transmettreCommande(socket, params, 'retirerSubscriptionWebpush', {exchange: L2Prive})
+    return transmettreCommande(socket, params, 'retirerSubscriptionWebpush', {exchange: L1Public})
 }
 
 // Section GrosFichiers pour attachements

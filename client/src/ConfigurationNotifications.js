@@ -162,6 +162,9 @@ function NotificationsWebpush(props) {
                 .then(async registration => {
                     const subscription = await registration.pushManager.getSubscription()
                     console.debug("Push manager subscription", subscription)
+                    if(subscription) {
+                        console.debug("Subscription existante : ", JSON.parse(JSON.stringify(subscription)))
+                    }                    
                     setWebpushActif(!!subscription)
                 })
                 .catch(err=>console.error("Erreur verification subscription state ", err))
