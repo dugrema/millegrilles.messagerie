@@ -11,6 +11,8 @@ import FormControl from 'react-bootstrap/FormControl'
 import contactsActions, {thunks as contactsThunks} from './redux/contactsSlice'
 import useWorkers from './WorkerContext'
 
+const NOTIFICATIONS_WEBPUSH_DISPONIBLES = window.Notification && window.Notification.permission
+
 function ConfigurationNotifications(props) {
 
     const { retour } = props
@@ -50,7 +52,20 @@ function ConfigurationNotifications(props) {
 
     return (
         <div>
-            <NotificationsWebpush />
+            {NOTIFICATIONS_WEBPUSH_DISPONIBLES?
+                <NotificationsWebpush />
+                :
+                <Alert variant='warning'>
+                    <Alert.Heading>Notifications directes</Alert.Heading>
+                    <p>Les notifications web push directes ne sont pas disponibles sur cet appareil.</p>
+                    {!emailActif?
+                        <p>Utiliser les notifications par email comme alternative.</p>
+                        :''
+                    }
+                    
+                </Alert>
+            }
+            
 
             <p></p>
 
@@ -88,7 +103,15 @@ function NotificationsEmail(props) {
         <div>
             <h3>Email</h3>
 
-            <p>Recevoir des notifications par email.</p>
+            <Row>
+                <Col>
+                    <Form.Check id="emailActif" aria-describedby="emailActif"
+                        type="switch"
+                        label="Activer notifications par email"
+                        checked={emailActif}
+                        onChange={toggleActifHandler} />
+                </Col>
+            </Row>
 
             <Row>
                 <Form.Group as={Col}>
@@ -100,16 +123,6 @@ function NotificationsEmail(props) {
                         type='text' inputMode='email'
                         autoComplete='false' autoCorrect='false' autoCapitalize='false' spellCheck='false' />
                 </Form.Group>
-            </Row>
-
-            <Row>
-                <Col>
-                    <Form.Check id="emailActif" aria-describedby="emailActif"
-                        type="switch"
-                        label="Activer notifications par email"
-                        checked={emailActif}
-                        onChange={toggleActifHandler} />
-                </Col>
             </Row>
 
         </div>
