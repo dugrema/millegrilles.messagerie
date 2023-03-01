@@ -29,7 +29,10 @@ export { Icones }
 export function mapper(row, workers, opts) {
     // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
     opts = opts || {}
-    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, version_courante, favoris, disabled } = row
+    const version_courante = row.version_courante || row
+    const mimetype = version_courante.mimetype || row.mimetype
+
+    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, favoris, disabled } = row
     const { genererToken, creerToken } = opts
     const cles = opts.cles || {}
     // const supportMedia = opts.supportMedia || {},
@@ -49,11 +52,11 @@ export function mapper(row, workers, opts) {
         imageLoader = null,
         videoLoader = null,
         audioLoader = null
-    if(!version_courante) {
+    if(!mimetype) {
         ids.folderId = tuuid  // Collection, tuuid est le folderId
         thumbnailIcon = Icones.ICONE_FOLDER
     } else {
-        const { mimetype, date_fichier, taille, images, video } = version_courante
+        const { date_fichier, taille, images, video } = version_courante
         const ref_hachage_bytes = fuuid
         mimetype_fichier = mimetype
         date_version = date_fichier
@@ -289,14 +292,21 @@ export function mapDocumentComplet(workers, doc) {
                 return reponse.token
             }
 
-            if(Object.keys(video).length > 0) {
-                copie.videoLoader = videoResourceLoader(
-                    traitementFichiers.getFichierChiffre, video, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
+            if(video && Object.keys(video).length > 0) {
+                copie.videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante})
             } else {
-                // Utilisation du video original seulement
-                copie.videoLoader = videoResourceLoader(
-                    traitementFichiers.getFichierChiffre, {}, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
+                // console.debug("Video - original seulement")
+                copie.videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante})
             }
+
+            // if(Object.keys(video).length > 0) {
+            //     copie.videoLoader = videoResourceLoader(
+            //         traitementFichiers.getFichierChiffre, video, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
+            // } else {
+            //     // Utilisation du video original seulement
+            //     copie.videoLoader = videoResourceLoader(
+            //         traitementFichiers.getFichierChiffre, {}, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
+            // }
         }
     }
 
