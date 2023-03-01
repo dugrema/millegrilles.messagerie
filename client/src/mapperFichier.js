@@ -82,11 +82,19 @@ export function mapper(row, workers, opts) {
             if(video) {
                 // const videoLoader = videoResourceLoader(null, fichier.video, {supporteWebm: support.webm, baseUrl: '/messagerie/streams', creerToken})                
                 // videoLoader = videoResourceLoader(getFichierChiffre, video, {supporteWebm, cles})
-                videoLoader = videoResourceLoader(getFichierChiffre, video, {
-                    ref_hachage_bytes, version_courante, genererToken, creerToken,
-                    fuuid: fuuid_v_courante, 
-                    baseUrl: '/messagerie/streams', 
-                })
+                // videoLoader = videoResourceLoader(getFichierChiffre, video, {
+                //     ref_hachage_bytes, version_courante, genererToken, creerToken,
+                //     fuuid: fuuid_v_courante, 
+                //     baseUrl: '/messagerie/streams', 
+                // })
+
+                if(video && Object.keys(video).length > 0) {
+                    videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
+                } else {
+                    // console.debug("Video - original seulement")
+                    videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
+                }
+
             } else if(mimetypeBase === 'audio') {
                 audioLoader = audioResourceLoader(fuuid, {creerToken, version_courante, baseUrl: '/messagerie/streams'})
             }
