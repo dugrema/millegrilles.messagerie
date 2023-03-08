@@ -94,6 +94,14 @@ function AfficherListeContacts(props) {
         enteteOnClickCb,
     } = props
        
+    const [selection, setSelection] = useState([])
+
+    const onSelectHandler = useCallback( items => {
+        const itemsMaj = items.filter(item=>item)
+        setSelection(itemsMaj)
+        setUuidContactSelectionne(itemsMaj)
+    }, [setSelection, setUuidContactSelectionne])
+
     if( !contacts || !show ) return ''
 
     return (
@@ -106,7 +114,8 @@ function AfficherListeContacts(props) {
                 modeView='liste'
                 colonnes={colonnes}
                 rows={contacts} 
-                onSelection={setUuidContactSelectionne}
+                selection={selection}
+                onSelect={onSelectHandler}
                 onClickEntete={enteteOnClickCb}
                 suivantCb={isListeComplete?'':getContactsSuivants}
             />
@@ -130,11 +139,11 @@ function AfficherCompteContacts(props) {
 function preparerColonnes() {
 
     const params = {
-        ordreColonnes: ['nom', 'adresse', 'boutonDetail'],
+        ordreColonnes: ['nom', 'adresse', /*'boutonDetail'*/ ],
         paramsColonnes: {
             'nom': {'label': 'Nom', showThumbnail: false, xs: 12, md: 4},
             'adresse': {'label': 'Adresse', className: 'details', xs: 12, md: 5},
-            'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 4, md: 3},
+            // 'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 4, md: 3},
         },
         tri: {colonne: 'nom', ordre: 1},
         idMapper: data => data.uuid_contact,
