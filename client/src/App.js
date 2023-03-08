@@ -251,6 +251,8 @@ function Contenu(props) {
   const workers = useWorkers()
   const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
 
+  const [scrollMessages, onScrollMessages] = useState(0)
+
   const retourConfiguration = useCallback(()=>setPageConfiguration(''))
 
   if(!workers) return <Attente />
@@ -283,7 +285,10 @@ function Contenu(props) {
               afficherContacts={afficherContacts}
               setAfficherContacts={setAfficherContacts} 
               pageConfiguration={pageConfiguration} />
-            <Page {...props} retour={retour} showNouveauMessage={showNouveauMessage} />
+            <Page {...props} retour={retour} 
+              showNouveauMessage={showNouveauMessage} 
+              scrollMessages={scrollMessages}
+              onScrollMessages={onScrollMessages} />
           </Suspense>
 
           <br/><br/>

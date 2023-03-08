@@ -138,23 +138,27 @@ function ModalSelectionnerAttachement(props) {
                 {titre}
             </Modal.Header>
 
-            <Row>
-                <Col>
-                    <SectionBreadcrumb 
-                        nomRootLocal={nomRootLocal}
-                        breadcrumb={breadcrumb}
-                        toBreadrumbIdx={handlerSliceBreadcrumb}
-                    />
-                </Col>
-            </Row>
-            <ListeFichiers 
-                modeView={modeView}
-                colonnes={colonnes}
-                rows={liste} 
-                onOpen={onOpenHandler}
-                selection={selection}
-                onSelect={onSelectionLignes}
-            />
+            <Modal.Body>
+                <Row>
+                    <Col>
+                        <SectionBreadcrumb 
+                            nomRootLocal={nomRootLocal}
+                            breadcrumb={breadcrumb}
+                            toBreadrumbIdx={handlerSliceBreadcrumb}
+                        />
+                    </Col>
+                </Row>
+
+                <div className='navigation-fichiers-scroll'>
+                    <ListeFichiers 
+                        modeView={modeView}
+                        colonnes={colonnes}
+                        rows={liste} 
+                        onOpen={onOpenHandler}
+                        selection={selection}
+                        onSelect={onSelectionLignes} />
+                </div>
+            </Modal.Body>
 
             <Modal.Footer>
                 <Button onClick={choisirHandler} disabled={!collectionSelectionnee}>Choisir</Button>

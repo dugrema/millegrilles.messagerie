@@ -1,14 +1,13 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
-import Nav from 'react-bootstrap/Nav'
 
 import { ListeFichiers } from '@dugrema/millegrilles.reactjs'
 import { MenuContextuelAfficherMessages, onContextMenu } from './MenuContextuel'
-import useWorkers, {useEtatConnexion, useEtatAuthentifie, useUsager} from './WorkerContext'
+import useWorkers, { useEtatConnexion, useEtatAuthentifie } from './WorkerContext'
 import messagerieActions from './redux/messagerieSlice'
 
 function ListeMessages(props) {

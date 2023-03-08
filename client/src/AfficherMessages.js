@@ -8,7 +8,7 @@ import ListeMessages from './ListeMessages'
 
 function AfficherMessages(props) {
 
-    const { showNouveauMessage } = props
+    const { showNouveauMessage, scrollMessages, onScrollMessages } = props
 
     const workers = useWorkers()
     const dossierSource = useSelector(state=>state.messagerie.source)
@@ -38,7 +38,9 @@ function AfficherMessages(props) {
         <AfficherListe 
             colonnes={colonnes}
             enteteOnClickCb={enteteOnClickCb} 
-            showNouveauMessage={showNouveauMessage} />
+            showNouveauMessage={showNouveauMessage} 
+            scrollMessages={scrollMessages}
+            onScrollMessages={onScrollMessages} />
     )
 
 }
@@ -47,7 +49,7 @@ export default AfficherMessages
 
 function AfficherListe(props) {
 
-    const { colonnes, enteteOnClickCb, showNouveauMessage } = props
+    const { colonnes, enteteOnClickCb, showNouveauMessage, scrollMessages, onScrollMessages } = props
 
     const listeMessages = useSelector(state=>state.messagerie.liste),
           compteMessages = listeMessages?listeMessages.length:0
@@ -59,7 +61,9 @@ function AfficherListe(props) {
             messages={listeMessages} 
             compteMessages={compteMessages}
             enteteOnClickCb={enteteOnClickCb}
-            showNouveauMessage={showNouveauMessage} />
+            showNouveauMessage={showNouveauMessage} 
+            scrollValue={scrollMessages}
+            onScroll={onScrollMessages} />
     )
 }
 

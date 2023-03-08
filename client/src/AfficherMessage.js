@@ -217,7 +217,14 @@ function ContenuMessage(props) {
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
 
-                const infoVideo = Object.values(videoItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
+                console.debug("creerToken fuuidVideo %O, videoItem %O", fuuidVideo, videoItem)
+                let infoVideo = null
+                if(fuuidVideo === videoItem.fuuid) {
+                    // Original
+                    infoVideo = videoItem
+                } else {
+                    infoVideo = Object.values(videoItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
+                }
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
                     if(infoVideo[champ]) paramsChiffrage[champ] = infoVideo[champ]

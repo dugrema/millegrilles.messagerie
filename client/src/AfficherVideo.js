@@ -255,35 +255,6 @@ function SelecteurResolution(props) {
     )
 }
 
-function AfficherLiensVideo(props) {
-    const { show, srcVideo } = props
-
-    if(!show) return ''
-
-    // console.debug("VIDEOS : %O", srcVideo)
-
-    return (
-        <div>
-            <h3>Liens video</h3>
-            {srcVideo.map(item=>{
-                return <LienVideo key={item.fuuid||item.label} video={item} /> 
-            })}
-        </div>
-    )
-}
-
-function LienVideo(props) {
-    const video = props.video
-    const nomVideo = video.codecVideo || video.mimetype || video.src
-    return (
-        <Row>
-            <Col>
-                <a href={video.src} target="_top">{nomVideo}</a>
-            </Col>
-        </Row>
-    )
-}
-
 function ProgresChargement(props) {
 
     const { value, srcVideo } = props
@@ -391,11 +362,7 @@ function PanneauInformation(props) {
     return (
         <div>
             <Row>
-                <Col>
-                    <Button variant="secondary" onClick={showInfoModalOuvrir}>Convertir</Button>
-                </Col>
-
-                <Col>
+                <Col xs={8}>
                     <SelecteurResolution 
                         listeVideos={videos} 
                         support={support}
@@ -403,7 +370,7 @@ function PanneauInformation(props) {
                         videoLoader={fichier.videoLoader} />
                 </Col>
 
-                <Col>
+                <Col className='buttonbar-right'>
                     <Button variant="secondary" onClick={fermer}>X</Button>
                 </Col>
             </Row>
