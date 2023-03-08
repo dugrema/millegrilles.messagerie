@@ -6,13 +6,12 @@ import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
-import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import ReactQuill from 'react-quill'
 import multibase from 'multibase'
 
-import { usagerDao, ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport, hachage } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatteurTaille, FormatterDate, useDetecterSupport, hachage } from '@dugrema/millegrilles.reactjs'
 
-import useWorkers, {useEtatConnexion, useEtatAuthentifie, WorkerProvider, useUsager} from './WorkerContext'
+import useWorkers, {useEtatConnexion, useEtatAuthentifie, useUsager} from './WorkerContext'
 import messagerieActions, { thunks as messagerieThunks } from './redux/messagerieSlice'
 
 import { MenuContextuelAfficherAttachments, MenuContextuelAfficherAttachementsMultiselect, onContextMenu } from './MenuContextuel'
@@ -28,8 +27,6 @@ const CONST_INTERVALLE_VERIFICATION_ATTACHMENTS = 20_000
 const CONST_CHAMPS_CHIFFRAGE = ['format', 'header', 'iv', 'tag']
 
 function AfficherMessage(props) {
-    // console.debug("AfficherMessage proppys: %O", props)
-
     const { downloadAction } = props
 
     const workers = useWorkers(),
@@ -41,8 +38,6 @@ function AfficherMessage(props) {
 
     const listeMessages = useSelector(state=>state.messagerie.liste),
           uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif)
-
-    // console.debug("uuid message actif : %O, liste messages %O", uuidMessageActif, listeMessages)
 
     const message = useMemo(()=>{
         return listeMessages.filter(item=>item.uuid_transaction===uuidMessageActif).pop()
@@ -82,7 +77,7 @@ function AfficherMessage(props) {
         if(etatConnexion && etatAuthentifie && message && !message.lu && !message.date_envoi) {
             marquerMessageLu(workers, message.uuid_transaction)
         }
-    }, [workers, etatConnexion, etatAuthentifie, message])  // , messageDechiffre])
+    }, [workers, etatConnexion, etatAuthentifie, message])
 
     return (
         <>
@@ -115,10 +110,9 @@ function AfficherMessage(props) {
 export default AfficherMessage
 
 function RenderMessage(props) {
-    // console.debug("RenderMessage : %O", props)
+
     const { 
         downloadAction, choisirCollectionCb, 
-        // setUuidMessage, 
         repondreCb, transfererCb, retourMessages,
         afficherVideo, setAfficherVideo, 
         afficherAudio, setAfficherAudio, 
@@ -144,12 +138,8 @@ function RenderMessage(props) {
     }, [])
 
     const supprimerCb = useCallback(()=>{
-        // console.debug("Supprimer message %s", uuid_transaction)
         workers.connexion.supprimerMessages(uuid_transaction)
-            .then(reponse=>{
-                // console.debug("Message supprime : %O", reponse)
-                retourMessages()  // Retour
-            })
+            .then( retourMessages )
             .catch(erreurCb)
     }, [workers, retourMessages, uuid_transaction, erreurCb])
 
@@ -427,7 +417,9 @@ function AfficherAttachments(props) {
     const dispatch = useDispatch()
     const userId = useSelector(state=>state.messagerie.userId)
 
-    const [colonnes, setColonnes] = useState('')
+    const colonnes = useMemo(preparerColonnes, [])
+
+    // const [colonnes, setColonnes] = useState('')
     const [modeView, setModeView] = useState('')
     const [attachmentsList, setAttachmentsList] = useState('')
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
@@ -471,10 +463,7 @@ function AfficherAttachments(props) {
         }
     }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio])
 
-    // useEffect(()=>detecterSupport(setSupport), [setSupport])
-    useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
-
-    // useEffect(()=>chargerFichiers(workers, attachments, setFichierCharges), [workers, attachments, setFichierCharges])
+    // useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
@@ -573,13 +562,10 @@ function AfficherAttachments(props) {
                 modeView={modeView}
                 colonnes={colonnes}
                 rows={attachmentsList} 
-                // onClick={...pas utilise...} 
-                onDoubleClick={showPreviewSelection}
+                selection={selection}
+                onOpen={showPreviewSelection}
                 onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                onSelection={onSelectionLignes}
-                onClickEntete={colonne=>{
-                    // console.debug("Entete click : %s", colonne)
-                }}
+                onSelect={onSelectionLignes}
             />
             
             <MenuContextuel
