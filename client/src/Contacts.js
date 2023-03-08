@@ -29,7 +29,6 @@ function Contacts(props) {
     const contacts = useSelector(state=>state.contacts.liste),
           uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
 
-    // const [editerContact, setEditerContact] = useState(false)
     const [colonnes, setColonnes] = useState(preparerColonnes())
 
     const nouveauContact = useCallback(()=>{
@@ -86,7 +85,6 @@ function Contacts(props) {
                 show={uuidContactActif===null} 
                 colonnes={colonnes}
                 nouveauContact={nouveauContact}
-                // editerContact={editerContactHandler}
                 retour={retour} 
                 enteteOnClickCb={enteteOnClickCb} 
                 supprimerContacts={supprimerContactsCb} />
@@ -103,49 +101,6 @@ function Contacts(props) {
 
 export default Contacts
 
-function BreadcrumbContacts(props) {
-
-    console.debug("!!! BreadcrumbContacts Proppies ", props)
-
-    const { retourMessages, retourContacts } = props
-
-    const contacts = useSelector(state=>state.contacts.liste),
-          uuidContactActif = useSelector(state=>state.contacts.uuidContactActif)
-
-    const bc = [
-        <Breadcrumb.Item key="messages" onClick={retourMessages}>Messages</Breadcrumb.Item>
-    ]
-
-    if(!uuidContactActif) {
-        return (
-            <Breadcrumb>
-                {bc}
-                <Breadcrumb.Item key="contacts" onClick={retourContacts} active>Contacts</Breadcrumb.Item>
-            </Breadcrumb>
-        )
-    }
-
-    bc.push(<Breadcrumb.Item key="contacts" onClick={retourContacts}>Contacts</Breadcrumb.Item>)
-
-    if(uuidContactActif === true) {
-        return (
-            <Breadcrumb>
-                {bc}
-                <Breadcrumb.Item active>Nouveau</Breadcrumb.Item>
-            </Breadcrumb>
-        )
-    } else {
-        const contact = contacts.filter(item=>item.uuid_contact === uuidContactActif).pop()
-        return (
-            <Breadcrumb>
-                {bc}
-                <Breadcrumb.Item active>{contact.nom}</Breadcrumb.Item>
-            </Breadcrumb>
-        )
-    }
-
-}
-
 function AfficherCompteContacts(props) {
     const value = props.value
     if(value > 1) {
@@ -160,7 +115,6 @@ function AfficherCompteContacts(props) {
 function AfficherListeContacts(props) {
     const { 
         nouveauContact, colonnes, show, 
-        editerContact, 
         enteteOnClickCb, 
         supprimerContacts,
     } = props
@@ -178,14 +132,11 @@ function AfficherListeContacts(props) {
     const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
 
     const ouvrir = useCallback(event=>{
-        event.preventDefault()
-        event.stopPropagation()
-
+        if('preventDefault' in event) event.preventDefault()
+        if('stopPropagation' in event) event.stopPropagation()
         // console.debug("Ouvrir event : %O, selection: %O", event, selection)
-        if(selection.length > 0) {
-            const uuid_contact = selection[0]
-            dispatch(contactsAction.setContactActif(uuid_contact))
-        }
+        const uuid_contact = event.uuid_contact
+        dispatch(contactsAction.setContactActif(uuid_contact))
     }, [selection, dispatch])
 
     if( !contacts || !show ) return ''
@@ -204,10 +155,10 @@ function AfficherListeContacts(props) {
                     modeView='liste'
                     colonnes={colonnes}
                     rows={contacts} 
-                    // onClick={onClick} 
-                    onDoubleClick={ouvrir}
+                    onOpen={ouvrir}
                     onContextMenu={onContextMenuCb}
-                    onSelection={onSelectionLignes}
+                    selection={selection}
+                    onSelect={onSelectionLignes}
                     onClickEntete={enteteOnClickCb}
                 />
                 :''
