@@ -1,23 +1,21 @@
 import {useState, useEffect, useCallback, useMemo} from 'react'
+import axios from 'axios'
+
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
-import Form from 'react-bootstrap/Form'
+import ProgressBar from 'react-bootstrap/ProgressBar'
+import Alert from 'react-bootstrap/Alert'
 
 import { VideoViewer } from '@dugrema/millegrilles.reactjs'
 
 import {trierLabelsVideos} from '@dugrema/millegrilles.reactjs/src/labelsRessources'
 
-
-// const PLAYER_VIDEORESOLUTION = 'player.videoResolution'
-
 function AfficherVideo(props) {
 
-    // console.debug("AfficherVideo PROPPIES : %O", props)
-
-    const { support, showInfoModalOuvrir } = props
+    const { support, showInfoModalOuvrir, fermer } = props
 
     const fichier = useMemo(()=>props.fichier || {}, [props.fichier])
     const nomFichier = fichier.nom || '',
@@ -29,8 +27,10 @@ function AfficherVideo(props) {
     const [selecteur, setSelecteur] = useState('')
     const [srcVideo, setSrcVideo] = useState('')
     const [posterObj, setPosterObj] = useState('')
-    // const [genererToken, setGenererToken] = useState(false)
     const [timeStamp, setTimeStamp] = useState(0)
+    const [videoChargePret, setVideoChargePret] = useState(false)
+    const [errVideo, setErrVideo] = useState('')
+    const [progresChargement, setProgresChargement] = useState(0)
 
     useEffect(()=>{
         if(selecteur || !videoLoader) return  // Deja initialise
@@ -52,37 +52,13 @@ function AfficherVideo(props) {
         }
     }, [selecteur, videoLoader, setSelecteur])
 
-    // const genererTokenToggle = useCallback(event => {
-    //     // console.debug("Toggle check de %O", genererToken)
-    //     setGenererToken(!genererToken)
-    // }, [genererToken, setGenererToken])
-
     const videoTimeUpdateHandler = useCallback(event=>{
-        // console.debug("Video time update event : %O", event)
         const currentTime = event.target.currentTime
         setTimeStamp(currentTime)
     }, [setTimeStamp])
 
     useEffect(()=>{
-        const loaderImage = fichier.imageLoader
-        let imageChargee = null
-        loaderImage.load()
-            .then(image=>{
-                imageChargee = image
-                // console.debug("Image poster chargee : %O", image)
-                setPosterObj(image)
-            })
-            .catch(err=>console.error("Erreur chargement poster : %O", err))
-        
-        return () => {
-            // console.debug("Revoking blob %O", imageChargee)
-            URL.revokeObjectURL(imageChargee)
-        }
-    }, [fichier, setPosterObj])
-
-    useEffect(()=>{
         if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
-        // console.debug("Video utiliser selecteur %s", selecteur)
         fichier.videoLoader.load(selecteur, {genererToken: true})
             .then(src=>{
                 // console.debug("Source video : %O", src)
@@ -93,55 +69,152 @@ function AfficherVideo(props) {
             })
     }, [fichier, selecteur, /*genererToken,*/ setSrcVideo])
 
+    const majChargement = useCallback(info=>{
+        console.debug("Maj chargement ", info)
+        if(info.status === 200) {
+            // Complete
+            setProgresChargement(100)
+        } else if(info.status === 202) {
+            const headers = info.headers
+            console.debug("headers ", headers)
+
+            const position = Number.parseInt(headers['x-file-position']),
+                  taille = Number.parseInt(headers['x-file-size'])
+
+            const progres =  Math.floor(100.0 * position / taille)
+            console.debug("Progres ", progres)
+            setProgresChargement(progres)
+        }
+    }, [setProgresChargement])
+
+    useEffect(()=>{
+        if(!fichier || !fichier.imageLoader) return // Metadata n'est pas encore genere
+        const loaderImage = fichier.imageLoader
+
+        // console.debug("Fichier video loader : ", loaderImage)
+
+        let imageChargee = null
+        loaderImage.load()
+            .then(image=>{
+                imageChargee = image
+                // console.debug("Image poster chargee : %O", image)
+                setPosterObj(image)
+            })
+            .catch(err=>console.error("Erreur chargement poster : %O", err))
+
+        return () => {
+            // console.debug("Revoking blob %O", imageChargee)
+            URL.revokeObjectURL(imageChargee)
+        }
+    }, [fichier, setPosterObj])
+
+    useEffect(()=>{
+        if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
+
+        // Reset indicateurs
+        setVideoChargePret(false)
+        setErrVideo('')
+        setProgresChargement(0)
+
+        fichier.videoLoader.load(selecteur, {genererToken: true})
+            .then(async src => {
+                try {
+                    // console.debug("HEAD src : ", src)
+                    const sourceHead = src[0].src
+                    
+                    while(true) {
+                        // S'assurer que le video est pret dans le back-end
+                        const reponse = await axios({
+                            method: 'HEAD',
+                            url: sourceHead,
+                            timeout: 20_000,
+                        })
+                        majChargement(reponse)
+                        if(reponse.status !== 202) break
+                        await new Promise(resolve=>setTimeout(resolve, 2000))
+                    }
+
+                    // console.debug("Reponse head ", reponse)
+                    setSrcVideo(src)
+                } catch(err) {
+                    console.error("Erreur HEAD : ", err)
+                    setErrVideo('Erreur chargement video (preparation)')
+                }
+            })
+            .catch(err=>{
+                console.error("AfficherVideo erreur chargement video : %O", err)
+                setErrVideo('Erreur chargement video (general)')
+            })
+    }, [fichier, selecteur, setSrcVideo, setVideoChargePret, setProgresChargement, setErrVideo])
+
+    const onProgress = useCallback(event => {
+        // console.debug("onProgress ", event)
+        // Le video n'est pas necessairement pret, mais onCanPlay n'est pas lance sur mobiles (iOS)
+        setVideoChargePret(true)
+    }, [setVideoChargePret])
+    const onPlay = useCallback(param => console.debug("onPlay ", param), [])
+    const onError = useCallback(event => {
+        const target = event.target
+        // console.debug("Erreur load video ", event)
+        if(target && target.nodeName === 'SOURCE') {
+            // Iterer les sources (automatique). Declarer erreur juste s'il n'y a pas de source suivante.
+            if(!target.nextSibling) {
+                setErrVideo('Erreur chargement video')
+                setVideoChargePret(false)
+            }
+        }
+    }, [setVideoChargePret, setErrVideo])
+    const onWaiting = useCallback(param => console.debug("onWaiting ", param), [])
+    const onCanPlay = useCallback(param => {
+        // console.debug("onCanPlay ", param)
+        setVideoChargePret(true)
+        setErrVideo('')
+    }, [setVideoChargePret, setErrVideo])
+    const onAbort = useCallback(param => console.debug("onAbort ", param), [])
+    const onEmptied = useCallback(param => console.debug("onEmptied ", param), [])
+
     return (
         <div>
             <Row>
                 
-                <Col md={12} lg={8}>
-                    {posterObj&&srcVideo?
-                        <VideoViewer videos={srcVideo} poster={posterObj} height='100%' width='100%' 
-                            selecteur={selecteur} 
-                            onTimeUpdate={videoTimeUpdateHandler} 
-                            timeStamp={timeStamp} />
-                    :(
-                        <div>
-                            <p>
-                                    <i className="fa fa-spinner fa-spin"/> ... Chargement en cours ...
-                            </p>
-                        </div>
-                    )}
-                </Col>
-
                 <Col>
-                    <h3>{nomFichier}</h3>
-                    
-                    <Button onClick={props.fermer}>Retour</Button>
-
-                    <h3>Operation</h3>
-                    <Row>
-                        <Col>
-                            <Button variant="secondary" onClick={showInfoModalOuvrir}>Convertir</Button>
-                        </Col>
-                    </Row>
-                    {/* <Row>
-                        <Col>
-                            <Form.Check type="switch" id="token-switch" label="Generer token" 
-                                checked={genererToken?true:false} 
-                                onChange={genererTokenToggle} />
-                        </Col>
-                    </Row> */}
-
-                    <h3>Afficher</h3>
-                    <SelecteurResolution 
-                        listeVideos={videos} 
+                    <PlayerEtatPassthrough
+                        posterObj={posterObj}
+                        srcVideo={srcVideo}
+                        selecteur={selecteur}
+                        videoChargePret={videoChargePret}
+                        errVideo={errVideo} >
+                            <VideoViewer videos={srcVideo} poster={posterObj} height='100%' width='100%' 
+                                selecteur={selecteur} 
+                                onTimeUpdate={videoTimeUpdateHandler} 
+                                timeStamp={timeStamp} 
+                                onProgress={onProgress}
+                                onPlay={onPlay}
+                                onError={onError}
+                                onWaiting={onWaiting}
+                                onCanPlay={onCanPlay}
+                                onAbort={onAbort}
+                                onEmptied={onEmptied}
+                                />
+                    </PlayerEtatPassthrough>
+                    <ProgresChargement value={progresChargement} srcVideo={srcVideo} />
+                </Col>
+            </Row>
+            <Row>
+                <Col>
+                    <PanneauInformation 
+                        fichier={fichier}
+                        nomFichier={nomFichier}
+                        fermer={fermer}
+                        showInfoModalOuvrir={showInfoModalOuvrir}
+                        videos={videos}
                         support={support}
-                        selecteur={selecteur} setSelecteur={setSelecteur} 
-                        videoLoader={fichier.videoLoader} />
+                        selecteur={selecteur}
+                        setSelecteur={setSelecteur}
+                        />
                 </Col>
 
             </Row>
-
-            {/* <AfficherLiensVideo srcVideo={srcVideo} show={!!genererToken} /> */}
 
         </div>
     )
@@ -155,22 +228,8 @@ function SelecteurResolution(props) {
     const [listeOptions, setListeOptions] = useState([])
 
     useEffect(()=>{
-        // console.debug("Liste videos : %O", listeVideos)
         if(!listeVideos || !videoLoader) return
-        // const { webm } = support
 
-        // const videoKeys = Object.keys()
-        //  let options = videoKeys.filter(item=>{
-        //     const [mimetype, codecVideo, resolution, bitrate] = item.split(';')
-        //     if(mimetype.endsWith('/webm')) {
-        //         if(!webm) return false
-        //     } 
-        //     // else {
-        //     //     if(webm) return false
-        //     // }
-
-        //     return true
-        // })
         const options = videoLoader.getSelecteurs()
         options.sort(trierLabelsVideos)
 
@@ -178,16 +237,11 @@ function SelecteurResolution(props) {
 
     }, [listeVideos, setListeOptions, videoLoader])
 
-    const changerSelecteur = useCallback(value=>{
-        // console.debug("Valeur : %O", value)
-        setSelecteur(value)
-        // const [mimetype, resolution, bitrate] = value.split(';')
-        // localStorage.setItem(PLAYER_VIDEORESOLUTION, ''+resolution)
-    }, [setSelecteur])
+    const changerSelecteur = useCallback(value=>setSelecteur(value), [setSelecteur])
 
     return (
         <>
-            <p>Selecteur</p>
+            <span>Resolution</span>
             <DropdownButton title={selecteur} variant="secondary" onSelect={changerSelecteur}>
                 {listeOptions.map(item=>{
                     if(item === selecteur) {
@@ -229,3 +283,131 @@ function LienVideo(props) {
         </Row>
     )
 }
+
+function ProgresChargement(props) {
+
+    const { value, srcVideo } = props
+
+    const [show, setShow] = useState(true)
+
+    const label = useMemo(()=>{
+        if(isNaN(value)) return ''
+        if(value === 100) {
+            if(srcVideo) {
+                return <div><i className="fa fa-spinner fa-spin"/>{' '}Preparation sur le serveur</div>
+            } else {
+                return 'Chargement complete'
+            }
+        }
+        return <div><i className="fa fa-spinner fa-spin"/>Chargement en cours</div>
+    }, [value, srcVideo])
+
+    useEffect(()=>{
+        if(value === null || value === '') setShow(false)
+        else if(value === 100 && srcVideo) {
+            setTimeout(()=>setShow(false), 1500)
+        } else {
+            setShow(true)
+        }
+    }, [value, setShow])
+
+    if(!show) return ''
+
+    return (
+        <Row className='progres-chargement'>
+            <Col xs={12} lg={5} className='label'>{label}</Col>
+            <Col xs={10} lg={4}>
+                <ProgressBar now={value} />
+            </Col>
+            <Col xs={2} lg={2}>{value}%</Col>
+        </Row>
+    )
+}
+
+function PlayerEtatPassthrough(props) {
+
+    const {posterObj, srcVideo, selecteur, videoChargePret, errVideo} = props
+
+    const [delaiSelecteur, setDelaiSelecteur] = useState(false)
+
+    useEffect(()=>{
+        // Fait un de-bump sur switch de stream
+        if(selecteur) {
+            const t = setTimeout(()=>setDelaiSelecteur(selecteur), 300)
+            return () => clearTimeout(t)
+        }
+    }, [srcVideo, setDelaiSelecteur])
+
+    if(!posterObj || !srcVideo || delaiSelecteur !== selecteur) {
+
+        let message = null
+        // if(srcVideo) {
+        //     message = <p><i className="fa fa-spinner fa-spin"/> ... Chargement en cours ...</p>
+        // } else {
+        //     message = <p><i className="fa fa-spinner fa-spin"/> ... Preparation du video sur le serveur ...</p>
+        // }
+
+        if(posterObj) {
+            return (
+                <div className='video-window'>
+                    <img src={posterObj} width='100%' height='100%' />
+                    {message}
+                </div>
+            )
+        } else {
+            return (
+                <div>
+                    {message}
+                </div>
+            )
+        }
+    }
+
+    if(errVideo) {
+        return (
+            <Alert variant="danger">
+                <Alert.Heading>Erreur</Alert.Heading>
+                <p>Erreur durant le chargement du video.</p>
+            </Alert>
+        )
+    }
+
+    return (
+        <div className='video-window'>
+            {props.children}
+            {/* {(!errVideo && !videoChargePret)?
+                <p>
+                    <i className="fa fa-spinner fa-spin"/> ... Chargement en cours ...
+                </p>
+            :''} */}
+        </div>
+    )
+}
+
+function PanneauInformation(props) {
+
+    const { fichier, nomFichier, fermer, showInfoModalOuvrir, videos, support, selecteur, setSelecteur } = props
+
+    return (
+        <div>
+            <Row>
+                <Col>
+                    <Button variant="secondary" onClick={showInfoModalOuvrir}>Convertir</Button>
+                </Col>
+
+                <Col>
+                    <SelecteurResolution 
+                        listeVideos={videos} 
+                        support={support}
+                        selecteur={selecteur} setSelecteur={setSelecteur} 
+                        videoLoader={fichier.videoLoader} />
+                </Col>
+
+                <Col>
+                    <Button variant="secondary" onClick={fermer}>X</Button>
+                </Col>
+            </Row>
+        </div>
+    )
+}
+

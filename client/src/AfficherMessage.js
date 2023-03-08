@@ -205,7 +205,6 @@ function ContenuMessage(props) {
     const fermerAfficherAudio = useCallback(()=>setAfficherAudio(false))
 
     const attachmentMappe = useMemo(()=>{
-        console.debug('ContenuMessage attachmentMappe fichiers: %O, afficherAudio: %O', fichiers, afficherAudio)
         if(!fichiers) return
 
         const videoItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
@@ -217,8 +216,6 @@ function ContenuMessage(props) {
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
-                console.debug("!!! usager : %O\nvideoItem : %O", usager, videoItem)
-                // console.debug("Creer token video fuuid : %O (videoItem: %O, cles: %O)", fuuid, videoItem, attachments.cles)
 
                 const infoVideo = Object.values(videoItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
                 const paramsChiffrage = {}
@@ -439,31 +436,27 @@ function AfficherAttachments(props) {
         setFuuidSelectionne(fuuid)
         setShowPreview(true)
     }, [setShowPreview, setFuuidSelectionne])
-    const showPreviewSelection = useCallback( () => {
-        if(selection && selection.length > 0) {
-            let fuuid = [...selection].pop()
-            // console.debug("Show preview cb : %O", fuuid)
-            setFuuidSelectionne(fuuid)
-            // setShowPreview(true)
+    const showPreviewSelection = useCallback( item => {
+        console.debug("showPreviewSelection ", item)
+        const fuuid = item.fuuid
+        if(!fuuid) return
 
-            const fileItem = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
-            const mimetype = fileItem.mimetype || ''
-            console.debug("Afficher fuuid %s (mimetype: %s), fileItem %O", fuuid, mimetype, fileItem)
-            if(mimetype.startsWith('video/')) {
-                // Page Video
-                setAfficherVideo(fuuid)
-            } else if(mimetype.startsWith('audio/')) {
-                // Page Video
-                setAfficherAudio(fuuid)
-            } else {
-                // Preview/carousel
-                setShowPreview(true)
-            }
-
+        setFuuidSelectionne(fuuid)
+        const fileItem = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
+        const mimetype = fileItem.mimetype || ''
+        console.debug("Afficher fuuid %s (mimetype: %s), fileItem %O", fuuid, mimetype, fileItem)
+        if(mimetype.startsWith('video/')) {
+            // Page Video
+            setAfficherVideo(fuuid)
+        } else if(mimetype.startsWith('audio/')) {
+            // Page Video
+            setAfficherAudio(fuuid)
+        } else {
+            // Preview/carousel
+            setShowPreview(true)
         }
-    }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio])
 
-    // useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
+    }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio, attachmentsList])
 
     useEffect(()=>{
         if(!attachments) { setAttachmentsList(''); return }  // Rien a faire

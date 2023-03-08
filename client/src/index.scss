@@ -91,3 +91,22 @@ SPAN.ql-picker-label {
 .ql-snow .ql-stroke, .ql-snow .ql-fill {
     stroke: $fourth-color;
 }
+
+.progres-chargement {
+    position: relative;
+    top: -6rem;
+    left: 1rem;
+    opacity: 0.85;
+}
+
+.progres-chargement .label {
+    background: $second-color;
+}
+
+.video-window {
+    height: calc(100vh - 22rem);
+}
+
+.video-window img {
+    object-fit: contain;
+}
