@@ -86,18 +86,10 @@ function ModalSelectionnerAttachement(props) {
     const onOpenHandler = useCallback( item => {
         console.debug("open ", item)
         window.getSelection().removeAllRanges()
-        
-        // const folderId = value.folderId || dataset.folderId
-        // const fileId = value.fileId || dataset.fileId
-
-        // console.debug("onDoubleClick dataset %O, folderId %o, fileId %O", dataset, folderId, fileId)
-
-        // if(folderId) {
-        //     naviguerCollection(folderId)
-        // } else if(fileId) {
-        //     choisirHandler()
-        // }
-
+        const folderId = item.folderId
+        if(folderId) {
+            naviguerCollection(folderId)
+        }
     }, [naviguerCollection, choisirHandler, liste])
 
     const handlerSliceBreadcrumb = useCallback(level => {
