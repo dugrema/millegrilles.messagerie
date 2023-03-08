@@ -6,10 +6,8 @@ import Col from 'react-bootstrap/Col'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
-import Dropdown from 'react-bootstrap/Dropdown'
 
 import ReactQuill from 'react-quill'
-import { useDropzone } from 'react-dropzone'
 
 import { ListeFichiers, FormatteurTaille, AlertTimeout, useDetecterSupport } from '@dugrema/millegrilles.reactjs'
 
@@ -50,10 +48,8 @@ function NouveauMessage(props) {
     const [attachments, setAttachments] = useState('')
     const [attachmentsPending, setAttachmentsPending] = useState('')
     const [attachmentsCles, setAttachmentsCles] = useState({})
-    // const [attachmentsPrets, setAttachmentsPrets] = useState('')
     const [erreur, setErreur] = useState('')
     const [idDraft, setIdDraft] = useState('')
-    const [drafts, setDrafts] = useState('')
     const [optionVideo, setOptionVideo] = useState('faible')
 
     const attachmentsPrets = useMemo(()=>{
@@ -62,16 +58,7 @@ function NouveauMessage(props) {
 
     const erreurCb = useCallback((err, message)=>setErreur({err, message}), [setErreur])
 
-    // const supprimerDraftCb = useCallback(idDraft=>{
-    //     idDraft = idDraft.currentTarget?Number.parseInt(idDraft.currentTarget.value):idDraft
-    //     console.error("supprimerDraftCb fix me - redux")
-    //     // MessageDao.supprimerDraft(idDraft).catch(erreurCb)
-    //     // const draftsMaj = drafts.filter(item=>item.idDraft!==idDraft)
-    //     // setDrafts(draftsMaj)
-    // }, [drafts, setDrafts, erreurCb])
-
     const fermer = useCallback( supprimerDraft => {
-        // if(supprimerDraft === true) supprimerDraftCb(idDraft)
         fermerNouveauMessage()
     }, [fermerNouveauMessage, /* supprimerDraftCb, */ idDraft])
 
@@ -79,8 +66,6 @@ function NouveauMessage(props) {
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
         envoyer(workers, userId, certificatsMaitredescles, from, to, content, opts)
             .then(()=>{
-                // showConfirmation("Message envoye")
-                // supprimerDraftCb(idDraft)
                 fermer(true)
             })
             .catch(err=>{
@@ -90,7 +75,7 @@ function NouveauMessage(props) {
     }, [
         workers, userId, showConfirmation, certificatsMaitredescles, 
         from, to, replyTo, content, uuidThread, attachments, attachmentsCles, optionVideo,
-        fermer, /* supprimerDraftCb, */ idDraft, erreurCb,
+        fermer, idDraft, erreurCb,
     ])
 
     const toChange = useCallback(event=>setTo(event.currentTarget.value), [setTo])
@@ -105,33 +90,6 @@ function NouveauMessage(props) {
         setTo(adressesStr)
     }, [to, setTo])
 
-    const chargerDraft = useCallback(idDraft=>{
-        throw new Error("fix me - redux")
-        // MessageDao.getDraft(idDraft)
-        //     .then(draft=>{
-        //         const {from, to, replyTo, content, attachments, attachmentsCles} = draft
-        //         setIdDraft(draft.idDraft)
-        //         setFrom(from)
-        //         setTo(to)
-        //         setReplyTo(replyTo)
-        //         setContent(content)
-        //         if(attachments) {
-        //             const attachmentsMappes = Object.values(attachments).map(fichier=>{
-        //                 const fuuid = fichier.fuuid
-        //                 const row = preparerRowAttachment(workers, fichier)
-        //                 const fichierMappe = {...row, ...fichier, fuuid}
-        //                 return fichierMappe
-        //             })
-        //             setAttachments(attachmentsMappes)
-        //             setAttachmentsCles(attachmentsCles)
-        //         } else {
-        //             setAttachments('')
-        //             setAttachmentsCles({})
-        //         }
-        //     })
-        //     .catch(erreurCb)
-    }, [workers, setIdDraft, setFrom, setTo, setReplyTo, setContent, setAttachments, setAttachmentsCles, erreurCb])
-
     useEffect(()=>{
         const { clesDao } = workers
         const certPromise = clesDao.getCertificatsMaitredescles()
@@ -142,16 +100,6 @@ function NouveauMessage(props) {
             })
             .catch(err=>erreurCb(err, "Erreur chargement du certificat de maitre des cles"))
     }, [workers, setCertificatsMaitredescles])
-
-    // useEffect(()=>{
-    //     console.error("getListeDrafts() fix me")
-    //     // MessageDao.getListeDrafts()
-    //     //     .then(drafts=>{
-    //     //         // console.debug("Drafts : %O", drafts)
-    //     //         setDrafts(drafts)
-    //     //     })
-    //     //     .catch(erreurCb)
-    // }, [setDrafts, erreurCb])
 
     // Preparer reponse ou transfert
     useEffect(()=>{
@@ -190,48 +138,18 @@ function NouveauMessage(props) {
         setReplyTo(replyTo)
     }, [workers, profil, usager, setReplyTo])
 
-    // useEffect(()=>{
-    //     if(!idDraft) {
-    //         if(to || content || attachments) {  // Champs modifiables par l'usager
-    //             // Creer un nouveau draft
-    //             //throw new Error("fix me - redux")
-    //             // MessageDao.ajouterDraft().then(setIdDraft).catch(erreurCb)
-    //         }
-    //     } else {
-    //         // Conserver information draft
-    //         let attachmentsMapping = null
-    //         if(attachments) {
-    //             const fieldsConserver = [
-    //                 'fileId', 'fuuid', 
-    //                 'duration', 'mimetype', 'width', 'height', 'anime', 'nom', 'taille', 
-    //                 'pret', 'version_courante'
-    //             ]
-    //             attachmentsMapping = attachments.map(item=>{
-    //                 const attach = {}
-    //                 fieldsConserver.forEach(champ=>{ if(item[champ]) attach[champ] = item[champ] })
-    //                 // console.debug("attach : %O", attach)
-    //                 return attach
-    //             })
-    //         }
-    //         throw new Error("fix me - redux")
-    //         // MessageDao.sauvegarderDraft(idDraft, {from, to, replyTo, content, attachments: attachmentsMapping, attachmentsCles}).catch(erreurCb)
-    //     }
-    // }, [idDraft, from, to, replyTo, content, attachments, attachmentsCles, setIdDraft, erreurCb])
-
     return (
         <>
             <AlertTimeout value={erreur} setValue={setErreur} titre="Erreur" variant="danger" />
 
-            {/* <AfficherDrafts 
-                drafts={drafts} 
-                setDrafts={setDrafts} 
-                chargerDraft={chargerDraft} 
-                supprimerCb={supprimerDraftCb}
-                erreurCb={erreurCb} /> */}
-
-            <Form.Label htmlFor="inputTo">To</Form.Label>
             <Row>
-                <Col xs={7} md={9} lg={10}>
+                <Col xs={6} md={2} lg={2}>
+                    <Form.Label htmlFor="inputTo">To</Form.Label>
+                </Col>
+                <Col xs={6} className="d-md-none buttonbar-right">
+                    <Button variant="secondary" onClick={choisirContacts}><i className="fa fa-user-circle"/>{' '}Contacts</Button>
+                </Col>
+                <Col xs={12} md={7} lg={8}>
                     <Form.Control
                         type="text"
                         id="inputTo"
@@ -240,19 +158,25 @@ function NouveauMessage(props) {
                         onChange={toChange}                        
                     />
                 </Col>
-                <Col className="buttonbar-right">
+                <Col md={3} lg={2} className="d-none d-md-block buttonbar-right">
                     <Button variant="secondary" onClick={choisirContacts}><i className="fa fa-user-circle"/>{' '}Contacts</Button>
                 </Col>
             </Row>
 
-            <Form.Label htmlFor="replyTo">Reply to</Form.Label>
-            <Form.Control
-                type="text"
-                id="replyTo"
-                name="to"
-                value={replyTo}
-                onChange={replyToChange}
-            />
+            <Row>
+                <Col xs={12} sm={2} lg={2}>
+                    <Form.Label htmlFor="replyTo">Reply to</Form.Label>
+                </Col>
+                <Col xs={12} sm={10} lg={10}>
+                    <Form.Control
+                        type="text"
+                        id="replyTo"
+                        name="to"
+                        value={replyTo}
+                        onChange={replyToChange}
+                    />
+                </Col>
+            </Row>
 
             <Form.Group>
                 <Form.Label htmlFor="inputContent">Message</Form.Label>
@@ -282,7 +206,6 @@ function NouveauMessage(props) {
             <Row>
                 <Col className="buttonbar">
                     <Button onClick={envoyerCb} disabled={!attachmentsPrets}><i className="fa fa-send-o"/>{' '}Envoyer</Button>
-                    {/* <Button variant="secondary" onClick={fermer}><i className="fa fa-save"/> Draft</Button> */}
                     <Button variant="secondary" onClick={()=>fermer(true)}>Annuler</Button>
                 </Col>
             </Row>
@@ -387,7 +310,6 @@ function mapperAttachments(attachments, opts) {
     // Mapper data attachments
     let attachmentsMapping = {}
     let fuuids = []
-    let fuuidsCleSeulement = []
 
     attachments.forEach( attachment => {
         // console.debug("mapperAttachments ", attachment)
@@ -399,93 +321,15 @@ function mapperAttachments(attachments, opts) {
             metadata,
             ...version_courante,
             fuuid,
-            // nom: attachment.nom,
-            // mimetype: version_courante.mimetype,
-            // taille: version_courante.taille,
-            // dateFichier: dateAjout,
         }
         delete mapping.tuuid
-        // console.debug("Mapping attachment : %O", mapping)
-
-        // if(version_courante) {
-        //     if(version_courante.images) {
-        //         const images = version_courante.images
-        //         // mapping.images = {...images}
-        //         Object.values(images).forEach(image=>{
-        //             if(image.data_chiffre || image.data) {
-        //                 fuuidsCleSeulement.push(image.hachage)
-        //             } else if(image.hachage) {
-        //                 // console.debug("Attacher image : %O", image)
-        //                 fuuids.push(image.hachage)
-        //             }
-        //         })
-        //     }
-        //     if(version_courante.video) {
-        //         let videos = {...version_courante.video}
-        //         let remplacant = null
-        //         // Filtrer la liste de videos pour retirer les formats indesirables
-        //         // if(optionVideo === 'original') {
-        //             // Retirer tous les formats sauf le basse resolution
-        //             // videos = Object.keys(videos).reduce((acc, videoKey)=>{
-        //             //     const video = videos[videoKey]
-        //             //     const resolution = calculerResolution(video),
-        //             //           codec = video.codec
-        //             //     if(codec === 'h264' && resolution === 270) acc[videoKey] = video
-        //             //     return acc
-        //             // }, {})
-        //         // } else {
-        //             // Remplacer le video 'original' par le format selectionne
-        //             // Valeurs a remplacer : fuuid, taille, videoCodec, mimetype, height, width
-        //             // if(optionVideo === 'faible') {
-        //             //     videos = Object.keys(videos).reduce((acc, videoKey)=>{
-        //             //         if(remplacant) return acc  // Rien a faire, deja trouve
-        //             //         const video = videos[videoKey]
-        //             //         const resolution = calculerResolution(video),
-        //             //               codec = video.codec
-        //             //         if(codec === 'h264' && resolution < 360) {
-        //             //             acc[videoKey] = video
-        //             //             remplacant = video
-        //             //         }
-        //             //         return acc
-        //             //     }, {})
-        //             // }
-        //         // }
-
-        //         // Remplacer .video dans version_courante
-        //         version_courante.video = videos
-
-        //         if(remplacant) {
-        //             mapping.fuuid = remplacant.fuuid_video
-        //             mapping.height = remplacant.height
-        //             mapping.width = remplacant.width
-        //             mapping.mimetype = remplacant.mimetype
-        //             mapping.videoCodec = remplacant.codec
-        //             mapping.taille = remplacant.taille_fichier
-        //         }
-
-        //         Object.values(videos).forEach(video=>{
-        //             if(video.fuuid_video) fuuids.push(video.fuuid_video)
-        //         })
-        //     }
-        // }
 
         console.debug("mapperAttachments Attachment %O", mapping)
 
         attachmentsMapping[fuuid] = mapping
     })
 
-    return {attachmentsMapping, fuuids /*, fuuidsCleSeulement */}
-}
-
-function calculerResolution(video) {
-    const height = video.height,
-          width = video.width
-    let resolution = video.resolution
-    if(!resolution) {
-        const resolutionCalculee = Math.min(width, height)
-        if(resolutionCalculee)  resolution = resolutionCalculee
-    }
-    return resolution
+    return { attachmentsMapping, fuuids }
 }
 
 async function preparerUploaderFichiers(workers, acceptedFiles) {
@@ -522,20 +366,6 @@ function AfficherAttachments(props) {
     const choisirFichiersAttaches = useCallback(event=>setShowAttacherFichiers(true), [setShowAttacherFichiers])
     const fermerAttacherFichiers = useCallback(event=>setShowAttacherFichiers(false), [setShowAttacherFichiers])
 
-    // const tuuidsAttachmentHandler = useCallback((attachmentsMaj, attachmentsPendingMaj)=>{
-    //     console.debug("tuuidsAttachmentHandler attachments: %O, attachmentsPending : %O", attachmentsMaj, attachmentsPendingMaj)
-
-    //     let tuuids = []
-    //     attachmentsMaj = attachmentsMaj || attachments || []
-    //     attachmentsPendingMaj = attachmentsPendingMaj || attachmentsPending || []
-
-    //     const liste = [...attachmentsMaj, ...attachmentsPendingMaj]
-
-    //     tuuids = liste.map(item=>(item.tuuid||item.fileId)).filter(item=>item)
-    //     console.debug("Tuuids listener : %O", tuuids)
-
-    // }, [attachments, attachmentsPending])
-
     const listeAttachments = useMemo(()=>{
         const liste = []
         if(attachments) attachments.forEach(item=>liste.push({...item, pret: true}))
@@ -560,7 +390,6 @@ function AfficherAttachments(props) {
             }
             console.debug("Maj attachments pending pour selection : %O", attachmentsMaj)
             setAttachmentsPending([...attachmentsMaj])
-            // tuuidsAttachmentHandler(null, attachmentsMaj)
         } else {
             // Fichier existant, provient d'une collection de l'usager
             if(attachments) {
@@ -571,12 +400,10 @@ function AfficherAttachments(props) {
             const attachmentsMaj = [...attachments, ...selection]
             console.debug("Attachments maj : %O", attachmentsMaj)
             setAttachments(attachmentsMaj)
-            // tuuidsAttachmentHandler(attachmentsMaj)
 
             // Extraire la liste complete des fuuids de la selection
             const { fuuids /*, fuuidsCleSeulement*/ } = mapperAttachments(selection)
             console.debug("AfficherAttachments Fuuids %O", fuuids)
-            // const listeFuuidsCles = [...fuuids, ...fuuidsCleSeulement]
             getClesFormattees(workers, fuuids, {delaiInitial: 500, tentatives: 2})
                 .then(cles=>{
                     const clesMaj = {...attachmentsCles, ...cles}
@@ -589,166 +416,24 @@ function AfficherAttachments(props) {
 
     }, [workers, attachments, attachmentsPending, attachmentsCles, setAttachments, setAttachmentsPending, setAttachmentsCles])
 
-    const onDrop = useCallback(acceptedFiles=>{
-        preparerUploaderFichiers(workers, acceptedFiles)
-            .then(info=>{
-                console.debug("Preparer uploads info : %O", info)
-                const { infoUploads } = info
-                const listeSelection = infoUploads.map(item=>{
-                    const { correlation, transaction } = item
-                    return { fileId: correlation, correlation, ...transaction }
-                })
-                selectionner(listeSelection, {upload: true})
-            })
-            .catch(erreurCb)
-    }, [workers, selectionner, erreurCb])
-    const dzHook = useDropzone({onDrop})
-    const {getRootProps, getInputProps} = dzHook
-
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
-
-    // // Capturer evenement upload
-    // useEffect(()=>addEvenementUpload1(evenementUpload), [evenementUpload, addEvenementUpload1])
-    // // Traiter evenement upload
-    // useEffect(()=>{
-    //     if(!evenementUpload1) return  // Rien a faire
-    //     addEvenementUpload1('')  // Eviter cycle
-
-    //     console.debug("!!! AfficherAttachements evenement upload : %O", evenementUpload1)
-    //     if(attachmentsPending) {
-    //         const routingKey = evenementUpload1.routingKey
-    //         if(routingKey) {
-    //             const message = evenementUpload1.message
-    //             const { tuuid, version_courante } = message
-    //             const mimetype = (version_courante?version_courante.mimetype:null) || ''
-    //             const baseType = mimetype.split('/').shift()
-
-    //             let complete = false
-    //             if(version_courante) {
-    //                 if(baseType === 'video') {
-    //                     const videos = version_courante.video || {},
-    //                           images = version_courante.images || {}
-    //                     complete = images.thumb && Object.values(videos).filter(item=>item.codec === 'h264').pop()
-    //                 } else if(baseType === 'image') {
-    //                     const images = version_courante.images || {}
-    //                     complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
-    //                 } else if(mimetype === 'application/pdf') {
-    //                     const images = version_courante.images || {}
-    //                     complete = images.thumb && Object.values(images).filter(item=>item.mimetype === 'image/webp').pop()
-    //                 } else {
-    //                     complete = true  // Version courante, aucune autre information requise
-    //                 }
-    //             }
-
-    //             const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
-    //                 const fileId = item.fileId || item.tuuid
-    //                 if(fileId === tuuid) { // Remplacer
-    //                     const fichier = {fileId, ...evenementUpload1.message}
-    //                     // Determiner si l'attachment est pret
-    //                     if(!complete) {
-    //                         const row = preparerRowAttachment(workers, fichier)
-    //                         acc.push(row)
-    //                     }
-    //                 } else {
-    //                     acc.push(item)  // Conserver
-    //                 }
-
-    //                 return acc
-    //             }, [])
-
-    //             setAttachmentsPending(attachmentsPendingMaj)
-    //             if(complete) {
-    //                 const rowAttachment = preparerRowAttachment(workers, message)
-    //                 selectionner([rowAttachment])
-    //             }
-    //         } else {
-    //             const { complete, transaction } = evenementUpload1
-    //             // TODO Fix race condition sur setAttachmentsPending / liste pending
-    //             if(!complete) return  // Rien a faire, evite race condition sur selection
-
-    //             // const nouvelUpload = { correlation: complete, ...transaction }
-    //             let majListeners = false
-    //             const attachmentsPendingMaj = attachmentsPending.reduce((acc, item)=>{
-    //                 if(transaction) {
-    //                     majListeners = true
-    //                     if(item.correlation === complete) {
-    //                         // Conserver identificateur tuuid (override correlation)
-    //                         const entete = transaction['en-tete']
-    //                         const tuuid = entete.uuid_transaction
-    //                         const attachmentMaj = {fileId: tuuid, tuuid, ...transaction}
-    //                         acc.push(attachmentMaj)
-    //                     } else {
-    //                         acc.push(item)  // Toujours actif
-    //                     }
-    //                 } else {
-    //                     acc.push(item)  // Toujours actif
-    //                 }
-                    
-    //                 return acc
-    //             }, [])
-    //             setAttachmentsPending(attachmentsPendingMaj)
-    //             if(majListeners) tuuidsAttachmentHandler(null, attachmentsPendingMaj)
-    //         }
-    //     }
-    // }, [workers, evenementUpload1, selectionner, attachmentsPending, setAttachmentsPending, addEvenementUpload1])
-
-    // // Enregistrer evenements ecoute maj fichiers (attachments)
-    // useEffect(()=>{
-    //     const { connexion } = workers
-    //     if(tuuidsAttachments && tuuidsAttachments.length > 0) {
-    //         const params = {tuuids: tuuidsAttachments}
-    //         console.debug("Ajouter listener fichiers %O", params)
-    //         connexion.enregistrerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
-    //         return () => {
-    //             console.debug("Retirer listener fichiers %O", params)
-    //             connexion.retirerCallbackMajFichier(params, addEvenementUpload1Proxy).catch(erreurCb)
-    //         }
-    //     }
-    // }, [workers, tuuidsAttachments, addEvenementUpload1Proxy, erreurCb])
-
-    // useEffect(()=>{
-    //     if(attachments) {
-    //         const pret = attachments.reduce((acc, item)=>acc&&item.pret, true)
-    //         setAttachmentsPrets(pret)
-    //     } else {
-    //         setAttachmentsPrets(true)
-    //     }
-    // }, [attachments, setAttachmentsPrets])
-
-    // if(!attachments || attachments.length === 0) return ''
 
     const compteAttachments = attachments?attachments.length:0
 
     return (
         <div>
+            <p></p>
+            <div>Attachments</div>
             <Row className="liste-header">
-                <Col xs={6} md={2} lg={2}>Attachments</Col>
-
-                <Col xs={6} md={1} lg={1}>
+                <Col xs={3}>
                     <BoutonsFormat modeView={modeView} setModeView={setModeView} />
                 </Col>
 
-                <Col className="buttonbar-right">
-                    {/* <span {...getRootProps()}>
-                        <input {...getInputProps()}/>
-                        <Button variant="secondary">
-                            <i className="fa fa-plus" />
-                            {' '}Upload
-                        </Button>
-                    </span> */}
+                <Col xs={8} className="buttonbar-right">
                     <Button variant="secondary" onClick={choisirFichiersAttaches}>
                         <i className="fa fa-folder" />
                             {' '}Collections
                     </Button>
-                    {/* <Dropdown onSelect={event=>setOptionVideo(event)}>
-                        <Dropdown.Toggle variant="secondary" id="dropdown-option-video">
-                            {optionVideo}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item eventKey="faible">Video basse resolution</Dropdown.Item>
-                            <Dropdown.Item eventKey="original">Video original</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown> */}
                 </Col>
             </Row>
 
@@ -771,9 +456,6 @@ function AfficherAttachments(props) {
                 attachments={listeAttachments}
                 setAttachments={setAttachments}
                 selection={selection}
-                // showPreview={showPreviewAction}
-                // showInfoModalOuvrir={showInfoModalOuvrir}
-                // downloadAction={downloadAction}
                 etatConnexion={etatConnexion}
             />
 
@@ -812,7 +494,6 @@ function BoutonsFormat(props) {
 }
 
 function MenuContextuel(props) {
-    // console.debug("MenuContextuel propppies : %O", props)
     const { contextuel, attachments, selection } = props
 
     if(!contextuel.show) return ''
