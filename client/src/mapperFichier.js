@@ -26,6 +26,7 @@ supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.wa
 
 export { Icones }
 
+// Mapping pour selection d'attachements
 export function mapper(row, workers, opts) {
     // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
     opts = opts || {}
@@ -38,7 +39,7 @@ export function mapper(row, workers, opts) {
     // const supportMedia = opts.supportMedia || {},
     //       supporteWebp = true  // !!supportMedia.webp
 
-    console.debug("!!! MAPPER %O, opts: %O", row, opts)
+    // console.debug("!!! MAPPER %O, opts: %O", row, opts)
 
     let date_version = '', 
         mimetype_fichier = '',
@@ -80,23 +81,14 @@ export function mapper(row, workers, opts) {
             }
 
             if(video) {
-                // const videoLoader = videoResourceLoader(null, fichier.video, {supporteWebm: support.webm, baseUrl: '/messagerie/streams', creerToken})                
-                // videoLoader = videoResourceLoader(getFichierChiffre, video, {supporteWebm, cles})
-                // videoLoader = videoResourceLoader(getFichierChiffre, video, {
-                //     ref_hachage_bytes, version_courante, genererToken, creerToken,
-                //     fuuid: fuuid_v_courante, 
-                //     baseUrl: '/messagerie/streams', 
-                // })
-
                 if(video && Object.keys(video).length > 0) {
                     videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
                 } else {
                     // console.debug("Video - original seulement")
                     videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
                 }
-
             } else if(mimetypeBase === 'audio') {
-                audioLoader = audioResourceLoader(fuuid, {creerToken, version_courante, baseUrl: '/messagerie/streams'})
+                audioLoader = audioResourceLoader(fuuid, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
             }
         
             // Loader du fichier source (principal), supporte thumbnail pour chargement
@@ -145,83 +137,6 @@ export function mapper(row, workers, opts) {
         version_courante,
         favoris,
         disabled,
-    }
-}
-
-export function mapperRecherche(row, workers) {
-    const { 
-        fuuid, tuuid, nom, supprime, favoris, date_creation, date_version, 
-        // mimetype, taille, 
-        thumb_data, thumb_hachage_bytes,
-        version_courante,
-        score,
-    } = row
-
-    // console.debug("!!! MAPPER %O", row)
-
-    let mimetype_fichier = '',
-        taille_fichier = ''
-
-    let thumbnailIcon = '',
-        ids = {},
-        miniThumbnailLoader = null
-    if(!fuuid) {
-        ids.folderId = tuuid  // Collection, tuuid est le folderId
-        thumbnailIcon = Icones.ICONE_FOLDER
-    } else {
-        const { mimetype, taille } = version_courante
-        const ref_hachage_bytes = fuuid
-        mimetype_fichier = mimetype
-        taille_fichier = taille
-        ids.fileId = tuuid    // Fichier, tuuid est le fileId
-        ids.fuuid = fuuid
-        const mimetypeBase = mimetype.split('/').shift()
-
-        if(workers && thumb_data && thumb_hachage_bytes) {
-            if(thumb_hachage_bytes && thumb_data) {
-                miniThumbnailLoader = loadFichierChiffre(workers.traitementFichiers, thumb_hachage_bytes, 'image/jpeg', {dataChiffre: thumb_data})
-            }
-        }
-
-        if(mimetype === 'application/pdf') {
-            thumbnailIcon = ICONE_FICHIER_PDF
-        } else if(mimetypeBase === 'image') {
-            thumbnailIcon = ICONE_FICHIER_IMAGE
-        } else if(mimetypeBase === 'video') {
-            thumbnailIcon = ICONE_FICHIER_VIDEO
-        } else if(mimetypeBase === 'audio') {
-            thumbnailIcon = ICONE_FICHIER_AUDIO
-        } else if(mimetypeBase === 'application/text') {
-            thumbnailIcon = ICONE_FICHIER_TEXT
-        } else if(mimetypeBase === 'application/zip') {
-            thumbnailIcon = ICONE_FICHIER_ZIP
-        } else { 
-            thumbnailIcon = ICONE_FICHIER
-        }
-    }
-
-    return {
-        // fileId: tuuid,
-        // folderId: tuuid,
-        ...ids,
-        nom,
-        supprime, 
-        taille: taille_fichier,
-        dateAjout: date_version || date_creation,
-        mimetype: ids.folderId?'Repertoire':mimetype_fichier,
-        // thumbnailSrc,
-        // thumbnailLoader,
-        // thumbnailIcon,
-        // thumbnailCaption: nom,
-        thumbnail: {
-            miniLoader: miniThumbnailLoader,
-            thumbnailIcon,
-            thumbnailCaption: nom,
-        },
-        version_courante,
-        fuuid,
-        favoris,
-        score,
     }
 }
 
@@ -307,14 +222,6 @@ export function mapDocumentComplet(workers, doc) {
                 copie.videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante})
             }
 
-            // if(Object.keys(video).length > 0) {
-            //     copie.videoLoader = videoResourceLoader(
-            //         traitementFichiers.getFichierChiffre, video, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
-            // } else {
-            //     // Utilisation du video original seulement
-            //     copie.videoLoader = videoResourceLoader(
-            //         traitementFichiers.getFichierChiffre, {}, {creerToken, ref_hachage_bytes, fuuid: fuuid_v_courante, version_courante})
-            // }
         }
     }
 

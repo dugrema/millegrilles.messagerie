@@ -74,13 +74,16 @@ export function preparerColonnes(workers, opts) {
           colonne_adresse = messages_envoyes?'to':'from'
   
     const params = {
-        ordreColonnes: [colonne_date, colonne_adresse, 'subject', 'boutonDetail'],
+        ordreColonnes: [
+            colonne_date, colonne_adresse, 'subject', 
+            // 'boutonDetail',
+        ],
         paramsColonnes: {
             [colonne_date]: {'label': 'Date', formatteur: FormatterDate, xs: 6, md: 3, lg: 2},
             'from': {'label': 'Auteur', xs: 6, md: 4, lg: 4},
             'to': {'label': 'Destinataires', xs: 6, md: 4, lg: 4},
-            'subject': {'label': 'Sujet', xs: 10, md: 4, lg: 5},
-            'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
+            'subject': {'label': 'Sujet', xs: 12, md: 5, lg: 6},
+            // 'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
         },
         tri: {colonne: colonne_date, ordre: -1},
         // rowLoader: data => dechiffrerMessage(workers, data)

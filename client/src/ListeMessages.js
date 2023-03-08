@@ -15,12 +15,9 @@ function ListeMessages(props) {
 
     const { 
         colonnes, enteteOnClickCb,
-        supprimerMessagesCb,
         showNouveauMessage,
+        scrollValue, onScroll,
     } = props
-
-    const etatConnexion = useEtatConnexion(),
-          etatAuthentifie = useEtatAuthentifie()
 
     const messages = useSelector(state=>state.messagerie.liste),
           compteMessages = messages?messages.length:0,
@@ -35,8 +32,6 @@ function ListeMessages(props) {
         </div>
     )
     
-    const titre = props.titre || 'Messages'
-
     return (
         <div>
             <Row className="liste-header">
@@ -51,9 +46,8 @@ function ListeMessages(props) {
             <AfficherListeMessages 
                 colonnes={colonnes}
                 enteteOnClickCb={enteteOnClickCb}
-                etatConnexion={etatConnexion}
-                etatAuthentifie={etatAuthentifie}
-                supprimerMessagesCb={supprimerMessagesCb}
+                scrollValue={scrollValue}
+                onScroll={onScroll}
             />
         </div>
     )
@@ -87,7 +81,7 @@ function AfficherListeMessages(props) {
     const { 
         colonnes, 
         enteteOnClickCb,
-        supprimerMessagesCb,
+        scrollValue, onScroll,
     } = props
 
     const workers = useWorkers(),
@@ -102,24 +96,21 @@ function AfficherListeMessages(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
 
     const onSelectionLignes = useCallback(selection=>{
-        // console.debug("Selection ", selection)
+        console.debug("Selection ", selection)
         dispatch(messagerieActions.selectionMessages(selection))
-    }, [])
+    }, [dispatch])
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])
-    const onContextMenuCb = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
+    const onContextMenuClick = useCallback((event, value)=>onContextMenu(event, value, setContextuel), [])
 
-    const ouvrir = useCallback(event=>{
-        event.preventDefault()
-        event.stopPropagation()
-
-        // console.debug("Ouvrir event : %O, selection: %O", event, selection)
-        if(selection.length === 1) {
-            const uuid_message = selection[0]
-            dispatch(messagerieActions.setUuidMessageActif(uuid_message))
-        }
+    const onOpenHandler = useCallback( item => {
+        // console.debug("Ouvrir item : %O", item)
+        window.getSelection().removeAllRanges()
+        const uuid_transaction = item.uuid_transaction
+        dispatch(messagerieActions.selectionMessages([uuid_transaction]))
+        dispatch(messagerieActions.setUuidMessageActif(uuid_transaction))
     }, [dispatch, selection])
 
-    const supprimerMessages = useCallback( ()=>{
+    const supprimerMessagesHandler = useCallback( ()=>{
         const { connexion, messagerieDao } = workers
         new Promise(async (resolve, reject) => {
             try {
@@ -145,11 +136,13 @@ function AfficherListeMessages(props) {
                 modeView='liste'
                 colonnes={colonnes}
                 rows={messages} 
-                // onClick={onClick} 
-                onDoubleClick={ouvrir}
-                onContextMenu={onContextMenuCb}
-                onSelection={onSelectionLignes}
+                selection={selection}
+                onOpen={onOpenHandler}
+                onContextMenu={onContextMenuClick}
+                onSelect={onSelectionLignes}
                 onClickEntete={enteteOnClickCb}
+                scrollValue={scrollValue}
+                onScroll={onScroll}
             />
 
             <MenuContextuelMessages 
@@ -160,7 +153,7 @@ function AfficherListeMessages(props) {
                 //selection={selection}
                 etatConnexion={etatConnexion}
                 etatAuthentifie={etatAuthentifie}
-                supprimerMessagesCb={supprimerMessages}
+                supprimerMessagesCb={supprimerMessagesHandler}
             />
         </>
     )

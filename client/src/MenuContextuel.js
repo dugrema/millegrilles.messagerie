@@ -137,7 +137,7 @@ function retirerAttacher(listeIds, fichiers, setFichiers) {
 }
 
 export function onContextMenu(event, value, setContextuel) {
-    event.preventDefault()
+    if('preventDefault' in event) event.preventDefault()
     const {clientX, clientY} = event
 
     const posx = clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
