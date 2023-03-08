@@ -110,3 +110,13 @@ SPAN.ql-picker-label {
 .video-window img {
     object-fit: contain;
 }
+
+.navigation-fichiers-scroll {
+    height: calc(100vh - 15rem);
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+.modal-body {
+    background-color: $first-color;
+}

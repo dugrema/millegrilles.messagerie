@@ -757,13 +757,9 @@ function AfficherAttachments(props) {
                     modeView={modeView}
                     colonnes={colonnes}
                     rows={listeAttachments} 
-                    // onClick={...pas utilise...} 
-                    // onDoubleClick={... pas utilise...}
                     onContextMenu={(event, value)=>onContextMenu(event, value, setContextuel)}
-                    onSelection={onSelectionLignes}
-                    onClickEntete={colonne=>{
-                        // console.debug("Entete click : %s", colonne)
-                    }}
+                    selection={selection}
+                    onSelect={onSelectionLignes}
                 />
                 :''
             }

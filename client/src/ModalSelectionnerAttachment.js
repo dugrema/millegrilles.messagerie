@@ -27,8 +27,10 @@ function ModalSelectionnerAttachement(props) {
     const nomRootLocal = 'Favoris'
 
     const [initComplete, setInitComplete] = useState(false)
-    const [colonnes, setColonnes] = useState(preparerColonnes(workers))
+    // const [colonnes, setColonnes] = useState(preparerColonnes(workers))
     const [modeView, setModeView] = useState('liste')
+
+    const colonnes = useMemo(()=>preparerColonnes(workers), [workers])
 
     const listeBrute = useSelector(state=>state.navigationSecondaire.liste)
     const cuuid = useSelector(state=>state.navigationSecondaire.cuuid)
@@ -46,13 +48,14 @@ function ModalSelectionnerAttachement(props) {
           .map(item=>mapDocumentComplet(workers, item))
     }, [workers, show, listeBrute])
 
-    const onSelectionLignes = useCallback(selection=>{
-        console.debug("Selection ", selection)
+    const onSelectionHandler = useCallback(selection=>{
+        console.debug("onSelectionHandler selection ", selection)
         dispatch(actionsNavigationSecondaire.selectionTuuids(selection))
-    }, [])
+    }, [dispatch])
 
-    const choisirHandler = useCallback(()=>{
-        console.debug("Selection %O, liste fichiers %O", selection, liste)
+    const choisirHandler = useCallback(item=>{
+        console.debug("ChoisirHandler item ", item)
+        console.debug("choisirHandler Selection %O, liste fichiers %O", selection, liste)
         const selectionFichiers = liste.filter(item=>selection.includes(item.tuuid))
         console.debug("Choisir fichiers %O", selectionFichiers)
         onSelect(selectionFichiers)
@@ -60,6 +63,7 @@ function ModalSelectionnerAttachement(props) {
     }, [selection, liste, onSelect, fermer])
 
     const naviguerCollection = useCallback( cuuid => {
+        console.debug("naviguerCollection ", cuuid)
         if(!cuuid) cuuid = ''
         try {
             if(cuuid) {
@@ -79,22 +83,31 @@ function ModalSelectionnerAttachement(props) {
         }
     }, [dispatch, workers, erreurCb])
 
-    const onDoubleClick = useCallback( (event, value) => {
-        const dataset = event.currentTarget.dataset
+    const toggleSelectionHandler = useCallback( item => {
+        console.debug("toggleSelection item ", item)
+        let selectionMaj = null
+        if(selection.includes(item)) {
+            selectionMaj = selection.filter(itemSel=>!item)
+        } else {
+            selectionMaj = [...selection, item]
+        }
+        dispatch(actionsNavigationSecondaire.selectionTuuids(selectionMaj))
+    }, [selection, dispatch])
+
+    const onOpenHandler = useCallback( item => {
+        console.debug('onOpenHandler ', item)
         window.getSelection().removeAllRanges()
         
-        const folderId = value.folderId || dataset.folderId
-        const fileId = value.fileId || dataset.fileId
-
-        console.debug("onDoubleClick dataset %O, folderId %o, fileId %O", dataset, folderId, fileId)
-
+        const { fileId, folderId } = item
         if(folderId) {
             naviguerCollection(folderId)
         } else if(fileId) {
-            choisirHandler()
+            // choisirHandler()
+            //onSelectionHandler([...selection, fileId])
+            toggleSelectionHandler(fileId)
         }
 
-    }, [naviguerCollection, choisirHandler, liste])
+    }, [naviguerCollection, choisirHandler, liste, selection, toggleSelectionHandler])
 
     const handlerSliceBreadcrumb = useCallback(level => {
         let tuuid = ''
@@ -139,25 +152,30 @@ function ModalSelectionnerAttachement(props) {
                 {titre}
             </Modal.Header>
 
-            <Row>
-                <Col>
-                    <SectionBreadcrumb 
-                        nomRootLocal={nomRootLocal}
-                        breadcrumb={breadcrumb}
-                        toBreadrumbIdx={handlerSliceBreadcrumb}
+            <Modal.Body>
+                <Row>
+                    <Col>
+                        <SectionBreadcrumb 
+                            nomRootLocal={nomRootLocal}
+                            breadcrumb={breadcrumb}
+                            toBreadrumbIdx={handlerSliceBreadcrumb}
+                        />
+                    </Col>
+                    <Col xs={12} sm={9} md={8} lg={5} className="buttonbars">
+                        <BoutonsFormat modeView={modeView} setModeView={setModeView} />
+                    </Col>
+                </Row>
+                <div className='navigation-fichiers-scroll'>
+                    <ListeFichiers 
+                        modeView={modeView}
+                        colonnes={colonnes}
+                        rows={liste}
+                        selection={selection}
+                        onOpen={onOpenHandler}
+                        onSelect={onSelectionHandler}
                     />
-                </Col>
-                <Col xs={12} sm={9} md={8} lg={5} className="buttonbars">
-                    <BoutonsFormat modeView={modeView} setModeView={setModeView} />
-                </Col>
-            </Row>
-            <ListeFichiers 
-                modeView={modeView}
-                colonnes={colonnes}
-                rows={liste} 
-                onDoubleClick={onDoubleClick}
-                onSelection={onSelectionLignes}
-            />
+                </div>
+            </Modal.Body>
 
             <Modal.Footer>
                 <Button onClick={choisirHandler} disabled={breadcrumb.length === 0}>Choisir</Button>

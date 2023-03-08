@@ -6,10 +6,9 @@ import Button from 'react-bootstrap/Button'
 import Breadcrumb from 'react-bootstrap/Breadcrumb'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
-import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import ProgressBar from 'react-bootstrap/ProgressBar'
 
-import { ListeFichiers, FormatteurTaille, FormatterDate } from '@dugrema/millegrilles.reactjs'
+import { ListeFichiers, FormatterDate } from '@dugrema/millegrilles.reactjs'
 
 import useWorkers, {useUsager} from './WorkerContext'
 import actionsNavigationSecondaire, {thunks as thunksNavigationSecondaire} from './redux/navigationSecondaireSlice'
@@ -27,7 +26,8 @@ function ModalSelectionnerAttachement(props) {
           modeView = 'liste'
 
     const [initComplete, setInitComplete] = useState(false)
-    const [colonnes, setColonnes] = useState(preparerColonnes(workers))
+
+    const colonnes = useMemo(()=>preparerColonnes(workers), [workers])
 
     const listeBrute = useSelector(state=>state.navigationSecondaire.liste)
     const cuuid = useSelector(state=>state.navigationSecondaire.cuuid)
@@ -83,20 +83,20 @@ function ModalSelectionnerAttachement(props) {
         }
     }, [dispatch, workers, erreurCb])
 
-    const onDoubleClick = useCallback( (event, value) => {
-        const dataset = event.currentTarget.dataset
+    const onOpenHandler = useCallback( item => {
+        console.debug("open ", item)
         window.getSelection().removeAllRanges()
         
-        const folderId = value.folderId || dataset.folderId
-        const fileId = value.fileId || dataset.fileId
+        // const folderId = value.folderId || dataset.folderId
+        // const fileId = value.fileId || dataset.fileId
 
-        console.debug("onDoubleClick dataset %O, folderId %o, fileId %O", dataset, folderId, fileId)
+        // console.debug("onDoubleClick dataset %O, folderId %o, fileId %O", dataset, folderId, fileId)
 
-        if(folderId) {
-            naviguerCollection(folderId)
-        } else if(fileId) {
-            choisirHandler()
-        }
+        // if(folderId) {
+        //     naviguerCollection(folderId)
+        // } else if(fileId) {
+        //     choisirHandler()
+        // }
 
     }, [naviguerCollection, choisirHandler, liste])
 
@@ -159,8 +159,9 @@ function ModalSelectionnerAttachement(props) {
                 modeView={modeView}
                 colonnes={colonnes}
                 rows={liste} 
-                onDoubleClick={onDoubleClick}
-                onSelection={onSelectionLignes}
+                onOpen={onOpenHandler}
+                selection={selection}
+                onSelect={onSelectionLignes}
             />
 
             <Modal.Footer>

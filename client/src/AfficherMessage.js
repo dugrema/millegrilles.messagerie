@@ -430,7 +430,7 @@ function AfficherAttachments(props) {
         // console.debug("!!! setSelectioN: %O", selection)
         setSelection(selection)
         setSelectionAttachments(selection)
-    }, [setSelection])
+    }, [setSelection, setSelectionAttachments])
     const showPreviewCb = useCallback( fuuid => {
         // console.debug("Show preview cb : %O", fuuid)
         setFuuidSelectionne(fuuid)
