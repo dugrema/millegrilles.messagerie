@@ -401,7 +401,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
 
             // Identifier hachage_bytes et uuid_transaction de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
-                acc.add(item.hachage_bytes)
+                acc.add(item.ref_hachage_bytes || item.hachage_bytes)
                 return acc
             }, new Set())
             const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
@@ -409,7 +409,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 var cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages, {messages_envoyes})
                 // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
             } catch(err) {
-                // console.debug("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
+                console.warn("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
                 messagesChiffres = [...getState().listeDechiffrage]
                 continue  // Skip
             }
@@ -419,10 +419,14 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
                 // Dechiffrer message
-                const cleDechiffrageMessage = cles[docCourant.hachage_bytes]
-                // console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                const cleDechiffrageMessage = cles[docCourant.ref_hachage_bytes || docCourant.hachage_bytes]
+                console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 try {
-                    const dataDechiffre = await dechiffrerMessage(workers, message, cleDechiffrageMessage)
+                    // Override parametres dechiffrage au besoin
+                    if(message.header) cleDechiffrageMessage.header = message.header
+                    if(message.format) cleDechiffrageMessage.format = message.format
+
+                    const dataDechiffre = await dechiffrerMessage(workers, docCourant, cleDechiffrageMessage)
                     // console.debug("Contenu dechiffre : ", dataDechiffre)
 
                     const validation = dataDechiffre.validation
@@ -438,6 +442,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                     // Cleanup objet dechiffre
                     delete docCourant.message_chiffre
                     delete docCourant.hachage_bytes
+                    delete docCourant.ref_hachage_bytes
                     delete docCourant.certificat_message
                     delete docCourant.certificat_millegrille
                     delete docCourant['_signature']
