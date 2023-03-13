@@ -1,5 +1,5 @@
 const build = {
-  date: '2023-03-11 18:41',
-  version: '2023.2.1'
+  date: '2023-03-13 08:53',
+  version: '2023.2.2'
 }
 module.exports = build;

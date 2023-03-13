@@ -1,6 +1,6 @@
 {
   "name": "millegrilles.messagerie",
-  "version": "2023.2.1",
+  "version": "2023.2.2",
   "description": "Messagerie pour MilleGrilles (web)",
   "main": "index.js",
   "scripts": {
