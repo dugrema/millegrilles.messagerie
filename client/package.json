@@ -1,12 +1,12 @@
 {
   "name": "millegrilles.messagerie-client",
-  "version": "2023.2.2",
+  "version": "2023.3.0",
   "private": true,
   "proxy": "https://localhost:3039",
   "homepage": "/messagerie",
   "dependencies": {
     "@babel/plugin-syntax-object-rest-spread": "^7.8.3",
-    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#2023.2",
+    "@dugrema/millegrilles.reactjs": "git+ssh://git.maceroc.com/git/millegrilles.reactjs#2023.3",
     "buffer": "^6.0.3",
     "comlink": "^4.3.1",
     "crypto-browserify": "^3.12.0",

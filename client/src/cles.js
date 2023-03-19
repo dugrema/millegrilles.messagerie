@@ -14,7 +14,7 @@ export async function dechiffrerMessage(workers, message, cle) {
     let userId = user_id,
         resultatValider = null
 
-    if(!messages_envoyes) {
+    if(!messages_envoyes && messageDechiffre['_signature']) {
         // Message incoming, valider
         const certificat_message = message.certificat_message,
             certificat_millegrille = message.certificat_millegrille

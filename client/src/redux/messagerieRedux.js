@@ -430,7 +430,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                     // console.debug("Contenu dechiffre : ", dataDechiffre)
 
                     const validation = dataDechiffre.validation
-                    if(!messages_envoyes && validation.valide !== true) {
+                    if(!messages_envoyes && validation.valide === false) {
                         console.warn("Message invalide %s, skip", message.uuid_transaction)
                         continue
                     }

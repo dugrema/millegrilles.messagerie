@@ -549,7 +549,8 @@ function preparerReponse(workers, message, setTo, setContent, setUuidThread, set
         setTo(to)
     }
 
-    const dateMessageOriginalInt = message['en-tete'].estampille || message.date_reception
+    const entete = message['en-tete'] || {}
+    const dateMessageOriginalInt = entete.estampille || message.date_reception
     const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
     const messageOriginal = []
     messageOriginal.push('<br><br><p>-----</p>')
