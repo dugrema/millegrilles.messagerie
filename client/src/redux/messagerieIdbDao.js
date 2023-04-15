@@ -6,8 +6,14 @@ const DB_NAME = 'messagerie',
       STORE_DRAFTS = 'drafts'
 // const MAX_AGE_DEFAUT = 6 * 60 * 60  // 6h en secondes
 
-export function init() {
-    return ouvrirDB()
+export async function init() {
+    try {
+        return await ouvrirDB()
+    } catch(err) {
+        // Catch pour affichage erreur worker
+        console.error("Erreur ouvrirDB ", err)
+        throw err
+    }
 }
 
 export async function getMessage(userId, uuid_transaction) {

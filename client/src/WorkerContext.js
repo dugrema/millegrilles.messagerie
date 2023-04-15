@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react'
 import { setupWorkers, cleanupWorkers } from './workers/workerLoader'
-import { init as initFichiersIdb } from './redux/messagerieIdbDao'
+import { init as initMessagerieIdb } from './redux/messagerieIdbDao'
 
 const Context = createContext()
 
@@ -61,13 +61,13 @@ export function WorkerProvider(props) {
         // console.info("Initialiser web workers (ready : %O, workers : %O)", ready, _workers)
 
         // Initialiser workers et tables collections dans IDB
-        const promiseIdb = initFichiersIdb()
+        const promiseIdb = initMessagerieIdb()
         Promise.all([ready, promiseIdb])
             .then(()=>{
                 console.info("Workers prets")
                 setWorkersPrets(true)
             })
-            .catch(err=>console.error("Erreur initialisation collections IDB / workers ", err))
+            .catch(err=>console.error("Erreur initialisation messagerie IDB / workers ", err))
 
         // Cleanup
         // return () => { 

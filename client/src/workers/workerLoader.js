@@ -43,19 +43,26 @@ export function setupWorkers() {
 
 async function wireWorkers(workers) {
     const { chiffrage, transfertFichiers } = workers
-    await transfertFichiers.down_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/down worker : %O", err))
-    await transfertFichiers.up_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/up worker : %O", err))
-
-    const urlLocal = new URL(window.location.href)
-    urlLocal.pathname = '/messagerie/fichiers'
-    const downloadHref = urlLocal.href
-    console.debug("Download path : %O", downloadHref)
-    transfertFichiers.down_setUrlDownload(downloadHref)
     
-    urlLocal.pathname = '/messagerie/upload'
-    const uploadHref = urlLocal.href
-    console.debug("Upload path : %O", uploadHref)
-    transfertFichiers.up_setPathServeur('/messagerie/upload')
+    try {
+        // console.debug("wireWorkers configuration transfertFichiers")
+        await transfertFichiers.down_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/down worker : %O", err))
+        // await transfertFichiers.up_setChiffrage(chiffrage) //.catch(err=>console.error("Erreur chargement transfertFichiers/up worker : %O", err))
+
+        const urlLocal = new URL(window.location.href)
+        urlLocal.pathname = '/messagerie/fichiers'
+        const downloadHref = urlLocal.href
+        console.info("wireWorkers Download path : %O", downloadHref)
+        transfertFichiers.down_setUrlDownload(downloadHref)
+        
+        urlLocal.pathname = '/messagerie/upload'
+        const uploadHref = urlLocal.href
+        console.info("wireWorkers Upload path : %O", uploadHref)
+        transfertFichiers.up_setPathServeur('/messagerie/upload')
+    } catch(err) {
+        console.error("wireWorkers Erreur preparation workers ", err)
+        throw err
+    }
 }
 
 function wrapWorker(worker) {
