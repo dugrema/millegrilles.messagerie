@@ -44,7 +44,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     opts = opts || {}
 
     const {connexion, chiffrage} = workers
-    const {cc, bcc, files, attachmentsCles, fuuids} = opts
+    const {cc, bcc, attachments, attachmentsCles, fuuids} = opts
     const champsOptionnels = ['cc', 'bcc', 'reply_to', 'thread', 'files']
 
     const toFiltre = to.split(';').map(item=>item.trim())
@@ -64,39 +64,40 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
     let fuuidsCles = fuuids,
         fuuidAttachmentsTransfert = null
-    if(files) {
-        throw new Error('todo')
+    if(attachments) {
+        console.debug("Attachements fichiers : %O\nCles fichiers: %O", attachments, attachmentsCles)
         // console.debug("signerMessage Message files : %O", files)
         // // Preparer l'information de dechiffrage (cle) pour tous les attachements
         // // if(fuuidsCleSeulement) {
         // //     fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
         // // }
 
-        // // Faire une liste des fuuids a transferer (pour l'enveloppe postmaster)
-        // fuuidAttachmentsTransfert = files.reduce((acc, attachment) =>{
-        //     const hachage_bytes = attachment.fuuid
-        //     acc.push(hachage_bytes)
-        //     const images = attachment.images || {},
-        //           videos = attachment.video || {}
-        //     Object.values(images).filter(item=>!item.data).forEach(image=>{
-        //         acc.push(image.hachage)
-        //     })
-        //     Object.values(videos).forEach(video=>acc.push(video.fuuid_video))
-        //     return acc
-        // }, [])
+        // Faire une liste des fuuids a transferer pour la commande poster
+        fuuidAttachmentsTransfert = attachments.reduce((acc, attachment) =>{
+            const hachage_bytes = attachment.fuuid
+            acc.push(hachage_bytes)
+            const images = attachment.images || {},
+                  videos = attachment.video || {}
+            Object.values(images).filter(item=>!item.data).forEach(image=>{
+                acc.push(image.hachage)
+            })
+            Object.values(videos).forEach(video=>acc.push(video.fuuid_video))
+            return acc
+        }, [])
+        console.debug("Fuuids a transferer : ", fuuidAttachmentsTransfert)
 
-        // // Retirer cles deja connues
-        // const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])
-        // let clesAttachmentsPrets = {...attachmentsCles}
-        // if(fuuidsClesInconnues.length > 0) {
-        //     console.warn("signerMessage : il manque des cles (%O), charger maintenant", fuuidsClesInconnues)
-        //     const cles = await getClesFormattees(workers, fuuidsClesInconnues)
-        //     clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
-        // }
+        // Retirer cles deja connues
+        const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])
+        let clesAttachmentsPrets = {...attachmentsCles}
+        if(fuuidsClesInconnues.length > 0) {
+            console.warn("signerMessage : il manque des cles (%O), charger maintenant", fuuidsClesInconnues)
+            const cles = await getClesFormattees(workers, fuuidsClesInconnues)
+            clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
+        }
 
-        // // console.debug("Cles attachments : ", clesAttachmentsPrets)
+        // console.debug("Cles attachments : ", clesAttachmentsPrets)
 
-        // // Dechiffrer metadata du fichier (remplacer data_chiffre par data)
+        // Dechiffrer metadata du fichier (remplacer data_chiffre par data)
         // for await (const attachment of attachments) {
         //     const hachage_bytes = attachment.fuuid
         //     const metadata = {...attachment.metadata}
@@ -118,14 +119,16 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         //     // cles: clesAttachmentsPrets,
         //     files: attachments
         // }
+
+        let mappingAttachements = []
+        for await (const item of attachments) {
+            mappingAttachements.push(await mapperAttachementFile(workers, item, clesAttachmentsPrets))
+        }
+
+        message.files = mappingAttachements
     }
 
-    // Signer le message
-    // console.debug("Signer message : %O", message)
-    // const messageSigne = await connexion.formatterMessage(message, 'message')
-    // delete messageSigne['_certificat']  // Retirer certificat
-    // console.debug("Message signe : %O", messageSigne)
-    
+    console.debug("Chiffrer le message : %O", message)
     // Compresser le message en gzip
     let messageBytes = JSON.stringify(message)
     // console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
@@ -187,7 +190,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
     return { 
         // enveloppeMessage: enveloppeRoutage, 
-        commande: {message: enveloppeMessageSigne, fuuids, destinataires},
+        commande: {message: enveloppeMessageSigne, fuuids: fuuidAttachmentsTransfert, destinataires},
         cle: commandeMaitrecles, 
     }
 }
@@ -233,4 +236,147 @@ export async function getClesFormattees(workers, fuuidsCles, opts) {
     }
 
     return cles
+}
+
+async function mapperAttachementFile(workers, fichier, cles) {
+    console.debug("Mapper %O (cles: %O)", fichier, cles)
+    const { chiffrage } = workers
+
+    const hachage_bytes = fichier.fuuid
+
+    const metadata = fichier.metadata
+    // fichier.metadata = metadata
+
+    // console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
+    const cleDechiffrage = cles[hachage_bytes]
+    if(cleDechiffrage && metadata.data_chiffre) {
+        var metadataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, cleDechiffrage)
+        console.debug("Metadata dechiffre %s : %O", hachage_bytes, metadataDechiffre)
+    } else {
+        console.warn("Erreur dechiffrage fuuid %s, cle absente", hachage_bytes)
+        return null
+    }
+
+    const attachementMappe = {
+        name: metadataDechiffre.nom,
+        date: metadataDechiffre.dateFichier,
+        digest: metadataDechiffre.hachage_original,
+        // size: 'todo',
+        encrypted_size: fichier.taille,
+        decryption: {
+            format: cleDechiffrage.format,
+            header: cleDechiffrage.header,
+        }
+    }
+
+    const images = fichier.images,
+          videos = fichier.video
+    if(images || videos) {
+        attachementMappe.media = {}
+        const media = attachementMappe.media
+        
+        // Mapper champs flat
+        Object.keys(CHAMPS_MEDIA).map(champ=>{
+            const nomChampDestination = CHAMPS_MEDIA[champ]
+            if(fichier[champ]) media[nomChampDestination] = fichier[champ]
+        })
+
+        if(images) {
+            // Mapper images
+            media.images = mapperImages(images)
+        }
+
+        if(videos) {
+            // Mapper videos
+            media.videos = mapperVideos(videos)
+        }
+    }
+
+    return attachementMappe
+}
+
+const CHAMPS_MEDIA = {
+    duration: 'duration',
+    height: 'height',
+    width: 'width',
+    video_codec: 'video_codec',
+}
+
+const CHAMPS_IMAGE_INLINE = {
+    width: 'width',
+    height: 'height',
+    mimetype: 'mimetype',
+}
+
+const CHAMPS_IMAGE_ATTACHEE = {
+    hachage: 'file',
+    width: 'width',
+    height: 'height',
+    mimetype: 'mimetype',
+    taille: 'size',
+}
+
+const CHAMPS_VIDEO = {
+    fuuid_video: 'file',
+    width: 'width',
+    height: 'height',
+    mimetype: 'mimetype',
+    taille_fichier: 'size',
+    codec: 'codec',
+    bitrate: 'bitrate',
+    quality: 'quality',
+}
+
+function mapperImages(images) {
+
+    const imagesMappees = []
+
+    for (const image of Object.values(images)) {
+        if(image.data) {
+            const imageMappee = {
+                data: image.data,
+            }
+            for (const champ of Object.keys(CHAMPS_IMAGE_INLINE)) {
+                const champDestination = CHAMPS_IMAGE_INLINE[champ]
+                if(image[champ]) imageMappee[champDestination] = image[champ]
+            }
+            imagesMappees.push(imageMappee)
+        } else {
+            // Image externe mappee (attachement)
+            const imageMappee = {
+                decryption: {
+                    header: image.header,
+                    format: image.format,
+                }
+            }
+            for (const champ of Object.keys(CHAMPS_IMAGE_ATTACHEE)) {
+                const champDestination = CHAMPS_IMAGE_ATTACHEE[champ]
+                if(image[champ]) imageMappee[champDestination] = image[champ]
+            }
+            imagesMappees.push(imageMappee)
+        }
+    }
+
+    return imagesMappees
+}
+
+function mapperVideos(videos) {
+
+    const videosMappes = []
+
+    for (const video of Object.values(videos)) {
+        const videoMappe = {
+            decryption: {
+                header: video.header,
+                format: video.format,
+            }
+        }
+        for (const champ of Object.keys(CHAMPS_VIDEO)) {
+            const champDestination = CHAMPS_VIDEO[champ]
+            if(video[champ]) videoMappe[champDestination] = video[champ]
+        }
+        videosMappes.push(videoMappe)
+    }
+
+    return videosMappes
 }
