@@ -42,7 +42,7 @@ export function setupWorkers() {
 }
 
 async function wireWorkers(workers) {
-    const { chiffrage, transfertFichiers } = workers
+    const { connexion, chiffrage, transfertFichiers } = workers
     
     try {
         // console.debug("wireWorkers configuration transfertFichiers")
@@ -59,6 +59,28 @@ async function wireWorkers(workers) {
         const uploadHref = urlLocal.href
         console.info("wireWorkers Upload path : %O", uploadHref)
         transfertFichiers.up_setPathServeur('/messagerie/upload')
+
+        const location = new URL(window.location)
+        location.pathname = '/fiche.json'
+        // console.debug("Charger fiche ", location.href)
+      
+        const axiosImport = await import('axios')
+        const axios = axiosImport.default
+        const reponse = await axios.get(location.href)
+        console.debug("Reponse fiche ", reponse)
+        const data = reponse.data || {}
+        const fiche = JSON.parse(data.contenu)
+        const ca = fiche.ca
+        if(ca) {
+            // console.debug("initialiserCertificateStore (connexion, chiffrage)")
+            await Promise.all([
+                connexion.initialiserCertificateStore(ca, {isPEM: true, DEBUG: false}),
+                chiffrage.initialiserCertificateStore(ca, {isPEM: true, DEBUG: false})
+            ])
+        } else {
+            throw new Error("Erreur initialisation - fiche/CA non disponible")
+        }
+
     } catch(err) {
         console.error("wireWorkers Erreur preparation workers ", err)
         throw err

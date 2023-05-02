@@ -399,9 +399,9 @@ async function transmettreCommande(socket, params, action, opts) {
 
 /* Fonction de verification pour eviter abus de l'API */
 function verifierMessage(message, domaine, action) {
-    const entete = message['en-tete'] || {},
-          domaineRecu = entete.domaine,
-          actionRecue = entete.action
+    const routage = message.routage || {},
+          domaineRecu = routage.domaine,
+          actionRecue = routage.action
     if(domaineRecu !== domaine) throw new Error(`Mismatch domaine (${domaineRecu} !== ${domaine})"`)
     if(actionRecue !== action) throw new Error(`Mismatch action (${actionRecue} !== ${action})"`)
 }
