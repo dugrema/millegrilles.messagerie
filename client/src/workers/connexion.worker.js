@@ -91,13 +91,18 @@ function marquerLu(uuid_message, flag_lu) {
 async function posterMessage(message, commandeMaitrecles, opts) {
   opts = opts || {}
 
-  throw new Error('todo fix me')
-
   // Les messages vont etre signes separement et emis en meme temps vers le serveur
-  const messageSigne = await ConnexionClient.formatterMessage(message, 'Messagerie', {action: 'poster', ajouterCertificat: true})
+  // const messageSigne = await ConnexionClient.formatterMessage(message, 'Messagerie', {action: 'poster', ajouterCertificat: true})
   // const commandeMaitreclesSignee = await ConnexionClient.formatterMessage(commandeMaitrecles, 'poster', {domaine: 'MaitreDesCles'})
 
-  return ConnexionClient.emitBlocking('posterMessage', {message: messageSigne, commandeMaitrecles})
+  return ConnexionClient.emitBlocking(
+    'posterMessage', message,
+    {
+      kind: MESSAGE_KINDS.KIND_COMMANDE, 
+      domaine: CONST_DOMAINE_MESSAGERIE, action: 'poster', 
+      attachements: {cle: commandeMaitrecles}, ajouterCertificat: true
+    }
+  )
 }
 
 async function getDomainesMessagerie() {

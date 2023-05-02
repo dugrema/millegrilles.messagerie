@@ -82,17 +82,19 @@ function getReferenceContacts(socket, params) {
 }
 
 async function posterMessage(socket, params) {
-    const { message, commandeMaitrecles } = params
+    // const { message, commandeMaitrecles } = params
+    const message = params
 
-    debug("Poster message\n%O\nCommande maitre cles : %O", message, commandeMaitrecles)
+    debug("Poster message\n%O", message)
 
-    const partition = commandeMaitrecles['_partition']
-    const reponseMaitreCles = await transmettreCommande(socket, commandeMaitrecles, 'sauvegarderCle', {domaine: CONST_DOMAINE_MAITREDESCLES, partition})
-    debug("Reponse maitre des cles : %O", reponseMaitreCles)
-    const reponseMessage = await transmettreCommande(socket, message, 'poster')
-    debug("Reponse poster message : %O", reponseMessage)
+    throw new Error('todo')
+    // const partition = commandeMaitrecles['_partition']
+    // const reponseMaitreCles = await transmettreCommande(socket, commandeMaitrecles, 'sauvegarderCle', {domaine: CONST_DOMAINE_MAITREDESCLES, partition})
+    // debug("Reponse maitre des cles : %O", reponseMaitreCles)
+    // const reponseMessage = await transmettreCommande(socket, message, 'poster')
+    // debug("Reponse poster message : %O", reponseMessage)
 
-    return {message: reponseMessage, maitreCles: reponseMaitreCles}
+    // return {message: reponseMessage, maitreCles: reponseMaitreCles}
 }
 
 function majContact(socket, params) {
