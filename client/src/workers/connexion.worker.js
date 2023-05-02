@@ -55,7 +55,7 @@ function getClesChiffrage() {
 function initialiserProfil(adresse) {
   return ConnexionClient.emitBlocking(
     'initialiserProfil', {adresse}, 
-    {kind: MESSAGE_KINDS.KIND_REQUETE, domaine: CONST_DOMAINE_MESSAGERIE, action: 'initialiserProfil', ajouterCertificat: true}
+    {kind: MESSAGE_KINDS.KIND_COMMANDE, domaine: CONST_DOMAINE_MESSAGERIE, action: 'initialiserProfil', ajouterCertificat: true}
   )
 }
 
