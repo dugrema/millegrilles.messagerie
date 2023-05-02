@@ -87,14 +87,13 @@ async function posterMessage(socket, params) {
 
     debug("Poster message\n%O", message)
 
-    throw new Error('todo')
     // const partition = commandeMaitrecles['_partition']
     // const reponseMaitreCles = await transmettreCommande(socket, commandeMaitrecles, 'sauvegarderCle', {domaine: CONST_DOMAINE_MAITREDESCLES, partition})
     // debug("Reponse maitre des cles : %O", reponseMaitreCles)
-    // const reponseMessage = await transmettreCommande(socket, message, 'poster')
-    // debug("Reponse poster message : %O", reponseMessage)
+    const reponseMessage = await transmettreCommande(socket, message, 'poster')
+    debug("Reponse poster message : %O", reponseMessage)
 
-    // return {message: reponseMessage, maitreCles: reponseMaitreCles}
+    return reponseMessage
 }
 
 function majContact(socket, params) {

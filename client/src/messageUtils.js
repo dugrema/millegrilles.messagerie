@@ -143,6 +143,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     // console.debug("Message chiffre : %O", messageChiffre)
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
+    // commandeMaitrecles.attachements = {'partition': commandeMaitrecles['_partition']}
 
     const destinataires = [...new Set([...toFiltre, ...ccFiltre, ...bccFiltre])]  // dedupe
 
