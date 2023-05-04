@@ -4,35 +4,39 @@ import { pki } from '@dugrema/node-forge'
 const { extraireExtensionsMillegrille } = forgecommon
 
 export async function dechiffrerMessage(workers, message, cle) {
-    const { message_chiffre, date_envoi, user_id } = message
+    const { date_envoi, user_id } = message
+    let data_chiffre = 'm' + message.contenu  // Ajouter code 'm' pour dechiffrer multibase base64
 
     let messages_envoyes = date_envoi?true:false
 
-    const docChiffre = { data_chiffre: message_chiffre }
+    const docChiffre = { data_chiffre }
+    console.debug("Dechiffrer %O avec cle %O", docChiffre, cle)
     const messageDechiffre = await workers.chiffrage.chiffrage.dechiffrerChampsChiffres(docChiffre, cle, {lzma: true})
     
+    console.debug("dechiffrerMessage Message dechiffre : ", messageDechiffre)
+
     let userId = user_id,
         resultatValider = null
 
-    if(!messages_envoyes && messageDechiffre['_signature']) {
+    if(!messages_envoyes) {
         // Message incoming, valider
-        const certificat_message = message.certificat_message,
-            certificat_millegrille = message.certificat_millegrille
-        const certForge = pki.certificateFromPem(certificat_message)
-        const extensions = extraireExtensionsMillegrille(certForge)
-        userId = extensions.userId
+        // const certificat_message = message.certificat_message,
+        //       certificat_millegrille = message.certificat_millegrille
+        // const certForge = pki.certificateFromPem(certificat_message)
+        // const extensions = extraireExtensionsMillegrille(certForge)
+        // userId = extensions.userId
 
-        resultatValider = await workers.chiffrage.verifierMessage(
-            {...messageDechiffre, '_certificat': certificat_message, '_millegrille': certificat_millegrille}, 
-            {support_idmg_tiers: true}
-        )
-        .catch(err=>{
-            console.error("Erreur validation message : %O", err)
-            return false
-        })
+        // resultatValider = await workers.chiffrage.verifierMessage(
+        //     {...messageDechiffre, '_certificat': certificat_message, '_millegrille': certificat_millegrille}, 
+        //     {support_idmg_tiers: true}
+        // )
+        // .catch(err=>{
+        //     console.error("Erreur validation message : %O", err)
+        //     return false
+        // })
     }
 
-    const messageDict = {...messageDechiffre, validation: {valide: resultatValider, userId}}
+    const messageDict = {message: messageDechiffre, validation: {valide: resultatValider, userId}}
 
     return messageDict
 }

@@ -56,28 +56,47 @@ export async function mergeReferenceMessages(userId, messages) {
     // Parcourir chaque message pour voir s'il existe deja
     const store = db.transaction(STORE_MESSAGES, 'readwrite').objectStore(STORE_MESSAGES)
     for await (let message of messages) {
-        const uuid_transaction = message.uuid_transaction
-        const messageExistant = await store.get(uuid_transaction)
-        const attachments_status = message.attachments || {}
-        const attachments_traites = message.attachments_traites || false
+        const message_id = message.message.id
+        const messageExistant = await store.get(message_id)
+        const fichiers = message.fichiers || {}
+        const fichiers_traites = message.fichiers_traites || false
         if(!messageExistant) {
             // console.debug("mergeReferenceMessages Conserver nouveau message : %O", message)
-            await store.put({user_id: userId, ...message, attachments_status, attachments_traites, 'dechiffre': 'false'})
+            const nouveauMessage = {
+                message_id,
+                user_id: userId, 
+                ...message, 
+                fichiers, 
+                fichiers_traites: fichiers_traites, 
+                'dechiffre': 'false'
+            }
+            console.debug("Put nouveau message ", nouveauMessage)
+            await store.put(nouveauMessage)
         } else {
             // Verifier si on doit ajouter date_envoi ou date_reception
             const { date_envoi: date_envoi_ref, date_reception: date_reception_ref } = message
             const { date_envoi: date_envoi_local, date_reception: date_reception_local } = messageExistant
+            let datesOverrides = {}
             if(date_reception_ref && !date_reception_local) {
                 // Injecter date reception (le message etait deja dans boite de reception)
                 // console.debug("mergeReferenceMessages Injecter date reception %O dans %s", date_reception_ref, uuid_transaction)
-                await store.put({...messageExistant, attachments_status, attachments_traites, date_reception: date_reception_ref})
+                datesOverrides.date_reception = date_reception_ref
             } else if(date_envoi_ref && !date_envoi_local) {
                 // Injecter date envoi (le message etait deja dans la boite d'envoi)
                 // console.debug("mergeReferenceMessages Injecter date envoi %O dans %s", date_envoi_ref, uuid_transaction)
-                await store.put({...messageExistant, attachments_status, attachments_traites, date_envoi: date_envoi_ref})
+                datesOverrides.date_envoi = date_envoi_ref
             } else {
                 // console.debug("Rien a merger pour %O", message)
             }
+
+            const messageMaj = {
+                ...messageExistant, 
+                fichiers_status: fichiers_status, 
+                fichiers_traites: fichiers_traites, 
+                ...datesOverrides
+            }
+            console.debug("Put message maj : ", messageMaj)
+            await store.put(messageMaj)
         }
     }
 }
@@ -113,13 +132,15 @@ export async function updateMessage(message, opts) {
     const store = db.transaction(STORE_MESSAGES, 'readwrite').store
     try {
         if(opts.replace) {
-            await store.put(message)
-            return message
+            throw new Error('obsolete')
+            // await store.put(message)
+            // return message
         } else {
             const userId = message.user_id || opts.userId
             if(!userId) throw new Error("messagerieIdbDao.updateMessage userId doit etre fourni")
             const messageOriginal = await store.get([message.message_id, userId])
             const messageMaj = {...messageOriginal, ...message}
+            console.debug("Maj message : ", messageMaj)
             await store.put(messageMaj)
             return messageMaj
         }

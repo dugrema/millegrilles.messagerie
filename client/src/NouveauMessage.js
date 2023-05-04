@@ -293,7 +293,8 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
     const messageEnvoyer = {
         message_id: resultat.message_id,
         user_id: userId,
-        message: resultat.message,
+        message: {...resultat.commande, contenu: undefined},
+        contenu: resultat.message,
         destinataires: mapDestinataires,
         date_envoi: resultat.commande.message.estampille,
         

@@ -325,16 +325,29 @@ export function creerThunks(actions, nomSlice) {
 
         dispatch(setSyncEnCours(true))
 
-        // console.debug("traiterChargerMessagesParSyncid messages ", messages)
+        console.debug("traiterChargerMessagesParSyncid messages ", messages)
 
         let batchUuids = new Set()
         for await (const messageSync of messages) {
-            const uuid_transaction = messageSync.uuid_transaction
-            const messageIdb = await messagerieDao.getMessage(userId, uuid_transaction)
+            // Extraire le message_id
+            const message_id = messageSync.message.id
+
+            const messageIdb = await messagerieDao.getMessage(userId, message_id)
             // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
             if(messageIdb) {
+                // const messageObj = {...messageSync, message_id}
+                // delete messageObj.message
+                const messageObj = {
+                    date_envoi: messageSync.date_envoi,
+                    date_reception: messageSync.date_reception,
+                    fichiers_completes: messageSync.fichiers_completes,
+                    lu: messageSync.lu,
+                    supprime: messageSync.supprime,
+                }
+
                 // Message connu, merge flags
-                const messageMaj = await messagerieDao.updateMessage(messageSync, {userId})
+                const messageMaj = await messagerieDao.updateMessage(messageObj, {userId})
+
                 // console.debug("Message maj avec sync ", messageMaj)
                 if(messageMaj.dechiffre === 'true') {
                     // Deja dechiffre, on le guarde
@@ -343,15 +356,15 @@ export function creerThunks(actions, nomSlice) {
             } else {
                 // Message inconnu, on le charge
                 // console.debug("traiterChargerMessagesParSyncid Message inconnu ", uuid_transaction)
-                batchUuids.add(uuid_transaction)
+                batchUuids.add(message_id)
             }
         }
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            // console.debug("Charger messages du serveur ", batchUuids)
+            console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            // console.debug("Liste messages recue : ", listeMessages)
+            console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -397,17 +410,20 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             const batchMessages = messagesChiffres.slice(0, CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Batch messages
             messagesChiffres = messagesChiffres.slice(CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Clip 
             listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
-            // console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
+            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
+            console.debug("dechiffrageMiddlewareListener Batch messages ", batchMessages)
 
             // Identifier hachage_bytes et uuid_transaction de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
-                acc.add(item.ref_hachage_bytes || item.hachage_bytes)
+                const infoDechiffrage = item.message.dechiffrage
+                acc.add(infoDechiffrage.hachage)
                 return acc
             }, new Set())
-            const uuid_transaction_messages = batchMessages.map(item=>item.uuid_transaction)
+            const uuid_transaction_messages = batchMessages.map(item=>item.message.id)
             try {
+                console.debug("dechiffrageMiddlewareListener Charger message_ids %O, cles %O", uuid_transaction_messages, liste_hachage_bytes)
                 var cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages, {messages_envoyes})
-                // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+                console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
             } catch(err) {
                 console.warn("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
                 messagesChiffres = [...getState().listeDechiffrage]
@@ -415,42 +431,52 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             }
 
             for await (const message of batchMessages) {
-                const docCourant = {...message}  // Copie du proxy contact (read-only)
+                const docCourant = {...message.message}  // Copie du proxy contact (read-only)
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
                 
                 // Dechiffrer message
-                const cleDechiffrageMessage = cles[docCourant.ref_hachage_bytes || docCourant.hachage_bytes]
+                const infoDechiffrage = docCourant.dechiffrage
+                const cleDechiffrageMessage = cles[infoDechiffrage.hachage]
                 console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 try {
                     // Override parametres dechiffrage au besoin
-                    if(message.header) cleDechiffrageMessage.header = message.header
-                    if(message.format) cleDechiffrageMessage.format = message.format
+                    if(infoDechiffrage.header) cleDechiffrageMessage.header = infoDechiffrage.header
+                    if(infoDechiffrage.format) cleDechiffrageMessage.format = infoDechiffrage.format
 
                     const dataDechiffre = await dechiffrerMessage(workers, docCourant, cleDechiffrageMessage)
-                    // console.debug("Contenu dechiffre : ", dataDechiffre)
+                    console.debug("Contenu dechiffre : ", dataDechiffre)
+                    const messageDechiffre = dataDechiffre.message
 
-                    const validation = dataDechiffre.validation
-                    if(!messages_envoyes && validation.valide === false) {
-                        console.warn("Message invalide %s, skip", message.uuid_transaction)
-                        continue
-                    }
+                    // const validation = messageDechiffre.validation
+                    // if(!messages_envoyes && validation.valide === false) {
+                    //     console.warn("Message invalide %s, skip", message.uuid_transaction)
+                    //     continue
+                    // }
 
                     // Ajout/override champs de metadonne avec contenu dechiffre
-                    Object.assign(docCourant, dataDechiffre)
+                    // Object.assign(docCourant, dataDechiffre)
+                    docCourant.messageDechiffre = messageDechiffre
                     docCourant.dechiffre = 'true'
 
-                    // Cleanup objet dechiffre
-                    delete docCourant.message_chiffre
-                    delete docCourant.hachage_bytes
-                    delete docCourant.ref_hachage_bytes
-                    delete docCourant.certificat_message
-                    delete docCourant.certificat_millegrille
-                    delete docCourant['_signature']
+                    // // Cleanup objet dechiffre
+                    // delete docCourant.message_chiffre
+                    // delete docCourant.hachage_bytes
+                    // delete docCourant.ref_hachage_bytes
+                    // delete docCourant.certificat_message
+                    // delete docCourant.certificat_millegrille
+                    // delete docCourant['_signature']
 
-                    // Sauvegarder dans IDB
-                    await messagerieDao.updateMessage(docCourant, {replace: true})
+                    const messageMaj = {
+                        message_id: message.message_id, 
+                        message: {...message.message, contenu: undefined},  // Retirer contenu chiffre du message
+                        contenu: messageDechiffre, 
+                        dechiffre: 'true'
+                    }
 
-                    // Mettre a jour liste a l'ecran
+                    // // Sauvegarder dans IDB
+                    await messagerieDao.updateMessage(messageMaj, {userId})
+
+                    // // Mettre a jour liste a l'ecran
                     listenerApi.dispatch(actions.mergeMessagesData(docCourant))
                 } catch(err) {
                     console.error("Erreur dechiffrage message %O : %O", message, err)
@@ -479,7 +505,7 @@ async function syncMessages(workers, limit, dateMaximum, skipCount, cbChargerMes
         {limit, date_maximum: dateMaximum, skip: skipCount, messages_envoyes, supprime, inclure_supprime}
     )
     const messages = reponseMessages.messages || []
-    // console.debug("syncMessages Reponse ", messages)
+    console.debug("syncMessages Reponse ", messages)
     if(messages.length > 0) {
         await cbChargerMessages(messages)
             // .catch(err=>console.error("Erreur traitement chargeMessagesParSyncid %O : %O", messages, err))
@@ -493,8 +519,9 @@ async function chargerBatchMessages(workers, batchUuids, opts) {
     const { connexion } = workers
     const { messages_envoyes } = opts
     const reponse = await connexion.getMessages(
-        {uuid_transactions: batchUuids, limit: batchUuids.length, messages_envoyes}
+        {message_ids: batchUuids, limit: batchUuids.length, messages_envoyes}
     )
+    console.debug("chargerBatchMessages Reponse ", reponse)
     if(!reponse.err) {
         const messages = reponse.messages
         return messages

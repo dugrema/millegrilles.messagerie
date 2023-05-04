@@ -38,10 +38,10 @@ function getMessagesAttachments(requete) {
   )
 }
 
-function getPermissionMessages(uuid_transaction_messages, opts) {
+function getPermissionMessages(message_ids, opts) {
   opts = opts || {}
   const messages_envoyes = opts.messages_envoyes?true:false
-  const requete = {uuid_transaction_messages, messages_envoyes}
+  const requete = {message_ids, messages_envoyes}
   return ConnexionClient.emitBlocking(
     'getPermissionMessages', requete, 
     {kind: MESSAGE_KINDS.KIND_REQUETE, domaine: CONST_DOMAINE_MESSAGERIE, action: 'getPermissionMessages', ajouterCertificat: true}
