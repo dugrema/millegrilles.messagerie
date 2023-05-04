@@ -23,7 +23,7 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     }
     // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
-    const { commande, cle } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
+    const { message, commande, cle } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
 
     console.debug("posterMessage commande %O\nCle %O", commande, cle)
 
@@ -34,10 +34,7 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     const reponse = await connexion.posterMessage(commande, cle)
     console.debug("Reponse poster : %O", reponse)
 
-    throw new Error('todo')
-    // const uuid_message = reponse.message.uuid_message
-
-    // return {...reponse, messageOriginal: message, uuid_message}
+    return {...reponse, message, commande}
 }
 
 export async function signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts) {
@@ -66,11 +63,6 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         fuuidAttachmentsTransfert = null
     if(attachments) {
         console.debug("Attachements fichiers : %O\nCles fichiers: %O", attachments, attachmentsCles)
-        // console.debug("signerMessage Message files : %O", files)
-        // // Preparer l'information de dechiffrage (cle) pour tous les attachements
-        // // if(fuuidsCleSeulement) {
-        // //     fuuidsCles = [...fuuidsCles, ...fuuidsCleSeulement]
-        // // }
 
         // Faire une liste des fuuids a transferer pour la commande poster
         fuuidAttachmentsTransfert = attachments.reduce((acc, attachment) =>{
@@ -95,31 +87,6 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
             clesAttachmentsPrets = {...clesAttachmentsPrets, ...cles}
         }
 
-        // console.debug("Cles attachments : ", clesAttachmentsPrets)
-
-        // Dechiffrer metadata du fichier (remplacer data_chiffre par data)
-        // for await (const attachment of attachments) {
-        //     const hachage_bytes = attachment.fuuid
-        //     const metadata = {...attachment.metadata}
-        //     attachment.metadata = metadata
-
-        //     // console.debug("Dechiffrer metadata %s : %O", hachage_bytes, metadata)
-        //     const cleDechiffrage = clesAttachmentsPrets[hachage_bytes]
-        //     if(cleDechiffrage && metadata.data_chiffre) {
-        //         const data_dechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, cleDechiffrage)
-        //         // console.debug("Metadata dechiffre %s : %O", hachage_bytes, data_dechiffre)
-        //         delete metadata.data_chiffre
-        //         metadata.data = data_dechiffre
-        //     } else {
-        //         console.warn("Erreur dechiffrage fuuid %s, cle absente", hachage_bytes)
-        //     }
-        // }
-
-        // message.attachments = {
-        //     // cles: clesAttachmentsPrets,
-        //     files: attachments
-        // }
-
         let mappingAttachements = []
         for await (const item of attachments) {
             mappingAttachements.push(await mapperAttachementFile(workers, item, clesAttachmentsPrets))
@@ -143,19 +110,8 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     // console.debug("Message chiffre : %O", messageChiffre)
 
     const commandeMaitrecles = messageChiffre.commandeMaitrecles
-    // commandeMaitrecles.attachements = {'partition': commandeMaitrecles['_partition']}
 
     const destinataires = [...new Set([...toFiltre, ...ccFiltre, ...bccFiltre])]  // dedupe
-
-    // Preparer l'enveloppe du message
-    // const enveloppeMessage = {
-    //     contenu: messageChiffre.doc.data_chiffre,
-    //     dechiffrage: {
-    //         format: commandeMaitrecles.format,
-    //         header: commandeMaitrecles.header,
-    //         hachage: commandeMaitrecles['hachage_bytes'],
-    //     }
-    // }
 
     const commandeMaitreclesContenu = JSON.parse(commandeMaitrecles.contenu)
     const dechiffrage = {
@@ -163,13 +119,6 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         header: commandeMaitreclesContenu.header,
         hachage: commandeMaitreclesContenu['hachage_bytes'],
     }
-
-    // if(attachments) {
-    //     enveloppeMessage.attachments = fuuids
-    // }
-    // if(fuuidAttachmentsTransfert) {
-    //     enveloppeMessage.attachments = fuuidAttachmentsTransfert
-    // }
 
     const dataChiffre = messageChiffre.doc.data_chiffre.slice(1)  // Retirer le premier character multibase (base64)
 
@@ -190,7 +139,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     //     routageMessage, 'Messagerie', {action: 'poster', ajouterCertificat: true})
 
     return { 
-        // enveloppeMessage: enveloppeRoutage, 
+        message,
         commande: {message: enveloppeMessageSigne, fuuids: fuuidAttachmentsTransfert, destinataires},
         cle: commandeMaitrecles, 
     }

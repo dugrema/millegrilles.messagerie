@@ -35,12 +35,11 @@ function createObjectStores(db, oldVersion) {
         switch(oldVersion) {
             case 0:
             case 1:
-                messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['uuid_transaction', 'user_id']})
+                messageStore = db.createObjectStore(STORE_MESSAGES, {keyPath: ['message_id', 'user_id']})
                 contactStore = db.createObjectStore(STORE_CONTACTS, {keyPath: 'uuid_contact'})
                 db.createObjectStore(STORE_DRAFTS, {autoIncrement: true})
                 
-                // Index messages
-                // messageStore.createIndex('etatChargement', ['user_id', '_etatChargement'])
+                // Index pour listes de messages par usager
                 messageStore.createIndex('dechiffre', ['user_id', 'dechiffre'])
                 messageStore.createIndex('date_reception', ['user_id', 'date_reception'])
                 messageStore.createIndex('date_envoi', ['user_id', 'date_envoi'])

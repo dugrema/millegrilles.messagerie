@@ -284,19 +284,26 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
     if(resultat.err) throw resultat.err
     if(resultat.ok === false) throw new Error("Erreur envoyer message")
 
+    const mapDestinataires = resultat.commande.destinataires.reduce((acc, item)=>{
+        acc[item] = null
+        return acc
+    }, {})
+
     // Sauvegarder dans la boite d'envoi
     const messageEnvoyer = {
-        ...resultat.messageOriginal,
+        message_id: resultat.message_id,
         user_id: userId,
-        uuid_transaction: resultat.uuid_message,  // Message envoyer n'a pas de uuid_transaction
-        uuid_message: resultat.uuid_message,
-        date_envoi: resultat.message['en-tete'].estampille,
+        message: resultat.message,
+        destinataires: mapDestinataires,
+        date_envoi: resultat.commande.message.estampille,
+        
+        // Flags
         dechiffre: 'true',
         lu: false,
         supprime: false,
     }
 
-    console.debug("Envoyer userId %s resultat : %O", userId, messageEnvoyer)
+    console.debug("envoyer Conserver message dans IDB : %O", userId, messageEnvoyer)
 
     const messageMaj = await messagerieDao.updateMessage(messageEnvoyer)
     console.debug("envoyer Messages maj ", messageMaj)

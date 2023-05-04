@@ -111,16 +111,21 @@ export async function updateMessage(message, opts) {
     opts = opts || {}
     const db = await ouvrirDB()
     const store = db.transaction(STORE_MESSAGES, 'readwrite').store
-    if(opts.replace) {
-        await store.put(message)
-        return message
-    } else {
-        const userId = message.user_id || opts.userId
-        if(!userId) throw new Error("messagerieIdbDao.updateMessage userId doit etre fourni")
-        const messageOriginal = await store.get([message.uuid_transaction, userId])
-        const messageMaj = {...messageOriginal, ...message}
-        await store.put(messageMaj)
-        return messageMaj
+    try {
+        if(opts.replace) {
+            await store.put(message)
+            return message
+        } else {
+            const userId = message.user_id || opts.userId
+            if(!userId) throw new Error("messagerieIdbDao.updateMessage userId doit etre fourni")
+            const messageOriginal = await store.get([message.message_id, userId])
+            const messageMaj = {...messageOriginal, ...message}
+            await store.put(messageMaj)
+            return messageMaj
+        }
+    } catch(err) {
+        console.error('messagerieIdbDao.updateMessage Erreur', err)
+        throw err
     }
 }
 
