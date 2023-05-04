@@ -88,7 +88,7 @@ function mergeMessagesDataAction(state, action) {
     let liste = state.liste || []
 
     for (const payloadMessage of payload) {
-        let { uuid_transaction } = payloadMessage
+        let { message_id } = payloadMessage
         // console.debug("mergeMessagesDataAction action: %O, uuid_transaction : %O", action, uuid_transaction)
 
         // Ajout flag _mergeVersion pour rafraichissement ecran
@@ -99,15 +99,15 @@ function mergeMessagesDataAction(state, action) {
             peutAppend = !retirer
 
         // Recuperer version courante (en memoire)
-        let dataCourant = liste.filter(item=>item.uuid_transaction === uuid_transaction).pop()
+        let dataCourant = liste.filter(item=>item.message_id === message_id).pop()
 
         if(dataCourant) {
             if(retirer) {
-                liste = liste.filter(item=>item.uuid_transaction !== uuid_transaction)
+                liste = liste.filter(item=>item.message_id !== message_id)
             } else {
                 dataCourant = {...dataCourant, ...data}
                 let listeModifiee = liste.map(item=>{
-                    if(item.uuid_transaction !== uuid_transaction) return item
+                    if(item.message_id !== message_id) return item
                     return dataCourant
                 })
                 liste = listeModifiee
@@ -149,10 +149,10 @@ function supprimerMessagesAction(state, action) {
     if(!Array.isArray(messages)) messages = [messages]
     messages = messages.map(item=>{
         if(typeof(item) === 'string') return item
-        return item.uuid_transaction
+        return item.message_id
     })
     state.liste = state.liste.filter(item=>{
-        return ! messages.includes(item.uuid_transaction)
+        return ! messages.includes(item.message_id)
     })
 }
 
@@ -333,11 +333,12 @@ export function creerThunks(actions, nomSlice) {
             const message_id = messageSync.message.id
 
             const messageIdb = await messagerieDao.getMessage(userId, message_id)
-            // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", uuid_transaction, messageIdb)
+            // console.debug("traiterChargerMessagesParSyncid Message idb pour %s = %O", message_id, messageIdb)
             if(messageIdb) {
                 // const messageObj = {...messageSync, message_id}
                 // delete messageObj.message
                 const messageObj = {
+                    message_id,
                     date_envoi: messageSync.date_envoi,
                     date_reception: messageSync.date_reception,
                     fichiers_completes: messageSync.fichiers_completes,
@@ -355,7 +356,7 @@ export function creerThunks(actions, nomSlice) {
                 }
             } else {
                 // Message inconnu, on le charge
-                // console.debug("traiterChargerMessagesParSyncid Message inconnu ", uuid_transaction)
+                // console.debug("traiterChargerMessagesParSyncid Message inconnu ", message_id)
                 batchUuids.add(message_id)
             }
         }
@@ -413,16 +414,16 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
             console.debug("dechiffrageMiddlewareListener Batch messages ", batchMessages)
 
-            // Identifier hachage_bytes et uuid_transaction de la bacth de messages
+            // Identifier hachage_bytes et message_id de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
                 const infoDechiffrage = item.message.dechiffrage
                 acc.add(infoDechiffrage.hachage)
                 return acc
             }, new Set())
-            const uuid_transaction_messages = batchMessages.map(item=>item.message.id)
+            const message_ids = batchMessages.map(item=>item.message.id)
             try {
-                console.debug("dechiffrageMiddlewareListener Charger message_ids %O, cles %O", uuid_transaction_messages, liste_hachage_bytes)
-                var cles = await clesDao.getClesMessages(liste_hachage_bytes, uuid_transaction_messages, {messages_envoyes})
+                console.debug("dechiffrageMiddlewareListener Charger message_ids %O, cles %O", message_ids, liste_hachage_bytes)
+                var cles = await clesDao.getClesMessages(liste_hachage_bytes, message_ids, {messages_envoyes})
                 console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
             } catch(err) {
                 console.warn("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
@@ -431,9 +432,9 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             }
 
             for await (const message of batchMessages) {
-                const docCourant = {...message.message}  // Copie du proxy contact (read-only)
+                const docCourant = {...message.message, certificat: message.certificat_message, millegrille: message.millegrille_message}
                 console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
-                
+
                 // Dechiffrer message
                 const infoDechiffrage = docCourant.dechiffrage
                 const cleDechiffrageMessage = cles[infoDechiffrage.hachage]
@@ -445,39 +446,22 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
 
                     const dataDechiffre = await dechiffrerMessage(workers, docCourant, cleDechiffrageMessage)
                     console.debug("Contenu dechiffre : ", dataDechiffre)
-                    const messageDechiffre = dataDechiffre.message
-
-                    // const validation = messageDechiffre.validation
-                    // if(!messages_envoyes && validation.valide === false) {
-                    //     console.warn("Message invalide %s, skip", message.uuid_transaction)
-                    //     continue
-                    // }
-
-                    // Ajout/override champs de metadonne avec contenu dechiffre
-                    // Object.assign(docCourant, dataDechiffre)
-                    docCourant.messageDechiffre = messageDechiffre
-                    docCourant.dechiffre = 'true'
-
-                    // // Cleanup objet dechiffre
-                    // delete docCourant.message_chiffre
-                    // delete docCourant.hachage_bytes
-                    // delete docCourant.ref_hachage_bytes
-                    // delete docCourant.certificat_message
-                    // delete docCourant.certificat_millegrille
-                    // delete docCourant['_signature']
-
+                    const { message: messageDechiffre, validation } = dataDechiffre
                     const messageMaj = {
                         message_id: message.message_id, 
                         message: {...message.message, contenu: undefined},  // Retirer contenu chiffre du message
                         contenu: messageDechiffre, 
-                        dechiffre: 'true'
+                        dechiffre: 'true',
+                        valide: validation.valide === false,
+                        certificat_message: undefined,
+                        millegrille_message: undefined,
                     }
 
                     // // Sauvegarder dans IDB
-                    await messagerieDao.updateMessage(messageMaj, {userId})
+                    const messageMerged = await messagerieDao.updateMessage(messageMaj, {userId})
 
                     // // Mettre a jour liste a l'ecran
-                    listenerApi.dispatch(actions.mergeMessagesData(docCourant))
+                    listenerApi.dispatch(actions.mergeMessagesData(messageMerged))
                 } catch(err) {
                     console.error("Erreur dechiffrage message %O : %O", message, err)
                 }
@@ -558,8 +542,8 @@ function genererTriListe(sortKeys) {
         }
 
         // Fallback, nom/tuuid du fichier
-        const { from: auteurA, subject: subjectA, uuid_transaction: uuid_transactionA } = a,
-              { from: auteurB, subject: subjectB, uuid_transaction: uuid_transactionB } = b
+        const { from: auteurA, subject: subjectA, message_id: message_idA } = a,
+              { from: auteurB, subject: subjectB, message_id: message_idB } = b
 
         if(subjectA && subjectB) {
             const compSubject = subjectA.localeCompare(subjectB) & ordre
@@ -572,6 +556,6 @@ function genererTriListe(sortKeys) {
         }
 
         // Fallback, uuid (doit toujours etre different)
-        return uuid_transactionA.localeCompare(uuid_transactionB) * ordre
+        return message_idA.localeCompare(message_idB) * ordre
     }
 }

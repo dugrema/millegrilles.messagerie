@@ -54,19 +54,30 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
     const message = evenementMessage.message
 
     // const verificationMessage = await x509.verifierMessage(message)
-    const resultatVerification = await connexion.verifierMessage(message)
-    console.debug("Message verification ", resultatVerification)
-    if(resultatVerification !== true) {
-        console.error("Message invalide (signature/cert) : ", message)
-        return  // Message rejete, on ne traite pas l'evenement
-    }
+    // const messageAVerifier = {...message, certificat: message.certificat_message, millegrille: message.certificat_millegrille}
+    // const resultatVerification = await connexion.verifierMessage(message)
+    // console.debug("Message verification ", resultatVerification)
+    // if(resultatVerification !== true) {
+    //     console.error("Message invalide (signature/cert) : ", message)
+    //     return  // Message rejete, on ne traite pas l'evenement
+    // }
   
     if(action === 'nouveauMessage') {
         console.debug("traiterMessageEvenement Nouveau message ", message)
-        const messageMaj = {...message, user_id: userId, dechiffre: 'false'}
-        delete messageMaj['en-tete']
-        delete messageMaj['_certificat']
-        delete messageMaj['_signature']
+        const messageMaj = {
+            message_id: message.message.id,
+            user_id: userId, 
+            message: message.message,
+            dechiffre: 'false',
+            fichiers: message.fichiers,
+            fichiers_completes: message.fichiers_completes,
+            date_reception: message.date_reception,
+            date_envoi: message.date_envoi,
+            lu: message.lu,
+            supprime: message.supprime,
+            certificat_message: message.certificat_message,
+            millegrille_message: message.millegrille_message,
+        }
   
         console.debug("traiterMessageEvenement majMessage ", messageMaj)
         await messagerieDao.updateMessage(messageMaj)

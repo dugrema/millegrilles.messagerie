@@ -136,11 +136,12 @@ export async function updateMessage(message, opts) {
             // await store.put(message)
             // return message
         } else {
+            // console.debug('updateMessage avec %O (opts: %O)', message, opts)
             const userId = message.user_id || opts.userId
             if(!userId) throw new Error("messagerieIdbDao.updateMessage userId doit etre fourni")
             const messageOriginal = await store.get([message.message_id, userId])
             const messageMaj = {...messageOriginal, ...message}
-            console.debug("Maj message : ", messageMaj)
+            // console.debug("Maj message : ", messageMaj)
             await store.put(messageMaj)
             return messageMaj
         }
@@ -167,7 +168,7 @@ export async function getMessages(userId, opts) {
 
     let position = 0
     const messages = []
-    let curseur = await index.openCursor(null, direction)
+    let curseur = await index.openCursor([userId], direction)
     while(curseur) {
         const value = curseur.value
 

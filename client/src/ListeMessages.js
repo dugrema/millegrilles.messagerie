@@ -104,9 +104,9 @@ function AfficherListeMessages(props) {
     const onOpenHandler = useCallback( item => {
         // console.debug("Ouvrir item : %O", item)
         window.getSelection().removeAllRanges()
-        const uuid_transaction = item.uuid_transaction
-        dispatch(messagerieActions.selectionMessages([uuid_transaction]))
-        dispatch(messagerieActions.setUuidMessageActif(uuid_transaction))
+        const message_id = item.message_id
+        dispatch(messagerieActions.selectionMessages([message_id]))
+        dispatch(messagerieActions.setUuidMessageActif(message_id))
     }, [dispatch, selection])
 
     const supprimerMessagesHandler = useCallback( ()=>{
@@ -115,8 +115,8 @@ function AfficherListeMessages(props) {
             try {
                 await connexion.supprimerMessages(selection)
                 dispatch(messagerieActions.supprimerMessages(selection))
-                for await (const uuid_transaction of selection) {
-                    const messageSupprime = {uuid_transaction, user_id: userId, supprime: true}
+                for await (const message_id of selection) {
+                    const messageSupprime = {message_id, user_id: userId, supprime: true}
                     await messagerieDao.updateMessage(messageSupprime)
                 }
                 resolve()

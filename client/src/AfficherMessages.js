@@ -90,14 +90,28 @@ export function preparerColonnes(workers, opts) {
             // 'boutonDetail': {label: ' ', className: 'droite', showBoutonContexte: true, xs: 2, md: 1, lg: 1},
         },
         tri: {colonne: colonne_date, ordre: -1},
-        // rowLoader: data => dechiffrerMessage(workers, data)
-        idMapper: data => data.uuid_transaction,
-        // rowLoader: async data => data,
-        rowClassname: data => {
-          if(data.lu !== true) return 'nouveau'
-          return ''
-        }
+        rowLoader, idMapper, rowClassname
     }
   
     return params
-  }
+}
+
+function idMapper(data) {
+    const id = data.message_id
+    // console.debug("ID Mapper ", id)
+    return id
+}
+
+function rowLoader(data) {
+    console.debug("AfficherMessages.rowLoader Mapper ", data)
+    return {
+        ...data,
+        ...data.contenu,
+        date_envoi: data.message.estampille,
+    }
+}
+
+function rowClassname(data) {
+    if(data.lu !== true) return 'nouveau'
+    return ''
+}

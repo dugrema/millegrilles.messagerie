@@ -293,13 +293,13 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
     const messageEnvoyer = {
         message_id: resultat.message_id,
         user_id: userId,
-        message: {...resultat.commande, contenu: undefined},
+        message: {...resultat.commande.message /*, contenu: undefined*/},
         contenu: resultat.message,
         destinataires: mapDestinataires,
         date_envoi: resultat.commande.message.estampille,
         
         // Flags
-        dechiffre: 'true',
+        dechiffre: 'true',  // Flag en format string pour supporter index IDB
         lu: false,
         supprime: false,
     }
