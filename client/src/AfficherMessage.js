@@ -37,11 +37,14 @@ function AfficherMessage(props) {
           usager = useUsager()
 
     const listeMessages = useSelector(state=>state.messagerie.liste),
-          uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif)
+          message_id = useSelector(state=>state.messagerie.message_id)
 
     const message = useMemo(()=>{
-        return listeMessages.filter(item=>item.uuid_transaction===uuidMessageActif).pop()
-    }, [uuidMessageActif, listeMessages])
+        console.debug("AfficherMessage id %s, liste %O", message_id, listeMessages)
+        const message = listeMessages.filter(item=>item.message_id===message_id).pop()
+        console.debug("AfficheMessage ", message)
+        return message
+    }, [message_id, listeMessages])
 
     const [showChoisirCollection, setChoisirCollection] = useState(false)
     const [afficherVideo, setAfficherVideo] = useState(false)
@@ -123,13 +126,14 @@ function RenderMessage(props) {
     const workers = useWorkers()
 
     const message = props.message || {}
+    const message_id = message.message_id
     const infoMessage = props.infoMessage || {}
-    const { to, cc, from, reply_to, subject, content, attachments, attachments_inline } = message
-    const entete = message['en-tete'] || {},
-          estampille = entete.estampille
-    const { uuid_transaction, date_reception } = infoMessage
-    const attachments_status = message.attachments_status || {}
-    const attachments_traites = message.attachments_traites || false
+    const contenu = message.contenu || {}
+    const { to, cc, from, reply_to, subject, content, files } = contenu
+    const estampille = message.estampille
+    const { date_reception } = infoMessage
+    const fichiers = message.fichiers || {}
+    const fichiers_completes = message.fichiers_completes || false
 
     const dateEstampille = new Date(estampille)
 
@@ -138,10 +142,10 @@ function RenderMessage(props) {
     }, [])
 
     const supprimerCb = useCallback(()=>{
-        workers.connexion.supprimerMessages(uuid_transaction)
+        workers.connexion.supprimerMessages(message_id)
             .then( retourMessages )
             .catch(erreurCb)
-    }, [workers, retourMessages, uuid_transaction, erreurCb])
+    }, [workers, retourMessages, message_id, erreurCb])
 
     if(!props.message) return ''
 
@@ -166,9 +170,7 @@ function RenderMessage(props) {
             <ContenuMessage 
                 content={content}
                 downloadAction={downloadAction}
-                uuid_transaction={uuid_transaction}
-                attachments={attachments} 
-                attachments_inline={attachments_inline} 
+                message_id={message_id}
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
                 afficherVideo={afficherVideo}
@@ -177,8 +179,9 @@ function RenderMessage(props) {
                 setAfficherAudio={setAfficherAudio} 
                 certificatMaitreDesCles={certificatMaitreDesCles} 
                 setSelectionAttachments={setSelectionAttachments} 
-                attachments_status={attachments_status}
-                attachments_traites={attachments_traites} />
+                fichiers={files} 
+                fichiers_status={fichiers}
+                fichiers_completes={fichiers_completes} />
 
         </>
     )
@@ -187,19 +190,17 @@ function RenderMessage(props) {
 function ContenuMessage(props) {
     const { 
         downloadAction, content, certificatMaitreDesCles,
-        attachments, attachments_inline, choisirCollectionCb, supportMedia, 
+        fichiers, choisirCollectionCb, supportMedia, 
         afficherVideo, setAfficherVideo, 
         afficherAudio, setAfficherAudio, 
         setSelectionAttachments,
         uuid_transaction,
-        attachments_status, attachments_traites,
+        fichiers_status, fichiers_completes,
     } = props
 
     const workers = useWorkers(),
           etatConnexion = useEtatConnexion(),
           usager = useUsager()
-
-    const fichiers = attachments?attachments.fichiers:null
 
     const fermerAfficherVideo = useCallback(()=>setAfficherVideo(false))
     const fermerAfficherAudio = useCallback(()=>setAfficherAudio(false))
@@ -207,12 +208,12 @@ function ContenuMessage(props) {
     const attachmentMappe = useMemo(()=>{
         if(!fichiers) return
 
-        const videoItem = fichiers.filter(item=>item.fuuid===afficherVideo).pop()
-        const audioItem = fichiers.filter(item=>item.fuuid===afficherAudio).pop()
+        const videoItem = fichiers.filter(item=>item.digest===afficherVideo).pop()
+        const audioItem = fichiers.filter(item=>item.digest===afficherAudio).pop()
 
         let attachmentMappe = null
         if(videoItem) {
-            const fuuidFichier = videoItem.fuuid
+            const fuuidFichier = videoItem.digest
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
@@ -231,7 +232,7 @@ function ContenuMessage(props) {
                 }
                 const mimetype = infoVideo.mimetype
 
-                const cleFuuid = attachments.cles[fuuidFichier]
+                const cleFuuid = fichiers.cles[fuuidFichier]
 
                 const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage, mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
@@ -240,7 +241,7 @@ function ContenuMessage(props) {
 
             attachmentMappe = mapperRowAttachment(videoItem, workers, {genererToken: true, creerToken})
         } else if(audioItem) {
-            const fuuidFichier = audioItem.fuuid
+            const fuuidFichier = audioItem.digest
             const mimetype = audioItem.mimetype
 
             const creerToken = async fuuidAudio => {
@@ -248,7 +249,7 @@ function ContenuMessage(props) {
                 console.debug("!!! usager : %O\nfuuidAudio : %O", usager, fuuidAudio)
                 // console.debug("Creer token video fuuid : %O (fuuidAudio: %O, cles: %O)", fuuid, fuuidAudio, attachments.cles)
 
-                const cleFuuid = attachments.cles[fuuidFichier]
+                const cleFuuid = fichiers.cles[fuuidFichier]
 
                 const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidFichier, usager, {mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
@@ -292,15 +293,14 @@ function ContenuMessage(props) {
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
                 uuid_transaction={uuid_transaction}
-                attachments={attachments} 
-                attachments_inline={attachments_inline} 
+                fichiers={fichiers} 
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
                 setAfficherVideo={setAfficherVideo} 
                 setAfficherAudio={setAfficherAudio} 
                 setSelectionAttachments={setSelectionAttachments}
-                attachments_status={attachments_status}
-                attachments_traites={attachments_traites} />        
+                fichiers_status={fichiers_status}
+                fichiers_completes={fichiers_completes} />        
         </>
     )
 }
@@ -411,10 +411,10 @@ async function marquerMessageLu(workers, uuid_transaction) {
 function AfficherAttachments(props) {
     // console.debug("AfficherAttachments proppys : %O", props)
     const { 
-        workers, attachments, etatConnexion, downloadAction, 
+        workers, fichiers, etatConnexion, downloadAction, 
         supportMedia, setSelectionAttachments, choisirCollectionCb, 
         setAfficherVideo, setAfficherAudio,
-        attachments_status, attachments_traites,
+        fichiers_status, fichiers_completes,
         uuid_transaction,
     } = props
 
@@ -466,65 +466,38 @@ function AfficherAttachments(props) {
     }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio, attachmentsList])
 
     useEffect(()=>{
-        if(!attachments) { setAttachmentsList(''); return }  // Rien a faire
+        console.debug("Fichiers : %O, fichiers_status : %O, fichiers_completes : %O", fichiers, fichiers_status, fichiers_completes)
+        if(!fichiers) { setAttachmentsList(''); return }  // Rien a faire
 
-        if(Array.isArray(attachments)) {
-            // Message envoye, pas d'info
-            console.debug("Liste attachments message envoye : %O", attachments)
-        } else {
+        // if(Array.isArray(fichiers)) {
+        //     // Message envoye, pas d'info
+        //     console.debug("Liste attachments message envoye : %O", fichiers)
+        // } else {
             // Message recu
-            const { cles, fichiers } = attachments
+            // const { cles, fichiers } = attachments
 
-            const dictAttachments = {}
-            fichiers.forEach( attachmentObj => {
-                let attachment = {...attachmentObj}
-                const fuuid = attachment.fuuid
-                const version_courante = {
-                    mimetype: attachment.mimetype || 'application/bytes',
-                    taille: attachment.taille,
-                }
-
-                const traite = attachments_traites || attachments_status[fuuid] || false
-
-                if(attachment.images) {
-                    version_courante.images = {...attachment.images}
-                    delete attachment.images
-                }
-                if(attachment.video) {
-                    version_courante.video = {...attachment.video}
-                    delete attachment.video
-                }
-                if(attachment.metadata && attachment.metadata.data) {
-                    // Extract metadata (normalement chiffre)
-                    const fichierData = attachment.metadata.data
-                    attachment = {...attachment, ...fichierData}
-                }
-                dictAttachments[fuuid] = {
-                    ...attachment, 
-                    fileId: fuuid, fuuid_v_courante: fuuid, 
-                    version_courante,
-                    traite,
-                    disabled: !traite,
-                }
+            // Premier mapping d'attachements vers format GrosFichiers (pour le 'mapper')
+            const listeFichiers = mapperFichiers(fichiers, fichiers_completes, fichiers_status)
+            console.debug("Liste attachments combines : %O", listeFichiers)
+            const listeMappee = listeFichiers.map(item=>{
+                const cles = {[item.fuuid_v_courante]: {
+                    ...item.decryption,
+                    cleSecrete: base64.decode(item.decryption.key),
+                }}
+                console.debug("Liste mappee cles ", cles)
+                return mapper(item, workers, {ref_hachage_bytes: item.fuuid_v_courante, cles, supportMedia})
             })
 
-            // console.debug("Dict attachments combines : %O", dictAttachments)
-
-            const liste = attachments.fichiers.map(attachment=>dictAttachments[attachment.fuuid])
-            const listeMappee = liste.map(item=>{
-                return mapper(item, workers, {ref_hachage_bytes: item.fuuid, cles, supportMedia})
-            })
-
-            // console.debug("Liste mappee ", listeMappee)
+            console.debug("Liste mappee ", listeMappee)
 
             setAttachmentsList(listeMappee)
-        }
-    }, [workers, attachments, supportMedia, setAttachmentsList])
+        // }
+    }, [workers, fichiers, fichiers_status, fichiers_completes, supportMedia, setAttachmentsList])
 
-    let verifierAttachments = (attachments && !attachments_traites)
-    if(!attachments_traites && attachments_status && Object.keys(attachments_status).length > 0) {
+    let verifierAttachments = (fichiers && !fichiers_completes)
+    if(!fichiers_completes && fichiers_status && Object.keys(fichiers_status).length > 0) {
         // S'assurer qu'on a au moins 1 attachement manquant
-        verifierAttachments = Object.values(attachments_status).reduce((acc, item)=>{
+        verifierAttachments = Object.values(fichiers_status).reduce((acc, item)=>{
             acc = acc || !item
             return acc
         }, false)
@@ -572,7 +545,7 @@ function AfficherAttachments(props) {
                 workers={workers}
                 contextuel={contextuel} 
                 fermerContextuel={fermerContextuel}
-                attachments={attachments}
+                fichiers={fichiers}
                 attachmentsList={attachmentsList}
                 selection={selection}
                 showPreview={showPreviewCb}
@@ -904,4 +877,97 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
     console.debug("fournirPreuveClesVideos Reponse ", reponseVerifierPreuve)
 
     return reponseVerifierPreuve.jwts || {}
+}
+
+function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
+
+    const listeFichiers = []
+
+    for (const fichier of fichiers) {
+        const fuuid = fichier.file
+        const mimetype = fichier.mimetype || 'application/bytes'
+        const traite = fichiers_traites || fichiers_status[fuuid] || false
+
+        const version_courante = {
+            nom: fichier.name,
+            date_fichier: fichier.date,
+            hachage_original: fichier.digest,
+            mimetype,
+            taille: fichier.encrypted_size || fichier.size,
+        }
+
+        const fichierMappe = {
+            nom: fichier.name,
+            dateFichier: fichier.date,
+            mimetype,
+            version_courante,
+
+            // Indicateurs de chargement
+            traite, 
+            disabled: !traite,
+
+            decryption: fichier.decryption,
+
+            // Ids pour utilitaires reutilises de collections
+            fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
+        }
+
+        const media = mapperMedia(fichier.media)
+        if(media) Object.assign(version_courante, media)
+
+        // dictFichiers[fuuid] = {
+        //     ...fichierMappe, 
+        //     fileId: fuuid, fuuid_v_courante: fuuid, 
+        //     version_courante,
+        //     traite,
+        //     disabled: !traite,
+        // }
+
+        listeFichiers.push(fichierMappe)
+    }
+
+    return listeFichiers
+}
+
+const CHAMPS_MEDIA = ['duration', 'width', 'height']
+
+function mapperMedia(media) {
+    console.debug("Mapper media ", media)
+    const mediaMappe = {}
+    for(const champ of CHAMPS_MEDIA) {
+        if(media[champ]) mediaMappe[champ] = media[champ]
+    }
+    
+    if(media.images) {
+        const images = {}
+        mediaMappe.images = images
+        for(const image of media.images) {
+            const resolution = Math.min(image.width, image.height)
+            let key = `${image.mimetype};${resolution}`
+            if(resolution <= 128 && image.data) key = 'thumb'
+            else if(resolution > 128 && resolution < 360) key = 'small'
+
+            const imageMappee = {
+                width: image.width,
+                height: image.height,
+                resolution,
+                mimetype: image.mimetype,
+            }
+            if(image.data) {
+                imageMappee.data = image.data
+            } else {
+                imageMappee.hachage = image.file
+                imageMappee.taille = image.size
+                Object.assign(imageMappee, image.decryption)
+            }
+            
+            images[key] = imageMappee
+        }
+    }
+
+    if(media.videos) {
+        console.error("!!! TODO mapper videos")
+    }
+
+    return mediaMappe
 }

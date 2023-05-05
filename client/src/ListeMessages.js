@@ -95,7 +95,7 @@ function AfficherListeMessages(props) {
     const [contextuel, setContextuel] = useState({show: false, x: 0, y: 0})
 
     const onSelectionLignes = useCallback(selection=>{
-        console.debug("Selection ", selection)
+        // console.debug("Selection ", selection)
         dispatch(messagerieActions.selectionMessages(selection))
     }, [dispatch])
     const fermerContextuel = useCallback(()=>setContextuel(false), [setContextuel])

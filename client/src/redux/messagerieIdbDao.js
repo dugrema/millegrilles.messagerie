@@ -58,8 +58,8 @@ export async function mergeReferenceMessages(userId, messages) {
     for await (let message of messages) {
         const message_id = message.message.id
         const messageExistant = await store.get(message_id)
-        const fichiers = message.fichiers || {}
-        const fichiers_traites = message.fichiers_traites || false
+        const fichiers = message.fichiers
+        const fichiers_completes = message.fichiers_completes || false
         if(!messageExistant) {
             // console.debug("mergeReferenceMessages Conserver nouveau message : %O", message)
             const nouveauMessage = {
@@ -67,7 +67,7 @@ export async function mergeReferenceMessages(userId, messages) {
                 user_id: userId, 
                 ...message, 
                 fichiers, 
-                fichiers_traites: fichiers_traites, 
+                fichiers_completes: fichiers_completes, 
                 'dechiffre': 'false'
             }
             console.debug("Put nouveau message ", nouveauMessage)
@@ -91,10 +91,10 @@ export async function mergeReferenceMessages(userId, messages) {
 
             const messageMaj = {
                 ...messageExistant, 
-                fichiers_status: fichiers_status, 
-                fichiers_traites: fichiers_traites, 
+                fichiers_completes: fichiers_completes, 
                 ...datesOverrides
             }
+            if(fichiers) messageMaj.fichiers = fichiers
             console.debug("Put message maj : ", messageMaj)
             await store.put(messageMaj)
         }

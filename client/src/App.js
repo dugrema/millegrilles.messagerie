@@ -249,7 +249,7 @@ function Contenu(props) {
   } = props
 
   const workers = useWorkers()
-  const uuidMessage = useSelector(state=>state.messagerie.uuidMessageActif)
+  const uuidMessage = useSelector(state=>state.messagerie.message_id)
 
   const [scrollMessages, onScrollMessages] = useState(0)
 
@@ -308,7 +308,7 @@ function BreadcrumbMessages(props) {
 
   const { retourAfficherMessages, fermerContactActif, afficherContacts, pageConfiguration } = props
 
-  const uuidMessageActif = useSelector(state=>state.messagerie.uuidMessageActif),
+  const uuidMessageActif = useSelector(state=>state.messagerie.message_id),
         uuidContactActif = useSelector(state=>state.contacts.uuidContactActif),
         sourceMessages = useSelector(state=>state.messagerie.source),
         syncEnCours = useSelector(state=>state.messagerie.syncEnCours)

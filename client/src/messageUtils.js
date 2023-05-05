@@ -209,13 +209,16 @@ async function mapperAttachementFile(workers, fichier, cles) {
 
     const attachementMappe = {
         name: metadataDechiffre.nom,
+        file: hachage_bytes,
         date: metadataDechiffre.dateFichier,
         digest: metadataDechiffre.hachage_original,
         // size: 'todo',
         encrypted_size: fichier.taille,
+        mimetype: fichier.mimetype,
         decryption: {
             format: cleDechiffrage.format,
             header: cleDechiffrage.header,
+            key: cleDechiffrage.cleSecrete,
         }
     }
 

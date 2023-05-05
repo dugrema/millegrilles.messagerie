@@ -20,7 +20,7 @@ const initialState = {
     sortKeys: {key: 'date_reception', ordre: -1}, // Ordre de tri
     liste: null,                // Liste triee de fichiers
     selection: null,            // Messages selectionnes
-    uuidMessageActif: null,     // Message actif
+    message_id: null,           // Message actif
 
     // Reponse/transfert message
     uuidMessageRepondre: null,
@@ -157,25 +157,25 @@ function supprimerMessagesAction(state, action) {
 }
 
 function setUuidMessageActifAction(state, action) {
-    state.uuidMessageActif = action.payload
+    state.message_id = action.payload
     state.uuidMessageRepondre = null
     state.uuidMessageTransfert = null
 }
 
 // Repondre au message actif
 function preparerRepondreMessageAction(state, action) {
-    const uuidMessage = state.uuidMessageActif || action.payload
+    const uuidMessage = state.message_id || action.payload
     if(!uuidMessage) return
-    state.uuidMessageActif = ''  // Valeur pour nouveau message
+    state.message_id = ''  // Valeur pour nouveau message
     state.uuidMessageRepondre = uuidMessage
 }
 
 // Transferer le message actif (conserver attachments)
 function preparerTransfererMessageAction(state, action) {
-    const uuidMessage = state.uuidMessageActif || action.payload
-    if(!uuidMessage) return
-    state.uuidMessageActif = ''  // Valeur pour nouveau message
-    state.uuidMessageTransfert = uuidMessage
+    const message_id = state.message_id || action.payload
+    if(!message_id) return
+    state.message_id = ''  // Valeur pour nouveau message
+    state.uuidMessageTransfert = message_id
 }
 
 function setSourceMessagesAction(state, action) {

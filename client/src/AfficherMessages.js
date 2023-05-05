@@ -103,7 +103,7 @@ function idMapper(data) {
 }
 
 function rowLoader(data) {
-    console.debug("AfficherMessages.rowLoader Mapper ", data)
+    // console.debug("AfficherMessages.rowLoader Mapper ", data)
     return {
         ...data,
         ...data.contenu,
