@@ -156,7 +156,7 @@ function LayoutMain() {
     // console.debug("Download action fichier : ", fichier)
 
     const metadata = fichier.metadata || {}
-    const champs = ['cle', 'version_courante', 'fuuid']
+    const champs = ['cle', 'version_courante', 'fuuid', 'nom']
     const copieFichier = {...metadata.data}
     for (const champ of champs) {
       copieFichier[champ] = fichier[champ]

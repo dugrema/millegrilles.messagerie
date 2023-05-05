@@ -604,9 +604,9 @@ function BoutonsFormat(props) {
 }
 
 function MenuContextuel(props) {
-    // console.debug("MenuContextuel proppys : %O", props)
+    console.debug("MenuContextuel proppys : %O", props)
 
-    const { contextuel, attachments, attachmentsList, selection } = props
+    const { contextuel, fichiers, attachmentsList, selection } = props
 
     if(!contextuel.show) return ''
 
@@ -614,13 +614,17 @@ function MenuContextuel(props) {
 
     if( selection && selection.length > 1 ) {
         return <MenuContextuelAfficherAttachementsMultiselect selection={selection} {...props} />
-    } else if(selection.length>0 && attachments.fichiers) {
+    } else if(selection.length>0 && fichiers) {
         const fuuid = selection[0]
-        const attachment = attachments.fichiers.filter(item=>item.fuuid===fuuid).pop()
+        console.debug("Selection fichiers ", fichiers)
+        const attachment = fichiers.filter(item=>item.file===fuuid).pop()
         const attachmentListDetail = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
+        console.debug("Attachement %O, Details %O", attachment, attachmentListDetail)
         const attachmentDetail = {...attachmentListDetail, ...attachment}
         if(attachment) {
-            return <MenuContextuelAfficherAttachments attachment={attachmentDetail} cles={attachments.cles} {...props} />
+            console.debug("Download attachement : ", attachment)
+            const cles = {[attachment.fuuid]: attachment.decryption.cleSecrete}
+            return <MenuContextuelAfficherAttachments attachment={attachmentDetail} cles={cles} {...props} />
         }
     }
 
