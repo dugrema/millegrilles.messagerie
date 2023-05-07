@@ -96,7 +96,7 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
     } else if(action === 'messagesSupprimes') {
         console.debug("traiterMessageEvenement Messages supprimes ", message)
 
-        for await (const message_id of message.uuid_transactions) {
+        for await (const message_id of message.message_ids) {
             const messageSupprime = {message_id, user_id: userId, supprime: true}
             await messagerieDao.updateMessage(messageSupprime)
             dispatch(messagerieAction.supprimerMessages(messageSupprime))
