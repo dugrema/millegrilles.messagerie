@@ -130,7 +130,7 @@ function RenderMessage(props) {
     const infoMessage = props.infoMessage || {}
     const contenu = message.contenu || {}
     const { to, cc, from, reply_to, subject, content, files } = contenu
-    const estampille = message.estampille
+    const estampille = message.message.estampille
     const { date_reception } = infoMessage
     const fichiers = message.fichiers || {}
     const fichiers_completes = message.fichiers_completes || false
