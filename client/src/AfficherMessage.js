@@ -235,13 +235,15 @@ function ContenuMessage(props) {
                 } else {
                     //infoVideo = Object.values(videoItem.media.videos).filter(item=>item.file===fuuidVideo).pop()
                     infoVideo = Object.values(videoDict).filter(item=>item.file===fuuidVideo).pop()
-                    paramsDecryption = infoVideo
+                    paramsDecryption = infoVideo.decryption
                 }
-                console.debug("creerToken Afficher infoVideo ", infoVideo)
+                console.debug("creerToken Afficher infoVideo %O, params decryption %O", infoVideo, paramsDecryption)
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
-                    if(infoVideo[champ]) paramsChiffrage[champ] = paramsDecryption[champ]
+                    if(paramsDecryption[champ]) paramsChiffrage[champ] = paramsDecryption[champ]
                 }
+                console.debug("creerToken Params chiffrages ", paramsChiffrage)
+
                 const mimetype = infoVideo.mimetype
 
                 // const cleFuuid = fichiers.cles[fuuidFichier]

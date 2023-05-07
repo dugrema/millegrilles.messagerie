@@ -233,6 +233,7 @@ export function onContextMenu(event, value, setContextuel) {
 // }
 
 export function mapDocumentComplet(workers, doc, opts) {
+    opts = opts || {}
 
     console.debug("mapDocumentComplet : %O (%O)", doc, opts)
 
