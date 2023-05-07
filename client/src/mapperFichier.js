@@ -371,8 +371,11 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
             fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
         }
 
-        const media = mapperMedia(fichier.media)
-        if(media) Object.assign(version_courante, media)
+        if(fichier.media) {
+            const media = mapperMedia(fichier.media)
+            if(media) Object.assign(version_courante, media)
+            if(fichier.media.animated === true) version_courante.anime = true
+        }
 
         listeFichiers.push(fichierMappe)
     }

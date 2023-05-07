@@ -237,6 +237,7 @@ async function mapperAttachementFile(workers, fichier, cles) {
         if(images) {
             // Mapper images
             media.images = mapperImages(images)
+            if(fichier.anime) media.animated = true
         }
 
         if(videos) {
