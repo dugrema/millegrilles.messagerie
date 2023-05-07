@@ -15,7 +15,7 @@ import useWorkers, {useEtatConnexion, useEtatAuthentifie, useUsager} from './Wor
 import messagerieActions, { thunks as messagerieThunks } from './redux/messagerieSlice'
 
 import { MenuContextuelAfficherAttachments, MenuContextuelAfficherAttachementsMultiselect, onContextMenu } from './MenuContextuel'
-import { mapper, mapperRowAttachment } from './mapperFichier'
+import { mapper, mapperRowAttachment, mapperFichiers } from './mapperFichier'
 // import { detecterSupport } from './fonctionsFichiers'
 
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
@@ -78,7 +78,7 @@ function AfficherMessage(props) {
 
     useEffect(()=>{
         if(etatConnexion && etatAuthentifie && message && !message.lu && !message.date_envoi) {
-            marquerMessageLu(workers, message.uuid_transaction)
+            marquerMessageLu(workers, message_id)
         }
     }, [workers, etatConnexion, etatAuthentifie, message])
 
@@ -194,7 +194,7 @@ function ContenuMessage(props) {
         afficherVideo, setAfficherVideo, 
         afficherAudio, setAfficherAudio, 
         setSelectionAttachments,
-        uuid_transaction,
+        message_id,
         fichiers_status, fichiers_completes,
     } = props
 
@@ -208,33 +208,43 @@ function ContenuMessage(props) {
     const attachmentMappe = useMemo(()=>{
         if(!fichiers) return
 
-        const videoItem = fichiers.filter(item=>item.digest===afficherVideo).pop()
-        const audioItem = fichiers.filter(item=>item.digest===afficherAudio).pop()
+        console.debug("ContenuMessage mapper (afficher video %O) %O", afficherVideo, fichiers)
+
+        const videoItem = fichiers.filter(item=>item.file===afficherVideo).pop()
+        const audioItem = fichiers.filter(item=>item.file===afficherAudio).pop()
 
         let attachmentMappe = null
         if(videoItem) {
-            const fuuidFichier = videoItem.digest
+            console.debug("ContenuMessage afficher videoItem ", videoItem)
+            const fuuidFichier = videoItem.file
+            const fichierVideoMappe = mapperFichiers([videoItem], true).pop()
+            console.debug("ContenuMessage afficher video (mappe) ", fichierVideoMappe)
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
 
                 console.debug("creerToken fuuidVideo %O, videoItem %O", fuuidVideo, videoItem)
                 let infoVideo = null
-                if(fuuidVideo === videoItem.fuuid) {
+                if(fuuidVideo === videoItem.file) {
                     // Original
-                    infoVideo = videoItem
+                    //infoVideo = videoItem
+                    infoVideo = fichierVideoMappe.version_courante
                 } else {
-                    infoVideo = Object.values(videoItem.video).filter(item=>item.fuuid_video===fuuidVideo).pop()
+                    //infoVideo = Object.values(videoItem.media.videos).filter(item=>item.file===fuuidVideo).pop()
+                    infoVideo = Object.values(fichierVideoMappe.version_courante.video).filter(item=>item===fuuidFichier).pop()
                 }
+                console.debug("creerToken Afficher infoVideo ", infoVideo)
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
                     if(infoVideo[champ]) paramsChiffrage[champ] = infoVideo[champ]
                 }
                 const mimetype = infoVideo.mimetype
 
-                const cleFuuid = fichiers.cles[fuuidFichier]
+                // const cleFuuid = fichiers.cles[fuuidFichier]
+                const cleFuuid = {...infoVideo.decryption, cleSecrete: base64.decode(videoItem.decryption.key)}
+                console.debug("ContenuMessage.creerToken creerTokensStreaming avec cleFuuid %O pour videoItem %O", cleFuuid, videoItem)
 
-                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage, mimetype})
+                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage}, {mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
                 return jwts
             }
@@ -258,6 +268,8 @@ function ContenuMessage(props) {
 
             attachmentMappe = mapperRowAttachment(audioItem, workers, {genererToken: true, creerToken})
         }
+
+        console.debug("ContenuMessage Attachement mappe : ", attachmentMappe)
 
         return attachmentMappe
     }, [workers, afficherVideo, afficherAudio, certificatMaitreDesCles, fichiers, usager])
@@ -292,7 +304,7 @@ function ContenuMessage(props) {
                 workers={workers} 
                 etatConnexion={etatConnexion}
                 downloadAction={downloadAction}
-                uuid_transaction={uuid_transaction}
+                message_id={message_id}
                 fichiers={fichiers} 
                 choisirCollectionCb={choisirCollectionCb} 
                 supportMedia={supportMedia} 
@@ -399,12 +411,12 @@ function AfficherMessageQuill(props) {
     )
 }
 
-async function marquerMessageLu(workers, uuid_transaction) {
+async function marquerMessageLu(workers, message_id) {
     try {
-        await workers.connexion.marquerLu(uuid_transaction, true)
-        // console.debug("Reponse marquer message %s lu : %O", uuid_transaction, reponse)
+        await workers.connexion.marquerLu(message_id, true)
+        // console.debug("Reponse marquer message %s lu : %O", message_id, reponse)
     } catch(err) {
-        console.error("Erreur marquer message %s lu : %O", uuid_transaction, err)
+        console.error("Erreur marquer message %s lu : %O", message_id, err)
     }
 }
 
@@ -415,7 +427,7 @@ function AfficherAttachments(props) {
         supportMedia, setSelectionAttachments, choisirCollectionCb, 
         setAfficherVideo, setAfficherAudio,
         fichiers_status, fichiers_completes,
-        uuid_transaction,
+        message_id,
     } = props
 
     const dispatch = useDispatch()
@@ -507,17 +519,17 @@ function AfficherAttachments(props) {
     // Recharger le message si les attachements ne sont pas tous traites
     useEffect(()=>{
         if(!verifierAttachments) return     // Rien a faire
-        reloadMessage(workers, dispatch, uuid_transaction, userId)
+        reloadMessage(workers, dispatch, message_id, userId)
             .catch(err=>console.error("Erreur maj message pour attachements incomplets : ", err))
         
         // Reload message
         const interval = setInterval(()=>{
-            reloadMessage(workers, dispatch, uuid_transaction, userId)
+            reloadMessage(workers, dispatch, message_id, userId)
                 .catch(err=>console.error("Erreur maj message pour attachements incomplets : ", err))
         }, CONST_INTERVALLE_VERIFICATION_ATTACHMENTS)
         
         return () => clearInterval(interval)  // Cleanup interval
-    }, [workers, dispatch, userId, uuid_transaction, verifierAttachments])
+    }, [workers, dispatch, userId, message_id, verifierAttachments])
 
     if(!attachmentsList) return ''
 
@@ -604,7 +616,7 @@ function BoutonsFormat(props) {
 }
 
 function MenuContextuel(props) {
-    console.debug("MenuContextuel proppys : %O", props)
+    // console.debug("MenuContextuel proppys : %O", props)
 
     const { contextuel, fichiers, attachmentsList, selection } = props
 
@@ -713,7 +725,8 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, us
 async function hacherPreuveCle(fingerprint, cleSecrete) {
     const dateNow = Math.floor(new Date().getTime()/1000)
     const dateBytes = longToByteArray(dateNow)
-    const fingerprintBuffer = multibase.decode(fingerprint)
+    // const fingerprintBuffer = multibase.decode(fingerprint)
+    const fingerprintBuffer = Buffer.from(fingerprint, 'hex')
 
     if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
 
@@ -814,7 +827,7 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
 
     const mimetype = opts.mimetype
 
-    console.debug("fournirPreuveClesVideos Conserver cle video %O", cleFuuid)
+    console.debug("fournirPreuveClesVideos Fichier %s (video %s) Conserver cle video %O (opts: %O)", fuuidFichier, fuuidVideo, cleFuuid, opts)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     const caPem = usager.ca
@@ -835,7 +848,7 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
         // Chiffrer la cle secrete pour le certificat de maitre des cles
         // Va servir de preuve d'acces au fichier
         const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
-        // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
+        console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
         for await (const fuuid of Object.keys(clesChiffrees.cles)) {
             const cleRechiffree = clesChiffrees.cles[fuuid]
@@ -852,11 +865,15 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
             
             let fuuidInfo = fichiersCles[fuuid]
             if(!fuuidInfo) {
-                const { cleSecrete } = cleFuuid
-                const cleSecreteBytes = multibase.decode(cleSecrete)
+                let { cleSecrete } = cleFuuid
+                if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
+                else if ( ! Buffer.isBuffer(cleSecrete) && ! ArrayBuffer.isView(cleSecrete) ) {
+                    console.warn("Cle secrete : ", cleFuuid)
+                    throw new Error("mauvais type cleSecrete")
+                }
                 // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
                 const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
-                    cleSecreteBytes, domaine, identificateurs_document, fuuid)
+                    cleSecrete, domaine, identificateurs_document, fuuid)
                 fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
                 fichiersCles[fuuid] = fuuidInfo
             }
@@ -883,95 +900,116 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
     return reponseVerifierPreuve.jwts || {}
 }
 
-function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
+// function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
 
-    const listeFichiers = []
+//     const listeFichiers = []
 
-    for (const fichier of fichiers) {
-        const fuuid = fichier.file
-        const mimetype = fichier.mimetype || 'application/bytes'
-        const traite = fichiers_traites || fichiers_status[fuuid] || false
+//     for (const fichier of fichiers) {
+//         const fuuid = fichier.file
+//         const mimetype = fichier.mimetype || 'application/bytes'
+//         const traite = fichiers_traites || fichiers_status[fuuid] || false
 
-        const version_courante = {
-            nom: fichier.name,
-            date_fichier: fichier.date,
-            hachage_original: fichier.digest,
-            mimetype,
-            taille: fichier.encrypted_size || fichier.size,
-        }
+//         const version_courante = {
+//             nom: fichier.name,
+//             date_fichier: fichier.date,
+//             hachage_original: fichier.digest,
+//             mimetype,
+//             taille: fichier.encrypted_size || fichier.size,
+//         }
 
-        const fichierMappe = {
-            nom: fichier.name,
-            dateFichier: fichier.date,
-            mimetype,
-            version_courante,
+//         const fichierMappe = {
+//             nom: fichier.name,
+//             dateFichier: fichier.date,
+//             mimetype,
+//             version_courante,
 
-            // Indicateurs de chargement
-            traite, 
-            disabled: !traite,
+//             // Indicateurs de chargement
+//             traite, 
+//             disabled: !traite,
 
-            decryption: fichier.decryption,
+//             decryption: fichier.decryption,
 
-            // Ids pour utilitaires reutilises de collections
-            fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
-        }
+//             // Ids pour utilitaires reutilises de collections
+//             fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
+//         }
 
-        const media = mapperMedia(fichier.media)
-        if(media) Object.assign(version_courante, media)
+//         const media = mapperMedia(fichier.media)
+//         if(media) Object.assign(version_courante, media)
 
-        // dictFichiers[fuuid] = {
-        //     ...fichierMappe, 
-        //     fileId: fuuid, fuuid_v_courante: fuuid, 
-        //     version_courante,
-        //     traite,
-        //     disabled: !traite,
-        // }
+//         // dictFichiers[fuuid] = {
+//         //     ...fichierMappe, 
+//         //     fileId: fuuid, fuuid_v_courante: fuuid, 
+//         //     version_courante,
+//         //     traite,
+//         //     disabled: !traite,
+//         // }
 
-        listeFichiers.push(fichierMappe)
-    }
+//         listeFichiers.push(fichierMappe)
+//     }
 
-    return listeFichiers
-}
+//     return listeFichiers
+// }
 
-const CHAMPS_MEDIA = ['duration', 'width', 'height']
+// const CHAMPS_MEDIA = ['duration', 'width', 'height']
 
-function mapperMedia(media) {
-    console.debug("Mapper media ", media)
-    const mediaMappe = {}
-    for(const champ of CHAMPS_MEDIA) {
-        if(media[champ]) mediaMappe[champ] = media[champ]
-    }
+// function mapperMedia(media, fuuid) {
+//     console.debug("Mapper media ", media)
+//     const mediaMappe = {}
+//     for(const champ of CHAMPS_MEDIA) {
+//         if(media[champ]) mediaMappe[champ] = media[champ]
+//     }
     
-    if(media.images) {
-        const images = {}
-        mediaMappe.images = images
-        for(const image of media.images) {
-            const resolution = Math.min(image.width, image.height)
-            let key = `${image.mimetype};${resolution}`
-            if(resolution <= 128 && image.data) key = 'thumb'
-            else if(resolution > 128 && resolution < 360) key = 'small'
+//     if(media.images) {
+//         const images = {}
+//         mediaMappe.images = images
+//         for(const image of media.images) {
+//             const resolution = Math.min(image.width, image.height)
+//             let key = `${image.mimetype};${resolution}`
+//             if(resolution <= 128 && image.data) key = 'thumb'
+//             else if(resolution > 128 && resolution < 360) key = 'small'
 
-            const imageMappee = {
-                width: image.width,
-                height: image.height,
-                resolution,
-                mimetype: image.mimetype,
-            }
-            if(image.data) {
-                imageMappee.data = image.data
-            } else {
-                imageMappee.hachage = image.file
-                imageMappee.taille = image.size
-                Object.assign(imageMappee, image.decryption)
-            }
+//             const imageMappee = {
+//                 width: image.width,
+//                 height: image.height,
+//                 resolution,
+//                 mimetype: image.mimetype,
+//             }
+//             if(image.data) {
+//                 imageMappee.data = image.data
+//             } else {
+//                 imageMappee.hachage = image.file
+//                 imageMappee.taille = image.size
+//                 Object.assign(imageMappee, image.decryption)
+//             }
             
-            images[key] = imageMappee
-        }
-    }
+//             images[key] = imageMappee
+//         }
+//     }
 
-    if(media.videos) {
-        console.error("!!! TODO mapper videos")
-    }
+//     if(media.videos) {
+//         // console.warn("!!! TODO mapper videos ", media.videos)
+//         const videos = {}
+//         mediaMappe.video = videos
+//         for (const video of media.videos) {
+//             const resolution = Math.min(video.width, video.height)
+//             const key = `${video.mimetype};${video.codec};${resolution}p;${video.quality}`
+//             const decryption = video.decryption
+//             const videoMappe = {
+//                 width: video.width,
+//                 height: video.height,
+//                 quality: video.quality,
+//                 fuuid,
+//                 fuuid_video: video.file,
+//                 hachage: video.file,
+//                 mimetype: video.mimetype,
+//                 taille_fichier: video.size,
+//                 bitrate: video.bitrate,
+//                 codec: video.codec,
+//                 ...decryption,
+//             }
+//             videos[key] = videoMappe
+//         }
+//     }
 
-    return mediaMappe
-}
+//     return mediaMappe
+// }

@@ -142,7 +142,9 @@ export function mapper(row, workers, opts) {
 
 // Formatte un attachment comme si c'etait un fichier
 export function mapperRowAttachment(attachment, workers, opts) {
-    const attachmentMapperFichier = {...attachment, version_courante: {...attachment}}
+    console.debug("Mapper row attachement : ", attachment)
+    const attachmentMapperFichier = mapperFichiers([attachment], true)
+    // const attachmentMapperFichier = {...attachment, version_courante: {...attachment, ...media, video, fuuid}}
     return mapper(attachmentMapperFichier, workers, opts)
 }
 
@@ -263,4 +265,118 @@ export function estMimetypeMedia(mimetype) {
     }
 
     return false
+}
+
+export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
+
+    const listeFichiers = []
+
+    for (const fichier of fichiers) {
+        const fuuid = fichier.file
+        const mimetype = fichier.mimetype || 'application/bytes'
+        const traite = fichiers_traites || fichiers_status[fuuid] || false
+
+        const version_courante = {
+            nom: fichier.name,
+            date_fichier: fichier.date,
+            hachage_original: fichier.digest,
+            mimetype,
+            taille: fichier.encrypted_size || fichier.size,
+        }
+
+        const fichierMappe = {
+            nom: fichier.name,
+            dateFichier: fichier.date,
+            mimetype,
+            version_courante,
+
+            // Indicateurs de chargement
+            traite, 
+            disabled: !traite,
+
+            decryption: fichier.decryption,
+
+            // Ids pour utilitaires reutilises de collections
+            fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
+        }
+
+        const media = mapperMedia(fichier.media)
+        if(media) Object.assign(version_courante, media)
+
+        // dictFichiers[fuuid] = {
+        //     ...fichierMappe, 
+        //     fileId: fuuid, fuuid_v_courante: fuuid, 
+        //     version_courante,
+        //     traite,
+        //     disabled: !traite,
+        // }
+
+        listeFichiers.push(fichierMappe)
+    }
+
+    return listeFichiers
+}
+
+const CHAMPS_MEDIA = ['duration', 'width', 'height']
+
+function mapperMedia(media, fuuid) {
+    console.debug("Mapper media ", media)
+    const mediaMappe = {}
+    for(const champ of CHAMPS_MEDIA) {
+        if(media[champ]) mediaMappe[champ] = media[champ]
+    }
+    
+    if(media.images) {
+        const images = {}
+        mediaMappe.images = images
+        for(const image of media.images) {
+            const resolution = Math.min(image.width, image.height)
+            let key = `${image.mimetype};${resolution}`
+            if(resolution <= 128 && image.data) key = 'thumb'
+            else if(resolution > 128 && resolution < 360) key = 'small'
+
+            const imageMappee = {
+                width: image.width,
+                height: image.height,
+                resolution,
+                mimetype: image.mimetype,
+            }
+            if(image.data) {
+                imageMappee.data = image.data
+            } else {
+                imageMappee.hachage = image.file
+                imageMappee.taille = image.size
+                Object.assign(imageMappee, image.decryption)
+            }
+            
+            images[key] = imageMappee
+        }
+    }
+
+    if(media.videos) {
+        // console.warn("!!! TODO mapper videos ", media.videos)
+        const videos = {}
+        mediaMappe.video = videos
+        for (const video of media.videos) {
+            const resolution = Math.min(video.width, video.height)
+            const key = `${video.mimetype};${video.codec};${resolution}p;${video.quality}`
+            const decryption = video.decryption
+            const videoMappe = {
+                width: video.width,
+                height: video.height,
+                quality: video.quality,
+                fuuid,
+                fuuid_video: video.file,
+                hachage: video.file,
+                mimetype: video.mimetype,
+                taille_fichier: video.size,
+                bitrate: video.bitrate,
+                codec: video.codec,
+                ...decryption,
+            }
+            videos[key] = videoMappe
+        }
+    }
+
+    return mediaMappe
 }

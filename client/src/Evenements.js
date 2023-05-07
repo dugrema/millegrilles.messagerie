@@ -87,17 +87,17 @@ async function traiterMessageEvenement(workers, dispatch, userId, evenementMessa
     } else if(action === 'messageLu') {
         console.debug("traiterMessageEvenement Message lu ", message)
 
-        for await (const uuid_transaction of Object.keys(message.lus)) {
-            const flag_lu = message.lus[uuid_transaction]
-            const messageMaj = {uuid_transaction, user_id: userId, lu: flag_lu?true:false}
+        for await (const message_id of Object.keys(message.lus)) {
+            const flag_lu = message.lus[message_id]
+            const messageMaj = {message_id, user_id: userId, lu: flag_lu?true:false}
             await messagerieDao.updateMessage(messageMaj)
             dispatch(messagerieAction.mergeMessagesData(messageMaj))
         }
     } else if(action === 'messagesSupprimes') {
         console.debug("traiterMessageEvenement Messages supprimes ", message)
 
-        for await (const uuid_transaction of message.uuid_transactions) {
-            const messageSupprime = {uuid_transaction, user_id: userId, supprime: true}
+        for await (const message_id of message.uuid_transactions) {
+            const messageSupprime = {message_id, user_id: userId, supprime: true}
             await messagerieDao.updateMessage(messageSupprime)
             dispatch(messagerieAction.supprimerMessages(messageSupprime))
         }

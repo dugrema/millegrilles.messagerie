@@ -80,8 +80,8 @@ function majContact(contact) {
   )
 }
 
-function marquerLu(uuid_message, flag_lu) {
-  const data = {uuid_transaction: uuid_message, lu: flag_lu}
+function marquerLu(message_id, flag_lu) {
+  const data = {message_id, lu: flag_lu}
   return ConnexionClient.emitBlocking(
     'marquerLu', data, 
     {kind: MESSAGE_KINDS.KIND_COMMANDE, domaine: CONST_DOMAINE_MESSAGERIE, action: 'lu', ajouterCertificat: true}
@@ -138,11 +138,11 @@ function getCollectionUpload() {
   )
 }
 
-function supprimerMessages(uuidTransactions) {
-  if(!Array.isArray(uuidTransactions)) {
-    uuidTransactions = [uuidTransactions]
+function supprimerMessages(message_ids) {
+  if(!Array.isArray(message_ids)) {
+    message_ids = [message_ids]
   }
-  const commande = { uuid_transactions: uuidTransactions }
+  const commande = { message_ids }
   return ConnexionClient.emitBlocking(
     'supprimerMessages', commande, 
     {kind: MESSAGE_KINDS.KIND_COMMANDE, domaine: CONST_DOMAINE_MESSAGERIE, action: 'supprimerMessages', ajouterCertificat: true}

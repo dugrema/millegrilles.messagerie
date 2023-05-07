@@ -51,7 +51,7 @@ export function MenuContextuelAfficherAttachementsMultiselect(props) {
 }
 
 export function MenuContextuelAfficherAttachments(props) {
-    console.debug("MenuContextuelAfficherAttachments proppys : %O", props)
+    // console.debug("MenuContextuelAfficherAttachments proppys : %O", props)
     const { 
         attachment, cles, contextuel, 
         fermerContextuel, downloadAction,
