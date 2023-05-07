@@ -13,189 +13,242 @@ const CACHE_TEMP_NAME = 'fichiersDechiffresTmp'
 
 function setup(workers) {
     return {
-        getFichierChiffre(fuuid, opts) {
-            return getFichierChiffre(workers, fuuid, opts)
-        },
+        // getFichierChiffre(fuuid, opts) {
+        //     return getFichierChiffre(workers, fuuid, opts)
+        // },
         traiterAcceptedFiles(dispatch, usager, cuuid, acceptedFiles, opts) {
             opts = opts || {}
             return traiterAcceptedFiles(workers, dispatch, usager, cuuid, acceptedFiles, opts)
         },
-        resLoader,
+        // resLoader,
         clean,
         downloadCache,
+
+        // Remplacement pour getFichierChiffre
+        getUrlFuuid,
+        getCleSecrete(cle_id) {
+            return getCleSecrete(workers, cle_id)
+        },
     }
 }
 
 export default setup
 
-async function getFichierChiffre(workers, fuuid, opts) {
+function getUrlFuuid(fuuid, opts) {
     opts = opts || {}
-    // console.debug("getFichierChiffre %s (opts %O)", fuuid, opts)
-    const cles = opts.cles
-    const { dataChiffre, mimetype, controller, progress, ref_hachage_bytes } = opts
-    const { connexion, chiffrage, usagerDao } = workers
+    const jwt = opts.jwt
 
-    // Recuperer la cle de fichier
-    const cleFichierFct = async () => {
-        const hachage_bytes = ref_hachage_bytes || fuuid
+    console.trace('getUrlFuuid fuuid %s, opts %O', fuuid, opts)
 
-        // console.debug("Charger cle %s", hachage_bytes)
-
-        let cleFichier = null,
-            cleSecrete = null
-        try {
-            cleFichier = await usagerDao.getCleDechiffree(hachage_bytes)
-            if(cleFichier) return cleFichier
-        } catch(err) {
-            console.error("Erreur acces usagerDao ", err)
-        }
-
-        if(cles && cles[hachage_bytes]) {
-            cleFichier = cles[hachage_bytes]
-            cleSecrete = cleFichier.cleSecrete
-            if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
-        } else {
-            const reponse = await connexion.getClesFichiers([hachage_bytes])
-            cleFichier = reponse.cles[hachage_bytes]
-            cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
-        }
-        // console.debug("getFichierChiffre %s cle secrete %O", hachage_bytes, cleSecrete)
-
-        cleFichier = {...cleFichier, cleSecrete}
-
-        // Sauvegarder la cle pour reutilisation
-        usagerDao.saveCleDechiffree(hachage_bytes, cleSecrete, cleFichier)
-            .catch(err=>{
-                console.warn("Erreur sauvegarde cle dechiffree %s dans la db locale", err)
-            })
-
-        return cleFichier
+    const url = new URL(window.location.href)
+    if(jwt) {
+        // Mode streaming
+        url.pathname = `/messagerie/streams/${fuuid}`
+        url.searchParams.append('jwt', jwt)
+    } else {
+        // Fichiers (defaut)
+        url.pathname = `/messagerie/fichiers/${fuuid}`
     }
 
-    let fichierFct = async () => {
-        if( dataChiffre ) {
-            // Convertir de multibase en array
-            // console.debug("Data chiffre a dechiffrer : %O", dataChiffre)
-            return multibase.decode(dataChiffre)
-        } else {
-            // const controller = new AbortController();
-            const signal = controller?controller.signal:null
-
-            // Recuperer le fichier
-            const reponse = await axios({
-                method: 'GET',
-                url: `/messagerie/fichiers/${fuuid}`,
-                responseType: 'arraybuffer',
-                timeout: 300000,
-                progress,
-                // signal,
-            })
-            const abIn = Buffer.from(reponse.data)
-            return abIn
-        }
-    }
-
-    var [cleFichier, abFichier] = await Promise.all([cleFichierFct(), fichierFct()])
-    if(cleFichier && abFichier) {
-        // console.debug("Dechiffrer : cle %O, contenu : %O", cleFichier, abFichier)
-        try {
-            const champsOverrides = ['header', 'format']
-            const overrides = {}
-            for (const champ of champsOverrides) {
-                if(opts[champ]) overrides[champ] = opts[champ]
-            }
-            const cleEffective = {...cleFichier, ...overrides}  // Permet override par header, format, etc pour images/video
-            // console.debug("Dechiffre avec cle effective %O (cle %O)", cleEffective, cleFichier)
-            const ab = await chiffrage.chiffrage.dechiffrer(cleFichier.cleSecrete, abFichier, cleEffective)
-            // console.debug("Contenu dechiffre : %O", ab)
-            const blob = new Blob([ab], {type: mimetype})
-            return blob
-        } catch(err) {
-            console.error("Erreur dechiffrage traitementFichiers : %O", err)
-            throw err
-        }
-    }
-
-    console.error("Erreur chargement image %s (erreur recuperation cle ou download)", fuuid)
+    return url.href
 }
+
+async function getCleSecrete(workers, cle_id) {
+    if(!cle_id) throw new Error('dechiffrer Fournir cle_id ou cle_secrete+header')
+
+    const { connexion, usagerDao, chiffrage } = workers
+
+    try {
+        const cleFichier = await usagerDao.getCleDechiffree(cle_id)
+        // La cle existe localement
+        if(cleFichier) return cleFichier
+    } catch(err) {
+        console.error("Erreur acces usagerDao ", err)
+    }
+
+    const reponse = await connexion.getClesFichiers([cle_id])
+
+    const cleFichier = reponse.cles[cle_id]
+
+    const cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
+    cleFichier.cleSecrete = cleSecrete
+    cleFichier.cle_secrete = cleSecrete  // Nouvelle approche
+
+    // Sauvegarder la cle pour reutilisation
+    usagerDao.saveCleDechiffree(cle_id, cleSecrete, cleFichier)
+        .catch(err=>console.warn("Erreur sauvegarde cle dechiffree %s dans la db locale", err))
+
+    return cleFichier
+}
+
+// async function getFichierChiffre(workers, fuuid, opts) {
+//     opts = opts || {}
+//     // console.debug("getFichierChiffre %s (opts %O)", fuuid, opts)
+//     const cles = opts.cles
+//     const { dataChiffre, mimetype, controller, progress, ref_hachage_bytes } = opts
+//     const { connexion, chiffrage, usagerDao } = workers
+
+//     // Recuperer la cle de fichier
+//     const cleFichierFct = async () => {
+//         const hachage_bytes = ref_hachage_bytes || fuuid
+
+//         // console.debug("Charger cle %s", hachage_bytes)
+
+//         let cleFichier = null,
+//             cleSecrete = null
+//         try {
+//             cleFichier = await usagerDao.getCleDechiffree(hachage_bytes)
+//             if(cleFichier) return cleFichier
+//         } catch(err) {
+//             console.error("Erreur acces usagerDao ", err)
+//         }
+
+//         if(cles && cles[hachage_bytes]) {
+//             cleFichier = cles[hachage_bytes]
+//             cleSecrete = cleFichier.cleSecrete
+//             if(typeof(cleSecrete) === 'string') cleSecrete = multibase.decode(cleSecrete)
+//         } else {
+//             const reponse = await connexion.getClesFichiers([hachage_bytes])
+//             cleFichier = reponse.cles[hachage_bytes]
+//             cleSecrete = await chiffrage.dechiffrerCleSecrete(cleFichier.cle)
+//         }
+//         // console.debug("getFichierChiffre %s cle secrete %O", hachage_bytes, cleSecrete)
+
+//         cleFichier = {...cleFichier, cleSecrete}
+
+//         // Sauvegarder la cle pour reutilisation
+//         usagerDao.saveCleDechiffree(hachage_bytes, cleSecrete, cleFichier)
+//             .catch(err=>{
+//                 console.warn("Erreur sauvegarde cle dechiffree %s dans la db locale", err)
+//             })
+
+//         return cleFichier
+//     }
+
+//     let fichierFct = async () => {
+//         if( dataChiffre ) {
+//             // Convertir de multibase en array
+//             // console.debug("Data chiffre a dechiffrer : %O", dataChiffre)
+//             return multibase.decode(dataChiffre)
+//         } else {
+//             // const controller = new AbortController();
+//             const signal = controller?controller.signal:null
+
+//             // Recuperer le fichier
+//             const reponse = await axios({
+//                 method: 'GET',
+//                 url: `/messagerie/fichiers/${fuuid}`,
+//                 responseType: 'arraybuffer',
+//                 timeout: 300000,
+//                 progress,
+//                 // signal,
+//             })
+//             const abIn = Buffer.from(reponse.data)
+//             return abIn
+//         }
+//     }
+
+//     var [cleFichier, abFichier] = await Promise.all([cleFichierFct(), fichierFct()])
+//     if(cleFichier && abFichier) {
+//         // console.debug("Dechiffrer : cle %O, contenu : %O", cleFichier, abFichier)
+//         try {
+//             const champsOverrides = ['header', 'format']
+//             const overrides = {}
+//             for (const champ of champsOverrides) {
+//                 if(opts[champ]) overrides[champ] = opts[champ]
+//             }
+//             const cleEffective = {...cleFichier, ...overrides}  // Permet override par header, format, etc pour images/video
+//             // console.debug("Dechiffre avec cle effective %O (cle %O)", cleEffective, cleFichier)
+//             const ab = await chiffrage.chiffrage.dechiffrer(cleFichier.cleSecrete, abFichier, cleEffective)
+//             // console.debug("Contenu dechiffre : %O", ab)
+//             const blob = new Blob([ab], {type: mimetype})
+//             return blob
+//         } catch(err) {
+//             console.error("Erreur dechiffrage traitementFichiers : %O", err)
+//             throw err
+//         }
+//     }
+
+//     console.error("Erreur chargement image %s (erreur recuperation cle ou download)", fuuid)
+// }
 
 /* Donne acces aux ressources, selection via typeRessource. Chargement async. 
    Retourne { src } qui peut etre un url ou un blob. 
 */
-export function resLoader(fichier, typeRessource, opts) {
-    // console.debug("Res loader fichier %s : typeRessource %O, opts %O", fichier, typeRessource, opts)
-    opts = opts || {}
-    const { fileId } = fichier
-    const versionCourante = fichier.version_courante || {}
-    const { anime } = versionCourante
-    // console.debug("Loader %s avec sources %O (opts: %O)", typeRessource, fichier, opts)
+// export function resLoader(fichier, typeRessource, opts) {
+//     // console.debug("Res loader fichier %s : typeRessource %O, opts %O", fichier, typeRessource, opts)
+//     opts = opts || {}
+//     const { fileId } = fichier
+//     const versionCourante = fichier.version_courante || {}
+//     const { anime } = versionCourante
+//     // console.debug("Loader %s avec sources %O (opts: %O)", typeRessource, fichier, opts)
 
-    let selection = ''
-    if(typeRessource === 'video') {
-        // Charger video pleine resolution
-        const {video} = versionCourante
-        if(video) {
-            const labelVideo = trouverLabelVideo(Object.keys(video), opts)
-            // console.debug("Label video trouve : '%s'", labelVideo)
-            selection = video[labelVideo]
-        }
-    } else if(typeRessource === 'image') {
-        // Charger image pleine resolution
-        const mimetype = versionCourante.mimetype
-        if(anime && mimetype.startsWith('image/')) {
-            // Pas un video et anime
-            selection = {versionCourante, fuuid: fichier.fuuid}
-        } else {
-            const images = versionCourante.images || {}
-            const labelImage = trouverLabelImage(Object.keys(images), opts)
-            // console.debug("Label image trouve : '%s'", labelImage)
-            selection = images[labelImage]
-        }
-    } else if(typeRessource === 'poster') {
-        // Charger poster (fallback image pleine resolution)
-        const images = versionCourante.images || {}
-        if(images.poster) selection = images.poster
-        else {
-            const labelImage = trouverLabelImage(Object.keys(images), opts)
-            // console.debug("Label image trouve : '%s'", labelImage)
-            selection = images[labelImage]
-        }
-    } else if(typeRessource === 'thumbnail') {
-        // Charger thumbnail (fallback image poster, sinon pleine resolution)
-        const images = versionCourante.images || {}
-        if(images.thumbnail) selection = images.thumbnail
-        else if(images.poster) selection = images.poster
-        else {
-            const labelImage = trouverLabelImage(Object.keys(images), opts)
-            // console.debug("Label image trouve : '%s'", labelImage)
-            selection = images[labelImage]
-        }
-    } else if(typeRessource === 'original') {
-        // Charger contenu original
-        selection = {versionCourante, fuuid: fichier.fuuid}
-    }
+//     let selection = ''
+//     if(typeRessource === 'video') {
+//         // Charger video pleine resolution
+//         const {video} = versionCourante
+//         if(video) {
+//             const labelVideo = trouverLabelVideo(Object.keys(video), opts)
+//             // console.debug("Label video trouve : '%s'", labelVideo)
+//             selection = video[labelVideo]
+//         }
+//     } else if(typeRessource === 'image') {
+//         // Charger image pleine resolution
+//         const mimetype = versionCourante.mimetype
+//         if(anime && mimetype.startsWith('image/')) {
+//             // Pas un video et anime
+//             selection = {versionCourante, fuuid: fichier.fuuid}
+//         } else {
+//             const images = versionCourante.images || {}
+//             const labelImage = trouverLabelImage(Object.keys(images), opts)
+//             // console.debug("Label image trouve : '%s'", labelImage)
+//             selection = images[labelImage]
+//         }
+//     } else if(typeRessource === 'poster') {
+//         // Charger poster (fallback image pleine resolution)
+//         const images = versionCourante.images || {}
+//         if(images.poster) selection = images.poster
+//         else {
+//             const labelImage = trouverLabelImage(Object.keys(images), opts)
+//             // console.debug("Label image trouve : '%s'", labelImage)
+//             selection = images[labelImage]
+//         }
+//     } else if(typeRessource === 'thumbnail') {
+//         // Charger thumbnail (fallback image poster, sinon pleine resolution)
+//         const images = versionCourante.images || {}
+//         if(images.thumbnail) selection = images.thumbnail
+//         else if(images.poster) selection = images.poster
+//         else {
+//             const labelImage = trouverLabelImage(Object.keys(images), opts)
+//             // console.debug("Label image trouve : '%s'", labelImage)
+//             selection = images[labelImage]
+//         }
+//     } else if(typeRessource === 'original') {
+//         // Charger contenu original
+//         selection = {versionCourante, fuuid: fichier.fuuid}
+//     }
 
-    if(selection) {
-        const fuuid = selection.fuuid_video || selection.hachage || selection.fuuid
-        const mimetype = selection.mimetype || versionCourante.mimetype || fichier.mimetype
-        if(!fuuid) {
-            console.warn("Aucun fuuid trouve pour file_id: %s (selection: %O)", fileId, selection)
-            throw new Error(`Aucun fuuid trouve pour file_id: ${fileId}`)
-        }
-        // console.debug("Charger video selection %O, mimetype: %O, fuuid video: %s", selection, mimetype, fuuid)
-        const controller = new AbortController()
-        const urlBlob = getFichierChiffre(fuuid, {mimetype, controller})
-            .then(blob=>URL.createObjectURL(blob))
-            // .catch(err=>console.error("Erreur creation url blob fichier %s : %O", selection.hachage, err))
+//     if(selection) {
+//         const fuuid = selection.fuuid_video || selection.hachage || selection.fuuid
+//         const mimetype = selection.mimetype || versionCourante.mimetype || fichier.mimetype
+//         if(!fuuid) {
+//             console.warn("Aucun fuuid trouve pour file_id: %s (selection: %O)", fileId, selection)
+//             throw new Error(`Aucun fuuid trouve pour file_id: ${fileId}`)
+//         }
+//         // console.debug("Charger video selection %O, mimetype: %O, fuuid video: %s", selection, mimetype, fuuid)
+//         const controller = new AbortController()
+//         const urlBlob = getFichierChiffre(fuuid, {mimetype, controller})
+//             .then(blob=>URL.createObjectURL(blob))
+//             // .catch(err=>console.error("Erreur creation url blob fichier %s : %O", selection.hachage, err))
 
-        return { srcPromise: urlBlob, clean: ()=>{
-            try { controller.abort() } catch(err) {console.debug("Erreur annulation getFichierChiffre : %O", err)}
-            clean(urlBlob) 
-        }}
-    }
+//         return { srcPromise: urlBlob, clean: ()=>{
+//             try { controller.abort() } catch(err) {console.debug("Erreur annulation getFichierChiffre : %O", err)}
+//             clean(urlBlob) 
+//         }}
+//     }
 
-    return false
-}
+//     return false
+// }
 
 async function clean(urlBlobPromise) {
     try {

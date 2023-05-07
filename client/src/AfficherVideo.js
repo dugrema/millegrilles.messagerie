@@ -32,42 +32,32 @@ function AfficherVideo(props) {
     const [errVideo, setErrVideo] = useState('')
     const [progresChargement, setProgresChargement] = useState(0)
 
-    useEffect(()=>{
-        if(selecteur || !videoLoader) return  // Deja initialise
-        // Identifier un selecteur initial
-        const selecteurs = videoLoader.getSelecteurs()
-        if(!selecteurs) {
-            return setSelecteur('original')
-        } else if(selecteurs.includes('faible')) {
-            return setSelecteur('faible')
-        } else if(selecteurs.includes('medium')) {
-            return setSelecteur('medium')
-        } else if(selecteurs.includes('haute')) {
-            return setSelecteur('haute')
-        } else if(selecteurs.includes('original')) {
-            // Selectionner l'original, c'est le seul format disponible
-            return setSelecteur('original')
-        } else {
-            console.error("Aucuns format video n'est disponible dans le selecteur")
-        }
-    }, [selecteur, videoLoader, setSelecteur])
+    const selecteurs = useMemo(()=>videoLoader.getSelecteurs(), [videoLoader])
+
+    // useEffect(()=>{
+    //     if(selecteur || !videoLoader) return  // Deja initialise
+    //     // Identifier un selecteur initial
+    //     const selecteurs = videoLoader.getSelecteurs()
+    //     if(!selecteurs) {
+    //         return setSelecteur('original')
+    //     } else if(selecteurs.includes('faible')) {
+    //         return setSelecteur('faible')
+    //     } else if(selecteurs.includes('medium')) {
+    //         return setSelecteur('medium')
+    //     } else if(selecteurs.includes('haute')) {
+    //         return setSelecteur('haute')
+    //     } else if(selecteurs.includes('original')) {
+    //         // Selectionner l'original, c'est le seul format disponible
+    //         return setSelecteur('original')
+    //     } else {
+    //         console.error("Aucuns format video n'est disponible dans le selecteur")
+    //     }
+    // }, [selecteur, videoLoader, setSelecteur])
 
     const videoTimeUpdateHandler = useCallback(event=>{
         const currentTime = event.target.currentTime
         setTimeStamp(currentTime)
     }, [setTimeStamp])
-
-    useEffect(()=>{
-        if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
-        fichier.videoLoader.load(selecteur, {genererToken: true})
-            .then(src=>{
-                // console.debug("Source video : %O", src)
-                setSrcVideo(src)
-            })
-            .catch(err=>{
-                console.error("AfficherVideo erreur chargement video : %O", err)
-            })
-    }, [fichier, selecteur, /*genererToken,*/ setSrcVideo])
 
     const majChargement = useCallback(info=>{
         console.debug("Maj chargement ", info)
@@ -88,13 +78,38 @@ function AfficherVideo(props) {
     }, [setProgresChargement])
 
     useEffect(()=>{
+        if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
+        // fichier.videoLoader.load({selecteur})
+        //     .then(src=>{
+        //         // console.debug("Source video : %O", src)
+        //         setSrcVideo(src)
+        //     })
+        //     .catch(err=>{
+        //         console.error("AfficherVideo erreur chargement video : %O", err)
+        //     })
+
+        console.debug("useEffect Charger video avec selecteur ", selecteur)
+
+        fichier.videoLoader.load({selecteur})
+            .then(async src => {
+                console.debug("videoLoader.load resultat : ", src)
+                return attendreChargement(src, majChargement, setSrcVideo, setErrVideo)
+            })
+            .catch(err=>{
+                console.error("AfficherVideo erreur chargement video : %O", err)
+                setErrVideo('Erreur chargement video (general)')
+            })
+
+    }, [fichier, selecteur, majChargement, setSrcVideo, setErrVideo])
+
+    useEffect(()=>{
         if(!fichier || !fichier.imageLoader) return // Metadata n'est pas encore genere
         const loaderImage = fichier.imageLoader
 
         // console.debug("Fichier video loader : ", loaderImage)
 
         let imageChargee = null
-        loaderImage.load()
+        loaderImage.load({setFirst: setPosterObj})
             .then(image=>{
                 imageChargee = image
                 // console.debug("Image poster chargee : %O", image)
@@ -108,44 +123,44 @@ function AfficherVideo(props) {
         }
     }, [fichier, setPosterObj])
 
-    useEffect(()=>{
-        if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
+    // useEffect(()=>{
+    //     if(!selecteur || !fichier.videoLoader) return setSrcVideo('')
 
-        // Reset indicateurs
-        setVideoChargePret(false)
-        setErrVideo('')
-        setProgresChargement(0)
+    //     // Reset indicateurs
+    //     setVideoChargePret(false)
+    //     setErrVideo('')
+    //     setProgresChargement(0)
 
-        fichier.videoLoader.load(selecteur, {genererToken: true})
-            .then(async src => {
-                try {
-                    // console.debug("HEAD src : ", src)
-                    const sourceHead = src[0].src
+    //     fichier.videoLoader.load({selecteur})
+    //         .then(async src => {
+    //             try {
+    //                 console.debug("HEAD src : ", src)
+    //                 const sourceHead = src[0].src
                     
-                    while(true) {
-                        // S'assurer que le video est pret dans le back-end
-                        const reponse = await axios({
-                            method: 'HEAD',
-                            url: sourceHead,
-                            timeout: 20_000,
-                        })
-                        majChargement(reponse)
-                        if(reponse.status !== 202) break
-                        await new Promise(resolve=>setTimeout(resolve, 2000))
-                    }
+    //                 while(true) {
+    //                     // S'assurer que le video est pret dans le back-end
+    //                     const reponse = await axios({
+    //                         method: 'HEAD',
+    //                         url: sourceHead,
+    //                         timeout: 20_000,
+    //                     })
+    //                     majChargement(reponse)
+    //                     if(reponse.status !== 202) break
+    //                     await new Promise(resolve=>setTimeout(resolve, 2000))
+    //                 }
 
-                    // console.debug("Reponse head ", reponse)
-                    setSrcVideo(src)
-                } catch(err) {
-                    console.error("Erreur HEAD : ", err)
-                    setErrVideo('Erreur chargement video (preparation)')
-                }
-            })
-            .catch(err=>{
-                console.error("AfficherVideo erreur chargement video : %O", err)
-                setErrVideo('Erreur chargement video (general)')
-            })
-    }, [fichier, selecteur, setSrcVideo, setVideoChargePret, setProgresChargement, setErrVideo])
+    //                 // console.debug("Reponse head ", reponse)
+    //                 setSrcVideo(src)
+    //             } catch(err) {
+    //                 console.error("Erreur HEAD : ", err)
+    //                 setErrVideo('Erreur chargement video (preparation)')
+    //             }
+    //         })
+    //         .catch(err=>{
+    //             console.error("AfficherVideo erreur chargement video : %O", err)
+    //             setErrVideo('Erreur chargement video (general)')
+    //         })
+    // }, [fichier, selecteur, setSrcVideo, setVideoChargePret, setProgresChargement, setErrVideo])
 
     const onProgress = useCallback(event => {
         // console.debug("onProgress ", event)
@@ -184,7 +199,11 @@ function AfficherVideo(props) {
                         selecteur={selecteur}
                         videoChargePret={videoChargePret}
                         errVideo={errVideo} >
-                            <VideoViewer videos={srcVideo} poster={posterObj} height='100%' width='100%' 
+                            <VideoViewer 
+                                // videos={srcVideo} 
+                                srcVideo={srcVideo}
+                                poster={posterObj} 
+                                height='100%' width='100%' 
                                 selecteur={selecteur} 
                                 onTimeUpdate={videoTimeUpdateHandler} 
                                 timeStamp={timeStamp} 
@@ -208,6 +227,7 @@ function AfficherVideo(props) {
                         fermer={fermer}
                         showInfoModalOuvrir={showInfoModalOuvrir}
                         videos={videos}
+                        selecteurs={selecteurs}
                         support={support}
                         selecteur={selecteur}
                         setSelecteur={setSelecteur}
@@ -222,20 +242,93 @@ function AfficherVideo(props) {
 
 export default AfficherVideo
 
+async function attendreChargement(source, majChargement, setSrcVideo, setErrVideo) {
+    try {
+        console.debug("attendreChargement source ", source)
+        const url = source.src
+        while(true) {
+            // S'assurer que le video est pret dans le back-end
+            const reponse = await axios({
+                method: 'HEAD',
+                url,
+                timeout: 20_000,
+            })
+            majChargement(reponse)
+            if(reponse.status !== 202) break
+            await new Promise(resolve=>setTimeout(resolve, 2000))
+        }
+        setSrcVideo(source)
+    } catch(err) {
+        console.error("Erreur HEAD : ", err)
+        setErrVideo('Erreur chargement video (preparation)')
+    }
+}
+
+// function SelecteurResolution(props) {
+//     const { listeVideos, /*support,*/ selecteur, setSelecteur, videoLoader } = props
+
+//     const [listeOptions, setListeOptions] = useState([])
+
+//     useEffect(()=>{
+//         if(!listeVideos || !videoLoader) return
+
+//         const options = videoLoader.getSelecteurs()
+//         options.sort(trierLabelsVideos)
+
+//         setListeOptions(options)
+
+//     }, [listeVideos, setListeOptions, videoLoader])
+
+//     const changerSelecteur = useCallback(value=>setSelecteur(value), [setSelecteur])
+
+//     return (
+//         <>
+//             <span>Resolution</span>
+//             <DropdownButton title={selecteur} variant="secondary" onSelect={changerSelecteur}>
+//                 {listeOptions.map(item=>{
+//                     if(item === selecteur) {
+//                         return <Dropdown.Item key={item} eventKey={item} active>{item}</Dropdown.Item>
+//                     } else {
+//                         return <Dropdown.Item key={item} eventKey={item}>{item}</Dropdown.Item>
+//                     }
+//                 })}
+//             </DropdownButton>
+//         </>
+//     )
+// }
+
 function SelecteurResolution(props) {
-    const { listeVideos, /*support,*/ selecteur, setSelecteur, videoLoader } = props
+    const { listeVideos, selecteur, setSelecteur, selecteurs } = props
 
     const [listeOptions, setListeOptions] = useState([])
 
     useEffect(()=>{
-        if(!listeVideos || !videoLoader) return
+        if(selecteur || !selecteurs) return  // Deja initialise
+        // Identifier un selecteur initial
+        const selecteursKeys = Object.keys(selecteurs)
 
-        const options = videoLoader.getSelecteurs()
+        if(!selecteursKeys) {
+            // Aucunes options (probablement nouveau video) - utiliser original
+            return setSelecteur('original')
+        } else if(selecteursKeys.includes('fallback')) {
+            // Selectionner le format fallback (la plus faible resolution)
+            return setSelecteur('fallback')
+        } else {
+            console.error("Aucuns format video n'est disponible dans le selecteur")
+        }
+    }, [selecteurs, selecteur, setSelecteur])
+
+    useEffect(()=>{
+        // if(!listeVideos || !videoLoader) return
+        if(!listeVideos || !selecteurs) return
+
+        // const options = videoLoader.getSelecteurs()
+        const options = Object.keys(selecteurs)
         options.sort(trierLabelsVideos)
 
         setListeOptions(options)
 
-    }, [listeVideos, setListeOptions, videoLoader])
+    }, [listeVideos, setListeOptions, selecteurs, /*, videoLoader*/])
 
     const changerSelecteur = useCallback(value=>setSelecteur(value), [setSelecteur])
 
@@ -357,7 +450,7 @@ function PlayerEtatPassthrough(props) {
 
 function PanneauInformation(props) {
 
-    const { fichier, nomFichier, fermer, showInfoModalOuvrir, videos, support, selecteur, setSelecteur } = props
+    const { fichier, fermer, videos, selecteurs, selecteur, setSelecteur } = props
 
     return (
         <div>
@@ -365,8 +458,9 @@ function PanneauInformation(props) {
                 <Col xs={8}>
                     <SelecteurResolution 
                         listeVideos={videos} 
-                        support={support}
-                        selecteur={selecteur} setSelecteur={setSelecteur} 
+                        selecteurs={selecteurs} 
+                        selecteur={selecteur} 
+                        setSelecteur={setSelecteur} 
                         videoLoader={fichier.videoLoader} />
                 </Col>
 

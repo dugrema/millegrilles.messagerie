@@ -19,7 +19,7 @@ import { uploaderFichiers } from './fonctionsFichiers'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
-import { mapper } from './mapperFichier'
+import { mapDocumentComplet } from './mapperFichier'
 
 function NouveauMessage(props) {
 
@@ -617,7 +617,7 @@ function preparerRowAttachment(workers, fichier) {
     }
 
     const fichierRebuild = {...fichier, tuuid}
-    const fichierMappe = mapper(fichierRebuild, workers)
+    const fichierMappe = mapDocumentComplet(workers, fichierRebuild)
 
     return {...fichierMappe, tuuid, pret}
 }

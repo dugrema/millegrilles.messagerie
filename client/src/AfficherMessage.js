@@ -15,7 +15,7 @@ import useWorkers, {useEtatConnexion, useEtatAuthentifie, useUsager} from './Wor
 import messagerieActions, { thunks as messagerieThunks } from './redux/messagerieSlice'
 
 import { MenuContextuelAfficherAttachments, MenuContextuelAfficherAttachementsMultiselect, onContextMenu } from './MenuContextuel'
-import { mapper, mapperRowAttachment, mapperFichiers } from './mapperFichier'
+import { mapDocumentComplet, mapperRowAttachment, mapperFichiers } from './mapperFichier'
 // import { detecterSupport } from './fonctionsFichiers'
 
 import ModalSelectionnerCollection from './ModalSelectionnerCollection'
@@ -224,29 +224,33 @@ function ContenuMessage(props) {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
 
                 console.debug("creerToken fuuidVideo %O, videoItem %O", fuuidVideo, videoItem)
-                let infoVideo = null
+                const videoDict = videoItem.media.videos
+                let infoVideo = null,
+                    paramsDecryption = null
                 if(fuuidVideo === videoItem.file) {
                     // Original
                     //infoVideo = videoItem
                     infoVideo = fichierVideoMappe.version_courante
+                    paramsDecryption = videoItem.decryption
                 } else {
                     //infoVideo = Object.values(videoItem.media.videos).filter(item=>item.file===fuuidVideo).pop()
-                    infoVideo = Object.values(fichierVideoMappe.version_courante.video).filter(item=>item===fuuidFichier).pop()
+                    infoVideo = Object.values(videoDict).filter(item=>item.file===fuuidVideo).pop()
+                    paramsDecryption = infoVideo
                 }
                 console.debug("creerToken Afficher infoVideo ", infoVideo)
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
-                    if(infoVideo[champ]) paramsChiffrage[champ] = infoVideo[champ]
+                    if(infoVideo[champ]) paramsChiffrage[champ] = paramsDecryption[champ]
                 }
                 const mimetype = infoVideo.mimetype
 
                 // const cleFuuid = fichiers.cles[fuuidFichier]
-                const cleFuuid = {...infoVideo.decryption, cleSecrete: base64.decode(videoItem.decryption.key)}
+                const cleFuuid = {...videoItem.decryption, cleSecrete: base64.decode(videoItem.decryption.key)}
                 console.debug("ContenuMessage.creerToken creerTokensStreaming avec cleFuuid %O pour videoItem %O", cleFuuid, videoItem)
 
                 const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage}, {mimetype})
                 console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
-                return jwts
+                return {jwts}
             }
 
             attachmentMappe = mapperRowAttachment(videoItem, workers, {genererToken: true, creerToken})
@@ -497,7 +501,7 @@ function AfficherAttachments(props) {
                     cleSecrete: base64.decode(item.decryption.key),
                 }}
                 console.debug("Liste mappee cles ", cles)
-                return mapper(item, workers, {ref_hachage_bytes: item.fuuid_v_courante, cles, supportMedia})
+                return mapDocumentComplet(workers, item, {ref_hachage_bytes: item.fuuid_v_courante, cles, supportMedia})
             })
 
             console.debug("Liste mappee ", listeMappee)
@@ -827,7 +831,9 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
 
     const mimetype = opts.mimetype
 
-    console.debug("fournirPreuveClesVideos Fichier %s (video %s) Conserver cle video %O (opts: %O)", fuuidFichier, fuuidVideo, cleFuuid, opts)
+    console.debug("fournirPreuveClesVideos Fichier %s (video %s) Conserver cle video %O, dechiffrageVideo :%O, (opts: %O)", 
+        fuuidFichier, fuuidVideo, cleFuuid, dechiffrageVideo, opts)
+    
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     const caPem = usager.ca
@@ -883,12 +889,23 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
 
     // console.debug("Fichiers cles ", fichiersCles)
 
-    const commandeVerifierCles = { 
-        fingerprint,
-        cles: fichiersCles, 
-        preuves: dictPreuves,
-        fuuidVideo,
-        dechiffrageVideo,
+    let commandeVerifierCles = null
+    if(fuuidFichier === fuuidVideo) {
+        commandeVerifierCles = { 
+            fingerprint,
+            cles: fichiersCles, 
+            preuves: dictPreuves,
+            // fuuidVideo,
+            // dechiffrageVideo,
+        }
+    } else {
+        commandeVerifierCles = { 
+            fingerprint,
+            cles: fichiersCles, 
+            preuves: dictPreuves,
+            fuuidVideo,
+            dechiffrageVideo,
+        }
     }
 
     if(mimetype) commandeVerifierCles.mimetype = mimetype

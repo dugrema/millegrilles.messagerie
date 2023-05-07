@@ -1,7 +1,10 @@
-import {
-    loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader, audioResourceLoader
-} from '@dugrema/millegrilles.reactjs/src/imageLoading'
-import {supporteFormatWebp, /*supporteFormatWebm*/} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
+// import {
+//     loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader, audioResourceLoader
+// } from '@dugrema/millegrilles.reactjs/src/imageLoading'
+
+import MediaLoader from '@dugrema/millegrilles.reactjs/src/mediaLoader'
+
+// import {supporteFormatWebp, /*supporteFormatWebm*/} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
 
 const ICONE_FOLDER = <i className="fa fa-folder fa-lg"/>
 const ICONE_FICHIER = <i className="fa fa-file fa-lg"/>
@@ -20,132 +23,131 @@ const Icones = {
 
 // // Detection format media
 // const supporteWebm = supporteFormatWebm()
-let supporteWebp = false
-supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.warn("Erreur detection webp : %O", err))
+// let supporteWebp = false
+// supporteFormatWebp().then(supporte=>supporteWebp=supporte).catch(err=>console.warn("Erreur detection webp : %O", err))
 // // console.debug("Support webm : %O", supporteWebm)
 
 export { Icones }
 
 // Mapping pour selection d'attachements
-export function mapper(row, workers, opts) {
-    // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
-    opts = opts || {}
-    const version_courante = row.version_courante || row
-    const mimetype = version_courante.mimetype || row.mimetype
+// export function mapper(row, workers, opts) {
+//     // console.trace("Mapper attachment : %O (opts: %O)", row, opts)
+//     opts = opts || {}
+//     const version_courante = row.version_courante || row
+//     const mimetype = version_courante.mimetype || row.mimetype
 
-    const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, favoris, disabled } = row
-    const { genererToken, creerToken } = opts
-    const cles = opts.cles || {}
-    // const supportMedia = opts.supportMedia || {},
-    //       supporteWebp = true  // !!supportMedia.webp
+//     const { tuuid, fuuid, nom, supprime, date_creation, duree, fuuid_v_courante, favoris, disabled } = row
+//     const { genererToken, creerToken } = opts
+//     const cles = opts.cles || {}
+//     // const supportMedia = opts.supportMedia || {},
+//     //       supporteWebp = true  // !!supportMedia.webp
 
-    // console.debug("!!! MAPPER %O, opts: %O", row, opts)
+//     // console.debug("!!! MAPPER %O, opts: %O", row, opts)
 
-    let date_version = '', 
-        mimetype_fichier = '',
-        taille_fichier = ''
+//     let date_version = '', 
+//         mimetype_fichier = '',
+//         taille_fichier = ''
 
-    let thumbnailIcon = '',
-        ids = {},
-        miniThumbnailLoader = null,
-        smallThumbnailLoader = null,
-        loader = null,
-        imageLoader = null,
-        videoLoader = null,
-        audioLoader = null
-    if(!mimetype) {
-        ids.folderId = tuuid  // Collection, tuuid est le folderId
-        thumbnailIcon = Icones.ICONE_FOLDER
-    } else {
-        const { date_fichier, taille, images, video } = version_courante
-        const ref_hachage_bytes = fuuid
-        mimetype_fichier = mimetype
-        date_version = date_fichier
-        taille_fichier = taille
-        ids.fileId = tuuid || fuuid  // Fichier, tuuid est le fileId pour selection attachment, fuuid pour messages recus
-        const mimetypeBase = mimetype.split('/').shift()
+//     let thumbnailIcon = '',
+//         ids = {},
+//         miniThumbnailLoader = null,
+//         smallThumbnailLoader = null,
+//         loader = null,
+//         imageLoader = null,
+//         videoLoader = null,
+//         audioLoader = null
+//     if(!mimetype) {
+//         ids.folderId = tuuid  // Collection, tuuid est le folderId
+//         thumbnailIcon = Icones.ICONE_FOLDER
+//     } else {
+//         const { date_fichier, taille, images, video } = version_courante
+//         const ref_hachage_bytes = fuuid
+//         mimetype_fichier = mimetype
+//         date_version = date_fichier
+//         taille_fichier = taille
+//         ids.fileId = tuuid || fuuid  // Fichier, tuuid est le fileId pour selection attachment, fuuid pour messages recus
+//         const mimetypeBase = mimetype.split('/').shift()
 
-        if(workers && workers.traitementFichiers) {
-            const getFichierChiffre = workers.traitementFichiers.getFichierChiffre
+//         if(workers && workers.traitementFichiers) {
+//             const getFichierChiffre = workers.traitementFichiers.getFichierChiffre
 
-            // Thumbnails pour navigation
-            if(images) {
-                const thumbnail = images.thumb || images.thumbnail,
-                    small = images.small || images.poster
-                if(thumbnail && thumbnail.data_chiffre) {
-                    miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre, ref_hachage_bytes, cles})
-                }
-                if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail, ref_hachage_bytes, cles})
+//             // Thumbnails pour navigation
+//             if(images) {
+//                 const thumbnail = images.thumb || images.thumbnail,
+//                     small = images.small || images.poster
+//                 if(thumbnail && thumbnail.data_chiffre) {
+//                     miniThumbnailLoader = loadFichierChiffre(getFichierChiffre, thumbnail.hachage, thumbnail.mimetype, {dataChiffre: thumbnail.data_chiffre, ref_hachage_bytes, cles})
+//                 }
+//                 if(small) smallThumbnailLoader = fileResourceLoader(getFichierChiffre, small.hachage, small.mimetype, {thumbnail, ref_hachage_bytes, cles})
 
-                imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp, ref_hachage_bytes, cles})
-            }
+//                 imageLoader = imageResourceLoader(getFichierChiffre, images, {supporteWebp, ref_hachage_bytes, cles})
+//             }
 
-            if(video) {
-                if(video && Object.keys(video).length > 0) {
-                    videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
-                } else {
-                    // console.debug("Video - original seulement")
-                    videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
-                }
-            } else if(mimetypeBase === 'audio') {
-                audioLoader = audioResourceLoader(fuuid, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
-            }
+//             if(video) {
+//                 if(video && Object.keys(video).length > 0) {
+//                     videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
+//                 } else {
+//                     // console.debug("Video - original seulement")
+//                     videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
+//                 }
+//             } else if(mimetypeBase === 'audio') {
+//                 audioLoader = audioResourceLoader(fuuid, {creerToken, fuuid: fuuid_v_courante, version_courante, baseUrl: '/messagerie/streams'})
+//             }
         
-            // Loader du fichier source (principal), supporte thumbnail pour chargement
-            loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {cles})
-        }
+//             // Loader du fichier source (principal), supporte thumbnail pour chargement
+//             loader = loadFichierChiffre(getFichierChiffre, fuuid_v_courante, mimetype, {cles})
+//         }
 
-        if(mimetype === 'application/pdf') {
-            thumbnailIcon = ICONE_FICHIER_PDF
-        } else if(mimetypeBase === 'image') {
-            thumbnailIcon = ICONE_FICHIER_IMAGE
-        } else if(mimetypeBase === 'video') {
-            thumbnailIcon = ICONE_FICHIER_VIDEO
-        } else if(mimetypeBase === 'audio') {
-            thumbnailIcon = ICONE_FICHIER_AUDIO
-        } else if(mimetypeBase === 'application/text') {
-            thumbnailIcon = ICONE_FICHIER_TEXT
-        } else if(mimetypeBase === 'application/zip') {
-            thumbnailIcon = ICONE_FICHIER_ZIP
-        } else { 
-            thumbnailIcon = ICONE_FICHIER
-        }
-    }
+//         if(mimetype === 'application/pdf') {
+//             thumbnailIcon = ICONE_FICHIER_PDF
+//         } else if(mimetypeBase === 'image') {
+//             thumbnailIcon = ICONE_FICHIER_IMAGE
+//         } else if(mimetypeBase === 'video') {
+//             thumbnailIcon = ICONE_FICHIER_VIDEO
+//         } else if(mimetypeBase === 'audio') {
+//             thumbnailIcon = ICONE_FICHIER_AUDIO
+//         } else if(mimetypeBase === 'application/text') {
+//             thumbnailIcon = ICONE_FICHIER_TEXT
+//         } else if(mimetypeBase === 'application/zip') {
+//             thumbnailIcon = ICONE_FICHIER_ZIP
+//         } else { 
+//             thumbnailIcon = ICONE_FICHIER
+//         }
+//     }
 
-    return {
-        // fileId: tuuid,
-        // folderId: tuuid,
-        ...ids,
-        nom,
-        supprime, 
-        taille: taille_fichier,
-        dateAjout: date_version || date_creation,
-        mimetype: ids.folderId?'Repertoire':mimetype_fichier,
-        // thumbnailSrc,
-        thumbnail: {
-            miniLoader: miniThumbnailLoader,
-            smallLoader: smallThumbnailLoader,
-            thumbnailIcon,
-            thumbnailCaption: nom,
-        },
-        loader,
-        imageLoader,
-        videoLoader,
-        audioLoader,
-        duree,
-        fuuid: fuuid_v_courante,
-        version_courante,
-        favoris,
-        disabled,
-    }
-}
+//     return {
+//         // fileId: tuuid,
+//         // folderId: tuuid,
+//         ...ids,
+//         nom,
+//         supprime, 
+//         taille: taille_fichier,
+//         dateAjout: date_version || date_creation,
+//         mimetype: ids.folderId?'Repertoire':mimetype_fichier,
+//         // thumbnailSrc,
+//         thumbnail: {
+//             miniLoader: miniThumbnailLoader,
+//             smallLoader: smallThumbnailLoader,
+//             thumbnailIcon,
+//             thumbnailCaption: nom,
+//         },
+//         loader,
+//         imageLoader,
+//         videoLoader,
+//         audioLoader,
+//         duree,
+//         fuuid: fuuid_v_courante,
+//         version_courante,
+//         favoris,
+//         disabled,
+//     }
+// }
 
 // Formatte un attachment comme si c'etait un fichier
 export function mapperRowAttachment(attachment, workers, opts) {
     console.debug("Mapper row attachement : ", attachment)
-    const attachmentMapperFichier = mapperFichiers([attachment], true)
-    // const attachmentMapperFichier = {...attachment, version_courante: {...attachment, ...media, video, fuuid}}
-    return mapper(attachmentMapperFichier, workers, opts)
+    const attachmentMapperFichier = mapperFichiers([attachment], true).pop()
+    return mapDocumentComplet(workers, attachmentMapperFichier, opts)
 }
 
 export function onContextMenu(event, value, setContextuel) {
@@ -161,14 +163,94 @@ export function onContextMenu(event, value, setContextuel) {
     setContextuel(params)
 }
 
-export function mapDocumentComplet(workers, doc) {
+// export function mapDocumentComplet(workers, doc) {
 
+//     const { connexion, traitementFichiers } = workers
+
+//     const { nom, tuuid, date_creation, fuuid_v_courante, mimetype } = doc
+//     const version_courante = doc.version_courante?{...doc.version_courante}:null
+//     const copie = {...doc, version_courante}
+//     const ref_hachage_bytes = fuuid_v_courante
+
+//     if(tuuid) {
+//         // Mapper vers fileId ou folderId
+//         // Utiliser mimetype pour detecter si c'est un repertoire ou fichier
+//         if(mimetype) copie.fileId = tuuid
+//         else {
+//             copie.mimetype = 'Repertoire'
+//             copie.folderId = tuuid
+//         }
+
+//         // Remplacer le nom temporairement durant le dechiffrage
+//         if(!nom) copie.nom = tuuid
+//     }
+    
+//     if(date_creation) copie.dateAjout = date_creation
+//     copie.dateFichier = doc.dateFichier || date_creation
+
+//     // Icones et image
+//     copie.thumbnail = {
+//         thumbnailIcon: getThumbnailIcon(mimetype),
+//         thumbnailCaption: nom,
+//     }
+
+//     // Loader du fichier source (principal), supporte thumbnail pour chargement
+//     copie.loader = loadFichierChiffre(traitementFichiers.getFichierChiffre, fuuid_v_courante, mimetype)    
+
+//     if(version_courante) {
+//         const { anime, taille, images, video, duration, mimetype } = version_courante
+        
+//         if(taille) copie.taille = taille
+//         if(duration) copie.duration = duration
+
+//         if(images) {
+//             const imageLoader = imageResourceLoader(
+//                 traitementFichiers.getFichierChiffre, 
+//                 images, 
+//                 {anime, supporteWebp: true, ref_hachage_bytes, fuuid: fuuid_v_courante, mimetype}
+//             )
+//             copie.imageLoader = imageLoader
+//         }
+
+//         if(video) {
+//             const creerToken = async fuuids => {
+//                 if(typeof(fuuids) === 'string') fuuids = [fuuids]  // Transformer en array
+//                 const reponse = await connexion.creerTokenStream(fuuids)
+//                 return reponse.token
+//             }
+
+//             if(video && Object.keys(video).length > 0) {
+//                 copie.videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante})
+//             } else {
+//                 // console.debug("Video - original seulement")
+//                 copie.videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante})
+//             }
+
+//         }
+//     }
+
+//     return copie
+// }
+
+export function mapDocumentComplet(workers, doc, opts) {
+
+    console.debug("mapDocumentComplet : %O (%O)", doc, opts)
+
+    const creerToken = opts.creerToken
     const { connexion, traitementFichiers } = workers
 
-    const { nom, tuuid, date_creation, fuuid_v_courante, mimetype } = doc
+    // Instance mediaLoader pour contenu (fichier, images, videos)
+    const creerTokenStreamInst = async commande => {
+        console.debug("Commande creer token stream ", commande)
+        const fuuid = commande.fuuidStream
+        return creerToken(fuuid)
+        // return connexion.creerTokensStreaming(commande)
+    }
+    const mediaLoader = new MediaLoader(traitementFichiers.getUrlFuuid, traitementFichiers.getCleSecrete, creerTokenStreamInst)
+
+    const { nom, tuuid, date_creation, fuuid_v_courante, mimetype, archive } = doc
     const version_courante = doc.version_courante?{...doc.version_courante}:null
     const copie = {...doc, version_courante}
-    const ref_hachage_bytes = fuuid_v_courante
 
     if(tuuid) {
         // Mapper vers fileId ou folderId
@@ -193,37 +275,23 @@ export function mapDocumentComplet(workers, doc) {
     }
 
     // Loader du fichier source (principal), supporte thumbnail pour chargement
-    copie.loader = loadFichierChiffre(traitementFichiers.getFichierChiffre, fuuid_v_courante, mimetype)    
+    copie.loader = mediaLoader.fichierLoader(fuuid_v_courante, {mimetype})
 
     if(version_courante) {
-        const { anime, taille, images, video, duration, mimetype } = version_courante
+        const { anime, taille, images, video, duration, mimetype, header } = version_courante
         
         if(taille) copie.taille = taille
         if(duration) copie.duration = duration
 
         if(images) {
-            const imageLoader = imageResourceLoader(
-                traitementFichiers.getFichierChiffre, 
-                images, 
-                {anime, supporteWebp: true, ref_hachage_bytes, fuuid: fuuid_v_courante, mimetype}
-            )
-            copie.imageLoader = imageLoader
+            copie.imageLoader = mediaLoader.imageLoader(images, {cle_id: fuuid_v_courante, fuuid: fuuid_v_courante, mimetype, anime, header})
+            copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, {cle_id: fuuid_v_courante})
         }
 
-        if(video) {
-            const creerToken = async fuuids => {
-                if(typeof(fuuids) === 'string') fuuids = [fuuids]  // Transformer en array
-                const reponse = await connexion.creerTokenStream(fuuids)
-                return reponse.token
-            }
-
-            if(video && Object.keys(video).length > 0) {
-                copie.videoLoader = videoResourceLoader(video, {creerToken, fuuid: fuuid_v_courante, version_courante})
-            } else {
-                // console.debug("Video - original seulement")
-                copie.videoLoader = videoResourceLoader({}, {creerToken, fuuid: fuuid_v_courante, version_courante})
-            }
-
+        if(mimetype.toLowerCase().startsWith('video/')) {
+            copie.videoLoader = mediaLoader.videoLoader(video || {}, {fuuid: fuuid_v_courante, mimetype})
+        } else if(mimetype.toLowerCase().startsWith('audio/')) {
+            copie.audioLoader = mediaLoader.audioLoader(fuuid_v_courante, mimetype)
         }
     }
 
@@ -272,6 +340,8 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
     const listeFichiers = []
 
     for (const fichier of fichiers) {
+        console.debug("Mapper fichier ", fichier)
+
         const fuuid = fichier.file
         const mimetype = fichier.mimetype || 'application/bytes'
         const traite = fichiers_traites || fichiers_status[fuuid] || false
@@ -302,14 +372,6 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
 
         const media = mapperMedia(fichier.media)
         if(media) Object.assign(version_courante, media)
-
-        // dictFichiers[fuuid] = {
-        //     ...fichierMappe, 
-        //     fileId: fuuid, fuuid_v_courante: fuuid, 
-        //     version_courante,
-        //     traite,
-        //     disabled: !traite,
-        // }
 
         listeFichiers.push(fichierMappe)
     }

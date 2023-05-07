@@ -265,7 +265,7 @@ async function creerTokensStreaming(socket, params) {
             //       iv = cle.iv,
             //       tag = cle.tag
 
-            const jwt = await signerTokenFichier(fingerprint, clePriveePem, userId, fuuid)
+            const jwt = await signerTokenFichier(fingerprint, clePriveePem, userId, fuuid, {mimetype})
             debug("JWT cree pour userId %s sur fuuid %s : %O", userId, fuuid, jwt)
             jwts[fuuid] = jwt
 
