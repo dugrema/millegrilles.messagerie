@@ -1,7 +1,7 @@
 // import {
 //     loadFichierChiffre, fileResourceLoader, imageResourceLoader, videoResourceLoader, audioResourceLoader
 // } from '@dugrema/millegrilles.reactjs/src/imageLoading'
-
+import { base64 } from 'multiformats/bases/base64'
 import MediaLoader from '@dugrema/millegrilles.reactjs/src/mediaLoader'
 
 // import {supporteFormatWebp, /*supporteFormatWebm*/} from '@dugrema/millegrilles.reactjs/src/detecterAppareils'
@@ -285,8 +285,11 @@ export function mapDocumentComplet(workers, doc, opts) {
         if(duration) copie.duration = duration
 
         if(images) {
-            copie.imageLoader = mediaLoader.imageLoader(images, {cle_id: fuuid_v_courante, fuuid: fuuid_v_courante, mimetype, anime, header})
-            copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, {cle_id: fuuid_v_courante})
+            console.debug("doc.decryption ", doc.decryption)
+            const cle_secrete = base64.decode(doc.decryption.key)
+
+            copie.imageLoader = mediaLoader.imageLoader(images, {cle_secrete, fuuid: fuuid_v_courante, mimetype, anime, header})
+            copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, {cle_secrete})
         }
 
         if(mimetype.toLowerCase().startsWith('video/')) {
