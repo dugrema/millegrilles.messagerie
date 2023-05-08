@@ -58,18 +58,20 @@ function AfficherMessage(props) {
     const choisirCollectionCb = useCallback(()=>setChoisirCollection(true), [setChoisirCollection])
 
     const copierVersCollection = useCallback( cuuid => {
-        const attachments = message.attachments
+        console.debug("copierVersCollection message ", message)
+        const attachments = message.contenu.files
 
         console.debug("copierVersCollection cuuid %s selection %O (ref attachments %O)", cuuid, selectionAttachments, attachments)
         const fuuids = selectionAttachments
-        const fichiersSelectionnes = attachments.fichiers.filter(item=>fuuids.includes(item.fuuid))
-        const cles = fuuids.reduce((acc, fuuid)=>{
-            acc[fuuid] = attachments.cles[fuuid]
-            return acc
-        }, {})
-        console.debug("copierVersCollection cuuid %s cles %O fichiers %O", cuuid, cles, fichiersSelectionnes)
+        const fichiersSelectionnes = attachments.filter(item=>fuuids.includes(item.file))
+        // const cles = fichiersSelectionnes.reduce((acc, fichier)=>{
+        //     const fuuid = fichier.file
+        //     acc[fuuid] = fichier.decryption
+        //     return acc
+        // }, {})
+        console.debug("copierVersCollection cuuid %s fichiers %O", cuuid, fichiersSelectionnes)
 
-        copierAttachmentVersCollection(workers, fichiersSelectionnes, cles, cuuid, usager)
+        copierAttachmentVersCollection(workers, fichiersSelectionnes, cuuid, usager)
             .catch(err=>console.error("Erreur copie attachment vers collection : %O", err))
     }, [workers, selectionAttachments, message, usager])
 
@@ -652,7 +654,7 @@ function MenuContextuel(props) {
     return ''
 }
 
-async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, usager) {
+async function copierAttachmentVersCollection(workers, fichiers, /*cles, */ cuuid, usager) {
     // console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
@@ -728,7 +730,7 @@ async function copierAttachmentVersCollection(workers, fichiers, cles, cuuid, us
     // console.debug("copierAttachmentVersCollection Commande ", commande)
 
     const reponse = await connexion.copierFichierTiers(commande)
-    // console.debug("copierFichierTiers Reponse ", reponse)
+    console.debug("copierFichierTiers Reponse ", reponse)
 }
 
 async function hacherPreuveCle(fingerprint, cleSecrete) {
@@ -828,16 +830,11 @@ function longToByteArray( /*long*/ long) {
 
     // console.debug("Message reloade pour attachments")
     dispatch(messagerieActions.clearSyncEnCours())
- }
+}
  
  // Conserver les cles pour les videos
-async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, dechiffrageVideo, opts) {
-    opts = opts || {}
-
-    const mimetype = opts.mimetype
-
-    console.debug("fournirPreuveClesVideos Fichier %s (video %s) Conserver cle video %O, dechiffrageVideo :%O, (opts: %O)", 
-        fuuidFichier, fuuidVideo, cleFuuid, dechiffrageVideo, opts)
+async function creerPreuveCle(workers, fuuidFichier, cleFuuid, usager) {
+    console.debug("creerPreuveCle Fichier %s Conserver cle %O", fuuidFichier, cleFuuid)
     
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
@@ -893,21 +890,29 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
     }
 
     // console.debug("Fichiers cles ", fichiersCles)
+    return { fingerprint, preuves: dictPreuves, cles: fichiersCles }
+}
 
+async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, dechiffrageVideo, opts) {
+    opts = opts || {}
+    const { mimetype } = opts
+
+    const { fingerprint, preuves, cles } = await creerPreuveCle(workers, fuuidFichier, cleFuuid, usager)
+
+    const { connexion } = workers
+    
     let commandeVerifierCles = null
     if(fuuidFichier === fuuidVideo) {
         commandeVerifierCles = { 
             fingerprint,
-            cles: fichiersCles, 
-            preuves: dictPreuves,
-            // fuuidVideo,
-            // dechiffrageVideo,
+            cles, 
+            preuves,
         }
     } else {
         commandeVerifierCles = { 
             fingerprint,
-            cles: fichiersCles, 
-            preuves: dictPreuves,
+            cles, 
+            preuves,
             fuuidVideo,
             dechiffrageVideo,
         }
