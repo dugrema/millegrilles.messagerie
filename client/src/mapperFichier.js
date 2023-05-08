@@ -387,7 +387,7 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
         }
 
         if(fichier.media) {
-            const media = mapperMedia(fichier.media)
+            const media = mapperMedia(fichier.media, fuuid)
             if(media) Object.assign(version_courante, media)
             if(fichier.media.animated === true) version_courante.anime = true
         }

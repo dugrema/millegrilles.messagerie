@@ -655,7 +655,7 @@ function MenuContextuel(props) {
 }
 
 async function copierAttachmentVersCollection(workers, fichiers, /*cles, */ cuuid, usager) {
-    // console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
+    console.debug("copierAttachmentVersCollection Copier vers collection %O\nAttachment%O", cuuid, fichiers)
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     const caPem = usager.ca
@@ -666,68 +666,78 @@ async function copierAttachmentVersCollection(workers, fichiers, /*cles, */ cuui
     // const {fuuid, version_courante} = attachment
 
     // Creer hachage de preuve
-    const {fingerprint} = await connexion.getCertificatFormatteur()
-    // console.debug("Certificat signature : ", fingerprint)
-    const dictPreuves = {}, dictClesSecretes = {}
-    for await (const fuuid of Object.keys(cles)) {
-        const cleSecrete = cles[fuuid].cleSecrete
-        const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
+    // const {fingerprint} = await connexion.getCertificatFormatteur()
+    // // console.debug("Certificat signature : ", fingerprint)
+    const dictPreuves = {}, dictClesSecretes = {}, fichiersCles = {}
+    for await (const fichier of fichiers) {
+        const fuuid = fichier.file
+        // const cleSecrete = cles[fuuid].cleSecrete
+        const cleSecrete = base64.decode(fichier.decryption.key)
         dictClesSecretes[fuuid] = cleSecrete
-        dictPreuves[fuuid] = {preuve, date}
+        const cleFuuid = {...fichier.decryption, cleSecrete}
+        const { fingerprint, preuves, cles } = await creerPreuveCle(workers, fuuid, cleFuuid, usager)
+        //  const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
+        fichiersCles[fuuid] = cles[fuuid]
+        dictPreuves[fuuid] = preuves[fuuid]
     }
-    // console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
-    //     dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
 
-    const fichiersCles = {}
-    for await (const certMaitredescles of listeCertificatMaitreDesCles) {
-        // Chiffrer la cle secrete pour le certificat de maitre des cles
-        // Va servir de preuve d'acces au fichier
-        const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
-        // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
+    console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
+        dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
 
-        for await (const fuuid of Object.keys(clesChiffrees.cles)) {
-        //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
-            const cleRechiffree = clesChiffrees.cles[fuuid]
+    // const fichiersCles = {}
+    // for await (const certMaitredescles of listeCertificatMaitreDesCles) {
+    //     // Chiffrer la cle secrete pour le certificat de maitre des cles
+    //     // Va servir de preuve d'acces au fichier
+    //     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
+    //     // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
 
-            const domaine = 'GrosFichiers'
-            const identificateurs_document = {fuuid}
+    //     for await (const fuuid of Object.keys(clesChiffrees.cles)) {
+    //     //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
+    //         const cleRechiffree = clesChiffrees.cles[fuuid]
 
-            const infoCle = {
-                // Valeurs recues
-                ...cles[fuuid], 
-            }
-            // delete infoCle.cle
-            delete infoCle.cleSecrete
+    //         const domaine = 'GrosFichiers'
+    //         const identificateurs_document = {fuuid}
+
+    //         const infoCle = {
+    //             // Valeurs recues
+    //             ...cles[fuuid], 
+    //         }
+    //         // delete infoCle.cle
+    //         delete infoCle.cleSecrete
             
-            let fuuidInfo = fichiersCles[fuuid]
-            if(!fuuidInfo) {
-                const { cleSecrete } = cles[fuuid]
-                const cleSecreteBytes = multibase.decode(cleSecrete)
-                // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
-                const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
-                    cleSecreteBytes, domaine, identificateurs_document, fuuid)
-                fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
-                fichiersCles[fuuid] = fuuidInfo
-            }
-            fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
-        }
-    }
+    //         let fuuidInfo = fichiersCles[fuuid]
+    //         if(!fuuidInfo) {
+    //             const { cleSecrete } = cles[fuuid]
+    //             const cleSecreteBytes = multibase.decode(cleSecrete)
+    //             // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
+    //             const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
+    //                 cleSecreteBytes, domaine, identificateurs_document, fuuid)
+    //             fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
+    //             fichiersCles[fuuid] = fuuidInfo
+    //         }
+    //         fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
+    //     }
+    // }
     // console.debug("Fichiers cles ", fichiersCles)
 
     // Rechiffrer metadata
-    const fichiersCopies = await Promise.all(fichiers.map(attachment=>convertirAttachementFichier(workers, attachment, dictClesSecretes)))
+    const fichiersCopies = await Promise.all(fichiers.map(attachment => {
+        const fichierMappe = mapperFichiers([attachment], true).pop()
+        console.debug("Fichier mappe ", fichierMappe)
+        return convertirAttachementFichier(workers, fichierMappe, dictClesSecretes)
+    }))
 
     // Inserer cuuid dans chaque fichier
     fichiersCopies.forEach(item=>{ item.cuuid = cuuid })
 
-    // console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
+    console.debug("copierAttachmentVersCollection Fichiers prepares ", fichiersCopies)
 
     const commande = { 
         cles: fichiersCles, 
         preuves: dictPreuves,
         fichiers: fichiersCopies,
     }
-    // console.debug("copierAttachmentVersCollection Commande ", commande)
+    console.debug("copierAttachmentVersCollection Commande ", commande)
 
     const reponse = await connexion.copierFichierTiers(commande)
     console.debug("copierFichierTiers Reponse ", reponse)
@@ -754,20 +764,31 @@ async function hacherPreuveCle(fingerprint, cleSecrete) {
 
 // Converti un attachement en fichier (transaction)
 async function convertirAttachementFichier(workers, attachment, dictClesSecretes) {
+    console.debug("convertirAttachementFichier attachment : %O, cles : %O", attachment, dictClesSecretes)
     const { clesDao, chiffrage } = workers
     const certificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
 
-    const copie = {...attachment}
-    if(copie.images) copie.images = {...copie.images}
-    delete copie.metadata
+    const versionCourante = attachment.version_courante
+    const copie = {...attachment, ...versionCourante}
+    // if(versionCourante.images) versionCourante.images = {...copie.images}
 
-    const dataNominative = attachment.metadata.data,
-          ref_hachage_bytes = attachment.fuuid
+    // delete copie.metadata
+    // const dataNominative = attachment.metadata.data
+    const ref_hachage_bytes = attachment.fuuid_v_courante
 
     let cleSecrete = dictClesSecretes[ref_hachage_bytes]
     // console.debug("copierAttachmentVersCollection Fichier rechiffrer fuuid %s metadata %O avec cle %O", ref_hachage_bytes, dataNominative, cleSecrete)
 
     // Chiffrer metadata
+    const dataNominative = {
+        nom: versionCourante.nom,
+        dateFichier: versionCourante.date_fichier,
+        hachage_original: versionCourante.hachage_original,
+    }
+    delete versionCourante.nom
+    delete versionCourante.date_fichier
+    delete versionCourante.hachage_original
+
     const opts = {key: cleSecrete}
     const identificateurs_document = {}
     const data_chiffre = await chiffrage.chiffrage.chiffrerDocument(
@@ -793,6 +814,17 @@ async function convertirAttachementFichier(workers, attachment, dictClesSecretes
     const metadata = { ...data_chiffre.doc }
     delete metadata.ref_hachage_bytes
     copie.metadata = metadata
+
+    // Cleanup fichier
+    const CHAMPS_CONSERVER = [
+        'metadata', 'fuuid', 'taille', 'mimetype', 
+        'images', 'video', 
+        'anime', 'height', 'width', 'duration', 'video_codec',
+    ]
+    const champs = Object.keys(copie)
+    for(const champ of champs) {
+        if( ! CHAMPS_CONSERVER.includes(champ) ) delete copie[champ]
+    }
 
     return copie
 }
