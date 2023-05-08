@@ -33,8 +33,8 @@ function NouveauMessage(props) {
 
     const profil = useSelector(state=>state.contacts.profil),
           userId = useSelector(state=>state.contacts.userId),
-          uuidMessageRepondre = useSelector(state=>state.messagerie.uuidMessageRepondre),
-          uuidMessageTransfert = useSelector(state=>state.messagerie.uuidMessageTransfert),
+          message_id_repondre = useSelector(state=>state.messagerie.message_id_repondre),
+          message_id_transfert = useSelector(state=>state.messagerie.message_id_transfert),
           listeMessages = useSelector(state=>state.messagerie.liste)
 
     const [certificatsMaitredescles, setCertificatsMaitredescles] = useState('')
@@ -103,23 +103,23 @@ function NouveauMessage(props) {
 
     // Preparer reponse ou transfert
     useEffect(()=>{
-        if(listeMessages && (uuidMessageRepondre || uuidMessageTransfert)) {
-            const uuidMessage = uuidMessageRepondre || uuidMessageTransfert
-            const messageTrouve = listeMessages.filter(item=>item.uuid_transaction===uuidMessage).pop()
+        if(listeMessages && (message_id_repondre || message_id_transfert)) {
+            const message_id = message_id_repondre || message_id_transfert
+            const messageTrouve = listeMessages.filter(item=>item.message_id===message_id).pop()
             if(messageTrouve) {
                 let opts = {}
-                if(uuidMessageTransfert) {
+                if(message_id_transfert) {
                     // C'est un transfert
                     opts = {conserverAttachments: true, clearTo: true}
                 }
                 preparerReponse(workers, messageTrouve, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts)
-                dispatch(messagerieActions.setUuidMessageActif(''))  // Clear uuidMessageRepondre
+                dispatch(messagerieActions.setUuidMessageActif(''))  // Clear message_id_repondre/message_id_transfert
             } else {
-                console.error("NouveauMessage Erreur preparation repondre : Message %s introuvable ", uuidMessageRepondre)
+                console.error("NouveauMessage Erreur preparation repondre : Message %s introuvable ", message_id_repondre)
                 dispatch(messagerieActions.setUuidMessageActif())    // Retour a la liste de messages
             }
         }
-    }, [workers, dispatch, listeMessages, uuidMessageRepondre, uuidMessageTransfert, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
+    }, [workers, dispatch, listeMessages, message_id_repondre, message_id_transfert, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, setMessageRepondre])
     
     useEffect(()=>{
         if(!profil || !usager) return
@@ -273,10 +273,10 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
     if(opts.attachments) {
         // Mapper data attachments
         // console.debug("Attachments : ", opts.attachments)
-        const {attachmentsMapping, fuuids, fuuidsCleSeulement} = mapperAttachments([...opts.attachments], opts)
+        const {attachmentsMapping, fuuids} = mapperAttachments([...opts.attachments], opts)
 
         // Ajouter attachments et fuuids aux opts
-        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids, fuuidsCleSeulement}
+        opts = {...opts, attachments: Object.values(attachmentsMapping), fuuids}
     }
 
     const resultat = await posterMessage(workers, certificatsChiffragePem, from, to, content, opts)
@@ -320,21 +320,29 @@ function mapperAttachments(attachments, opts) {
     let fuuids = []
 
     attachments.forEach( attachment => {
-        // console.debug("mapperAttachments ", attachment)
-        const { version_courante, metadata } = attachment
-        const fuuid = attachment.fuuid_v_courante || attachment.fuuid
-        fuuids.push(fuuid)
+        console.debug("mapperAttachments ", attachment)
+        if(attachment.file && attachment.decryption) {
+            // Deja mappe (e.g. Transfert de message)
+            const fuuid = attachment.file
+            console.debug("mapperAttachement Deja fait, fuuid %s = %O", fuuid, attachment)
+            attachmentsMapping[fuuid] = attachment
+            fuuids.push(fuuid)
+        } else {
+            const { version_courante, metadata } = attachment
+            const fuuid = attachment.fuuid_v_courante || attachment.fuuid
+            fuuids.push(fuuid)
 
-        const mapping = {
-            metadata,
-            ...version_courante,
-            fuuid,
+            const mapping = {
+                metadata,
+                ...version_courante,
+                fuuid,
+            }
+            delete mapping.tuuid
+
+            console.debug("mapperAttachments Attachment %O", mapping)
+
+            attachmentsMapping[fuuid] = mapping
         }
-        delete mapping.tuuid
-
-        console.debug("mapperAttachments Attachment %O", mapping)
-
-        attachmentsMapping[fuuid] = mapping
     })
 
     return { attachmentsMapping, fuuids }
@@ -551,73 +559,34 @@ function PretFormatteur(props) {
 // Prepare une reponse/transfert de messages
 function preparerReponse(workers, message, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts) {
     opts = opts || {}
+    console.trace('preparerReponse ', message)
+
+    const contenu = message.contenu
+
     const { conserverAttachments, clearTo } = opts
-    const to = message.replyTo || message.from
+    const to = contenu.reply_to || contenu.from
     if(clearTo !== true) {
         setTo(to)
     }
 
-    const entete = message['en-tete'] || {}
-    const dateMessageOriginalInt = entete.estampille || message.date_reception
+    // const entete = message['en-tete'] || {}
+    const dateMessageOriginalInt = message.message.estampille || message.date_reception
     const dateMessageOriginal = new Date(dateMessageOriginalInt * 1000)
     const messageOriginal = []
     messageOriginal.push('<br><br><p>-----</p>')
     messageOriginal.push('<p>On ' + dateMessageOriginal + ', ' + to + ' wrote:</p>')
-    if(message.subject) {
-        messageOriginal.push('<p>' + message.subject + '</p>')
+    if(contenu.subject) {
+        messageOriginal.push('<p>' + contenu.subject + '</p>')
     }
-    messageOriginal.push(message.content)
+    messageOriginal.push(contenu.content)
     setContent(messageOriginal.join(''))
 
-    const uuidThread = message.uuid_thread || message.uuid_transaction
+    const uuidThread = contenu.uuid_thread || message.message.id
     setUuidThread(uuidThread)
 
-    if(conserverAttachments && message.attachments) {
-        console.debug("preparerReponse Conserver attachements : ", message.attachments)
-        const { cles, fichiers } = message.attachments
-        setAttachmentsCles(cles)
-
-        const rowsAttachments = fichiers.map(item=>{
-            const fuuid = item.fuuid,
-                  fileId = fuuid,
-                  metadata = item.metadata || {}
-            const itemMappe = {fileId, ...item, ...metadata.data, version_courante: {...item}}  // Simuler mapping avec version_courante
-            let rowAttachment = preparerRowAttachment(workers, itemMappe)
-            rowAttachment = {...rowAttachment, fuuid}
-            return rowAttachment
-        })
-
-        console.debug("preparerReponse Conserver attachements Cles %O, fichiers %O, rowsAttachments %O", cles, fichiers, rowsAttachments)
-        setAttachments(rowsAttachments)
+    const fichiers = contenu.files
+    if(conserverAttachments && fichiers) {
+        console.debug("preparerReponse Conserver attachements : ", fichiers)
+        setAttachments(fichiers)
     }
-}
-
-function preparerRowAttachment(workers, fichier) {
-    const tuuid = fichier.tuuid || fichier.fileId
-    const mimetype = fichier.mimetype
-    let pret = true
-    if(mimetype) {
-        const version_courante = fichier.version_courante || {}
-        const { images, video } = version_courante
-        const baseType = mimetype.toLowerCase().split('/').shift()
-        if(mimetype === 'application/pdf') {
-            pret = false
-            if(images) pret = !! (images && images.thumb)
-        } else if (baseType === 'image') {
-            pret = false
-            if(images) pret = !! (images && images.thumb)
-        } else if (baseType === 'video') {
-            pret = false
-            if(images && video) {
-                pret = images && images.thumb
-                const mp4 = Object.keys(video).filter(item=>item.startsWith('video/mp4')).pop()
-                pret = !! (images && images.thumb && mp4)
-            }
-        }
-    }
-
-    const fichierRebuild = {...fichier, tuuid}
-    const fichierMappe = mapDocumentComplet(workers, fichierRebuild)
-
-    return {...fichierMappe, tuuid, pret}
 }

@@ -38,7 +38,7 @@ function getUrlFuuid(fuuid, opts) {
     opts = opts || {}
     const jwt = opts.jwt
 
-    console.trace('getUrlFuuid fuuid %s, opts %O', fuuid, opts)
+    // console.trace('getUrlFuuid fuuid %s, opts %O', fuuid, opts)
 
     const url = new URL(window.location.href)
     if(jwt) {

@@ -23,8 +23,10 @@ const initialState = {
     message_id: null,           // Message actif
 
     // Reponse/transfert message
-    uuidMessageRepondre: null,
-    uuidMessageTransfert: null,
+    // uuidMessageRepondre: null,
+    // uuidMessageTransfert: null,
+    message_id_repondre: null,
+    message_id_transfert: null,
 
     // Travail background
     listeDechiffrage: [],       // Liste de messages a dechiffrer
@@ -158,16 +160,16 @@ function supprimerMessagesAction(state, action) {
 
 function setUuidMessageActifAction(state, action) {
     state.message_id = action.payload
-    state.uuidMessageRepondre = null
-    state.uuidMessageTransfert = null
+    state.message_id_repondre = null
+    state.message_id_transfert = null
 }
 
 // Repondre au message actif
 function preparerRepondreMessageAction(state, action) {
-    const uuidMessage = state.message_id || action.payload
-    if(!uuidMessage) return
+    const message_id = state.message_id || action.payload
+    if(!message_id) return
     state.message_id = ''  // Valeur pour nouveau message
-    state.uuidMessageRepondre = uuidMessage
+    state.message_id_repondre = message_id
 }
 
 // Transferer le message actif (conserver attachments)
@@ -175,7 +177,7 @@ function preparerTransfererMessageAction(state, action) {
     const message_id = state.message_id || action.payload
     if(!message_id) return
     state.message_id = ''  // Valeur pour nouveau message
-    state.uuidMessageTransfert = message_id
+    state.message_id_transfert = message_id
 }
 
 function setSourceMessagesAction(state, action) {

@@ -21,7 +21,7 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     } catch(err) {
         console.error("Erreur preparation sujet : %O", err)
     }
-    // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
+    console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
     const { message, commande, cle } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
 
@@ -66,7 +66,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
         // Faire une liste des fuuids a transferer pour la commande poster
         fuuidAttachmentsTransfert = attachments.reduce((acc, attachment) =>{
-            const hachage_bytes = attachment.fuuid
+            const hachage_bytes = attachment.file || attachment.fuuid
             acc.push(hachage_bytes)
             const images = attachment.images || {},
                   videos = attachment.video || {}
@@ -79,7 +79,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         console.debug("Fuuids a transferer : ", fuuidAttachmentsTransfert)
 
         // Retirer cles deja connues
-        const fuuidsClesInconnues = fuuidsCles.filter(item=>!attachmentsCles[item])
+        const fuuidsClesInconnues = fuuidsCles.filter(item=>(!item.decryption && !attachmentsCles[item]))
         let clesAttachmentsPrets = {...attachmentsCles}
         if(fuuidsClesInconnues.length > 0) {
             console.warn("signerMessage : il manque des cles (%O), charger maintenant", fuuidsClesInconnues)
@@ -89,7 +89,12 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
 
         let mappingAttachements = []
         for await (const item of attachments) {
-            mappingAttachements.push(await mapperAttachementFile(workers, item, clesAttachmentsPrets))
+            if(item.file && item.decryption) {
+                // Deja dans le bon format
+                mappingAttachements.push(item)
+            } else {
+                mappingAttachements.push(await mapperAttachementFile(workers, item, clesAttachmentsPrets))
+            }
         }
 
         message.files = mappingAttachements
