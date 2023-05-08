@@ -454,6 +454,8 @@ function mapperMedia(media, fuuid) {
                 bitrate: video.bitrate,
                 codec: video.codec,
                 ...decryption,
+
+                tuuid: '',  // Hack, requis par GrosFichiers (vient de la transaction)
             }
             videos[key] = videoMappe
         }
