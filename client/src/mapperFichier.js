@@ -275,27 +275,39 @@ export function mapDocumentComplet(workers, doc, opts) {
         thumbnailCaption: nom,
     }
 
-    // Loader du fichier source (principal), supporte thumbnail pour chargement
-    copie.loader = mediaLoader.fichierLoader(fuuid_v_courante, {mimetype})
-
     if(version_courante) {
-        const { anime, taille, images, video, duration, mimetype, header } = version_courante
-        
+        const { anime, taille, images, video, duration, mimetype } = version_courante
+
         if(taille) copie.taille = taille
         if(duration) copie.duration = duration
 
-        if(images) {
-            console.debug("doc.decryption ", doc.decryption)
+        let paramsDecryption = {}
+        if(doc.decryption) {
+            // Mode afficher image recue
+            // console.debug("mapDocumentComplet Decryption images recues doc.decryption %O", doc.decryption)
             const cle_secrete = base64.decode(doc.decryption.key)
+            paramsDecryption = {cle_secrete, fuuid: fuuid_v_courante, mimetype, anime, header: doc.decryption.header}
+        } else {
+            // Mode creation document (image provient de collections)
+            // console.debug("mapDocumentComplet Decryption document collections %O", doc)
+            paramsDecryption = {cle_id: fuuid_v_courante}
+        }
 
-            copie.imageLoader = mediaLoader.imageLoader(images, {cle_secrete, fuuid: fuuid_v_courante, mimetype, anime, header})
-            copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, {cle_secrete})
+        // Loader du fichier source (principal), supporte thumbnail pour chargement
+        // copie.loader = mediaLoader.fichierLoader(fuuid_v_courante, {mimetype})
+        copie.loader = mediaLoader.fichierLoader(fuuid_v_courante, paramsDecryption)
+
+        if(images) {
+            copie.imageLoader = mediaLoader.imageLoader(images, paramsDecryption)
+            copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, paramsDecryption)
+            // copie.imageLoader = mediaLoader.imageLoader(images, {cle_secrete, fuuid: fuuid_v_courante, mimetype, anime, header})
+            // copie.thumbnailLoader = mediaLoader.thumbnailLoader(images, {cle_secrete})
         }
 
         if(mimetype.toLowerCase().startsWith('video/')) {
             copie.videoLoader = mediaLoader.videoLoader(video || {}, {fuuid: fuuid_v_courante, mimetype})
         } else if(mimetype.toLowerCase().startsWith('audio/')) {
-            copie.audioLoader = mediaLoader.audioLoader(fuuid_v_courante, mimetype)
+            copie.audioLoader = mediaLoader.audioLoader(fuuid_v_courante, mimetype, paramsDecryption)
         }
     }
 

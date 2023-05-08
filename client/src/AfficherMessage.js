@@ -262,14 +262,17 @@ function ContenuMessage(props) {
 
             const creerToken = async fuuidAudio => {
                 if(Array.isArray(fuuidAudio)) fuuidAudio = fuuidAudio.pop()
-                console.debug("!!! usager : %O\nfuuidAudio : %O", usager, fuuidAudio)
+                // console.debug("ContenuMessage.creerToken usager : %O\nfuuidAudio : %O, mimetype : %O", usager, fuuidAudio, mimetype)
                 // console.debug("Creer token video fuuid : %O (fuuidAudio: %O, cles: %O)", fuuid, fuuidAudio, attachments.cles)
 
-                const cleFuuid = fichiers.cles[fuuidFichier]
+                // const cleFuuid = fichiers.cles[fuuidFichier]
+                const decryption = audioItem.decryption
+                // console.debug("ContenuMessage audioItem Decryption ", decryption)
+                const cleFuuid = {...decryption, cleSecrete: base64.decode(decryption.key)}
 
-                const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidFichier, usager, {mimetype})
-                console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
-                return jwts
+                const jwts = await creerTokensStreaming(workers, fuuidAudio, cleFuuid, fuuidAudio, usager, null, {mimetype})
+                // console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
+                return {jwts}
             }
 
             attachmentMappe = mapperRowAttachment(audioItem, workers, {genererToken: true, creerToken})
