@@ -19,7 +19,7 @@ import { uploaderFichiers } from './fonctionsFichiers'
 import ModalContacts from './ModalContacts'
 import ModalSelectionnerAttachement from './ModalSelectionnerAttachment'
 import { MenuContextuelAttacher, MenuContextuelAttacherMultiselect, onContextMenu } from './MenuContextuel'
-import { mapDocumentComplet } from './mapperFichier'
+import { mapperRowAttachment } from './mapperFichier'
 
 function NouveauMessage(props) {
 
@@ -384,7 +384,16 @@ function AfficherAttachments(props) {
 
     const listeAttachments = useMemo(()=>{
         const liste = []
-        if(attachments) attachments.forEach(item=>liste.push({...item, pret: true}))
+        if(attachments) attachments.forEach(item=>{
+            if(item.file && item.decryption) {
+                // Item transfere (deja formatte). Convertir a format GrosFichiers
+                const attachementConverti = mapperRowAttachment(item, workers)
+                console.debug("Attachement converti ", attachementConverti)
+                liste.push({...attachementConverti, pret: true})
+            } else {
+                liste.push({...item, pret: true})
+            }
+        })
         if(attachmentsPending) attachmentsPending.forEach(item=>liste.push({...item, pret: false}))
 
         console.debug("Maj liste Attachments combinee : %O (attachments : %O, attachmentsPending: %O)", liste, attachments, attachmentsPending)
