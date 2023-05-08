@@ -145,7 +145,7 @@ export { Icones }
 
 // Formatte un attachment comme si c'etait un fichier
 export function mapperRowAttachment(attachment, workers, opts) {
-    console.debug("Mapper row attachement : ", attachment)
+    // console.debug("Mapper row attachement : ", attachment)
     const attachmentMapperFichier = mapperFichiers([attachment], true).pop()
     return mapDocumentComplet(workers, attachmentMapperFichier, opts)
 }
@@ -235,14 +235,14 @@ export function onContextMenu(event, value, setContextuel) {
 export function mapDocumentComplet(workers, doc, opts) {
     opts = opts || {}
 
-    console.debug("mapDocumentComplet : %O (%O)", doc, opts)
+    // console.debug("mapDocumentComplet : %O (%O)", doc, opts)
 
     const creerToken = opts.creerToken
     const { connexion, traitementFichiers } = workers
 
     // Instance mediaLoader pour contenu (fichier, images, videos)
     const creerTokenStreamInst = async commande => {
-        console.debug("Commande creer token stream ", commande)
+        // console.debug("Commande creer token stream ", commande)
         const fuuid = commande.fuuidStream
         return creerToken(fuuid)
         // return connexion.creerTokensStreaming(commande)
@@ -356,7 +356,7 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
     const listeFichiers = []
 
     for (const fichier of fichiers) {
-        console.debug("Mapper fichier ", fichier)
+        // console.debug("Mapper fichier ", fichier)
 
         const fuuid = fichier.file
         const mimetype = fichier.mimetype || 'application/bytes'
@@ -401,7 +401,7 @@ export function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
 const CHAMPS_MEDIA = ['duration', 'width', 'height']
 
 function mapperMedia(media, fuuid) {
-    console.debug("Mapper media ", media)
+    // console.debug("Mapper media ", media)
     const mediaMappe = {}
     for(const champ of CHAMPS_MEDIA) {
         if(media[champ]) mediaMappe[champ] = media[champ]

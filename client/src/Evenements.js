@@ -30,13 +30,13 @@ export function EvenementsMessageHandler(_props) {
         if(!connexion || !etatPret) return  // Pas de connexion, rien a faire
 
         // Enregistrer listeners
-        console.debug("Enregistrer callback messages")
+        // console.debug("Enregistrer callback messages")
         connexion.enregistrerCallbackEvenementMessages({}, evenementMessageCb)
             .catch(err=>console.warn("Erreur enregistrement listeners messages : %O", err))
 
         // Cleanup listeners
         return () => {
-            console.debug("Retirer callback messages")
+            // console.debug("Retirer callback messages")
             connexion.retirerCallbackEvenementMessages({}, evenementMessageCb)
                 .catch(err=>console.warn("Erreur retirer listeners messages : %O", err))
         }
@@ -45,7 +45,7 @@ export function EvenementsMessageHandler(_props) {
 }
 
 async function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
-    console.debug("traiterMessageEvenement ", evenementMessage)
+    // console.debug("traiterMessageEvenement ", evenementMessage)
     const { connexion, messagerieDao } = workers
   
     // Traiter message

@@ -40,9 +40,9 @@ function AfficherMessage(props) {
           message_id = useSelector(state=>state.messagerie.message_id)
 
     const message = useMemo(()=>{
-        console.debug("AfficherMessage id %s, liste %O", message_id, listeMessages)
+        // console.debug("AfficherMessage id %s, liste %O", message_id, listeMessages)
         const message = listeMessages.filter(item=>item.message_id===message_id).pop()
-        console.debug("AfficheMessage ", message)
+        // console.debug("AfficheMessage ", message)
         return message
     }, [message_id, listeMessages])
 
@@ -208,22 +208,22 @@ function ContenuMessage(props) {
     const attachmentMappe = useMemo(()=>{
         if(!fichiers) return
 
-        console.debug("ContenuMessage mapper (afficher video %O) %O", afficherVideo, fichiers)
+        // console.debug("ContenuMessage mapper (afficher video %O) %O", afficherVideo, fichiers)
 
         const videoItem = fichiers.filter(item=>item.file===afficherVideo).pop()
         const audioItem = fichiers.filter(item=>item.file===afficherAudio).pop()
 
         let attachmentMappe = null
         if(videoItem) {
-            console.debug("ContenuMessage afficher videoItem ", videoItem)
+            // console.debug("ContenuMessage afficher videoItem ", videoItem)
             const fuuidFichier = videoItem.file
             const fichierVideoMappe = mapperFichiers([videoItem], true).pop()
-            console.debug("ContenuMessage afficher video (mappe) ", fichierVideoMappe)
+            // console.debug("ContenuMessage afficher video (mappe) ", fichierVideoMappe)
 
             const creerToken = async fuuidVideo => {
                 if(Array.isArray(fuuidVideo)) fuuidVideo = fuuidVideo.pop()
 
-                console.debug("creerToken fuuidVideo %O, videoItem %O", fuuidVideo, videoItem)
+                // console.debug("creerToken fuuidVideo %O, videoItem %O", fuuidVideo, videoItem)
                 const videoDict = videoItem.media.videos
                 let infoVideo = null,
                     paramsDecryption = null
@@ -237,21 +237,21 @@ function ContenuMessage(props) {
                     infoVideo = Object.values(videoDict).filter(item=>item.file===fuuidVideo).pop()
                     paramsDecryption = infoVideo.decryption
                 }
-                console.debug("creerToken Afficher infoVideo %O, params decryption %O", infoVideo, paramsDecryption)
+                // console.debug("creerToken Afficher infoVideo %O, params decryption %O", infoVideo, paramsDecryption)
                 const paramsChiffrage = {}
                 for (const champ of CONST_CHAMPS_CHIFFRAGE) {
                     if(paramsDecryption[champ]) paramsChiffrage[champ] = paramsDecryption[champ]
                 }
-                console.debug("creerToken Params chiffrages ", paramsChiffrage)
+                // console.debug("creerToken Params chiffrages ", paramsChiffrage)
 
                 const mimetype = infoVideo.mimetype
 
                 // const cleFuuid = fichiers.cles[fuuidFichier]
                 const cleFuuid = {...videoItem.decryption, cleSecrete: base64.decode(videoItem.decryption.key)}
-                console.debug("ContenuMessage.creerToken creerTokensStreaming avec cleFuuid %O pour videoItem %O", cleFuuid, videoItem)
+                // console.debug("ContenuMessage.creerToken creerTokensStreaming avec cleFuuid %O pour videoItem %O", cleFuuid, videoItem)
 
                 const jwts = await creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo, usager, {...paramsChiffrage}, {mimetype})
-                console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
+                // console.debug("ContenuMessage.creerToken JWTS tokens : %O", jwts)
                 return {jwts}
             }
 
@@ -278,7 +278,7 @@ function ContenuMessage(props) {
             attachmentMappe = mapperRowAttachment(audioItem, workers, {genererToken: true, creerToken})
         }
 
-        console.debug("ContenuMessage Attachement mappe : ", attachmentMappe)
+        // console.debug("ContenuMessage Attachement mappe : ", attachmentMappe)
 
         return attachmentMappe
     }, [workers, afficherVideo, afficherAudio, certificatMaitreDesCles, fichiers, usager])
@@ -465,14 +465,14 @@ function AfficherAttachments(props) {
         setShowPreview(true)
     }, [setShowPreview, setFuuidSelectionne])
     const showPreviewSelection = useCallback( item => {
-        console.debug("showPreviewSelection ", item)
+        // console.debug("showPreviewSelection ", item)
         const fuuid = item.fuuid
         if(!fuuid) return
 
         setFuuidSelectionne(fuuid)
         const fileItem = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
         const mimetype = fileItem.mimetype || ''
-        console.debug("Afficher fuuid %s (mimetype: %s), fileItem %O", fuuid, mimetype, fileItem)
+        // console.debug("Afficher fuuid %s (mimetype: %s), fileItem %O", fuuid, mimetype, fileItem)
         if(mimetype.startsWith('video/')) {
             // Page Video
             setAfficherVideo(fuuid)
@@ -487,7 +487,7 @@ function AfficherAttachments(props) {
     }, [selection, setShowPreview, setFuuidSelectionne, setAfficherVideo, setAfficherAudio, attachmentsList])
 
     useEffect(()=>{
-        console.debug("Fichiers : %O, fichiers_status : %O, fichiers_completes : %O", fichiers, fichiers_status, fichiers_completes)
+        // console.debug("Fichiers : %O, fichiers_status : %O, fichiers_completes : %O", fichiers, fichiers_status, fichiers_completes)
         if(!fichiers) { setAttachmentsList(''); return }  // Rien a faire
 
         // if(Array.isArray(fichiers)) {
@@ -499,17 +499,17 @@ function AfficherAttachments(props) {
 
             // Premier mapping d'attachements vers format GrosFichiers (pour le 'mapper')
             const listeFichiers = mapperFichiers(fichiers, fichiers_completes, fichiers_status)
-            console.debug("Liste attachments combines : %O", listeFichiers)
+            // console.debug("Liste attachments combines : %O", listeFichiers)
             const listeMappee = listeFichiers.map(item=>{
                 const cles = {[item.fuuid_v_courante]: {
                     ...item.decryption,
                     cleSecrete: base64.decode(item.decryption.key),
                 }}
-                console.debug("Liste mappee cles ", cles)
+                // console.debug("Liste mappee cles ", cles)
                 return mapDocumentComplet(workers, item, {ref_hachage_bytes: item.fuuid_v_courante, cles, supportMedia})
             })
 
-            console.debug("Liste mappee ", listeMappee)
+            // console.debug("Liste mappee ", listeMappee)
 
             setAttachmentsList(listeMappee)
         // }
@@ -637,13 +637,13 @@ function MenuContextuel(props) {
         return <MenuContextuelAfficherAttachementsMultiselect selection={selection} {...props} />
     } else if(selection.length>0 && fichiers) {
         const fuuid = selection[0]
-        console.debug("Selection fichiers ", fichiers)
+        // console.debug("Selection fichiers ", fichiers)
         const attachment = fichiers.filter(item=>item.file===fuuid).pop()
         const attachmentListDetail = attachmentsList.filter(item=>item.fuuid===fuuid).pop()
-        console.debug("Attachement %O, Details %O", attachment, attachmentListDetail)
+        // console.debug("Attachement %O, Details %O", attachment, attachmentListDetail)
         const attachmentDetail = {...attachmentListDetail, ...attachment}
         if(attachment) {
-            console.debug("Download attachement : ", attachment)
+            // console.debug("Download attachement : ", attachment)
             const cles = {[attachment.fuuid]: attachment.decryption.cleSecrete}
             return <MenuContextuelAfficherAttachments attachment={attachmentDetail} cles={cles} {...props} />
         }

@@ -185,7 +185,7 @@ export function creerThunks(actions, nomSlice) {
             profil = await connexion.getProfil()
         }
 
-        console.debug("Profil charge : ", profil)
+        // console.debug("Profil charge : ", profil)
         dispatch(setProfil(profil))
 
         const cle_hachage_bytes = profil.cle_ref_hachage_bytes
@@ -200,9 +200,9 @@ export function creerThunks(actions, nomSlice) {
         // console.debug("traiterChargerProfil Cle secrete hachage bytes %s = %O", cle_hachage_bytes, cle)
 
         if(profil.email_chiffre) {
-            console.debug("Dechiffrer champs email chiffres")
+            // console.debug("Dechiffrer champs email chiffres")
             const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {DEBUG: true})
-            console.debug("Champs email dechiffres ", dataDechiffre)
+            // console.debug("Champs email dechiffres ", dataDechiffre)
             profil = {...profil, ...dataDechiffre}
             dispatch(setProfil(profil))
         }

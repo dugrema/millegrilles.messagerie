@@ -325,7 +325,7 @@ export function creerThunks(actions, nomSlice) {
 
         dispatch(setSyncEnCours(true))
 
-        console.debug("traiterChargerMessagesParSyncid messages ", messages)
+        // console.debug("traiterChargerMessagesParSyncid messages ", messages)
 
         let batchUuids = new Set()
         for await (const messageSync of messages) {
@@ -489,7 +489,7 @@ async function syncMessages(workers, limit, dateMaximum, skipCount, cbChargerMes
         {limit, date_maximum: dateMaximum, skip: skipCount, messages_envoyes, supprime, inclure_supprime}
     )
     const messages = reponseMessages.messages || []
-    console.debug("syncMessages Reponse ", messages)
+    // console.debug("syncMessages Reponse ", messages)
     if(messages.length > 0) {
         await cbChargerMessages(messages)
             // .catch(err=>console.error("Erreur traitement chargeMessagesParSyncid %O : %O", messages, err))
@@ -505,7 +505,7 @@ async function chargerBatchMessages(workers, batchUuids, opts) {
     const reponse = await connexion.getMessages(
         {message_ids: batchUuids, limit: batchUuids.length, messages_envoyes}
     )
-    console.debug("chargerBatchMessages Reponse ", reponse)
+    // console.debug("chargerBatchMessages Reponse ", reponse)
     if(!reponse.err) {
         const messages = reponse.messages
         return messages
