@@ -590,8 +590,6 @@ function PretFormatteur(props) {
 // Prepare une reponse/transfert de messages
 function preparerReponse(workers, message, setTo, setContent, setUuidThread, ajouterAttachments, setAttachmentsCles, opts) {
     opts = opts || {}
-    console.trace('preparerReponse ', message)
-
     const contenu = message.contenu
 
     const { conserverAttachments, clearTo } = opts

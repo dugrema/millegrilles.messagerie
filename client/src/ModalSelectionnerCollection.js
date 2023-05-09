@@ -47,12 +47,12 @@ function ModalSelectionnerAttachement(props) {
     }, [workers, show, listeBrute])
 
     const onSelectionLignes = useCallback(selection=>{
-        console.debug("Selection ", selection)
+        // console.debug("Selection ", selection)
         dispatch(actionsNavigationSecondaire.selectionTuuids(selection))
     }, [])
 
     const choisirHandler = useCallback(()=>{
-        console.debug("Selection %O, cuuid %O", selection, cuuid)
+        // console.debug("Selection %O, cuuid %O", selection, cuuid)
         let cuuidChoisi = cuuid
         if(selection && selection.length === 1) {
             cuuidChoisi = selection[0]
@@ -76,7 +76,9 @@ function ModalSelectionnerAttachement(props) {
         }
         try {
             dispatch(thunksNavigationSecondaire.changerCollection(workers, cuuid))
-                .then(()=>console.debug("Succes changerCollection : ", cuuid))
+                .then(()=>{
+                    // console.debug("Succes changerCollection : ", cuuid)
+                })
                 .catch(err=>erreurCb(err, 'Erreur changer collection'))
         } catch(err) {
             console.error("naviguerCollection Erreur dispatch changerCollection", err)
@@ -84,7 +86,7 @@ function ModalSelectionnerAttachement(props) {
     }, [dispatch, workers, erreurCb])
 
     const onOpenHandler = useCallback( item => {
-        console.debug("open ", item)
+        // console.debug("open ", item)
         window.getSelection().removeAllRanges()
         const folderId = item.folderId
         if(folderId) {
@@ -117,7 +119,7 @@ function ModalSelectionnerAttachement(props) {
     useEffect(()=>{
         if(!show || initComplete) return
         // Charger position initiale (favoris)
-        console.debug("ModalCopier Set collection favoris")
+        // console.debug("ModalCopier Set collection favoris")
         Promise.resolve(naviguerCollection())
           .then(()=>setInitComplete(true))
           .catch(err=>console.error("CopierModal Erreur navigation ", err))

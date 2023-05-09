@@ -34,7 +34,7 @@ function ModalContacts(props) {
                 if(item) return uuidContactSelectionne.includes(item.uuid_contact)
                 return false
             })
-        console.debug("Contacts selectionnes : %O (uuids: %O)", contactsSelectionnes, uuidContactSelectionne)
+        // console.debug("Contacts selectionnes : %O (uuids: %O)", contactsSelectionnes, uuidContactSelectionne)
         ajouterAdresses(contactsSelectionnes)
         fermer()
     }, [uuidContactSelectionne, contacts, fermer, ajouterAdresses])

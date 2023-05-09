@@ -201,7 +201,7 @@ export function creerThunks(actions, nomSlice) {
 
         if(profil.email_chiffre) {
             // console.debug("Dechiffrer champs email chiffres")
-            const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {DEBUG: true})
+            const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {DEBUG: false})
             // console.debug("Champs email dechiffres ", dataDechiffre)
             profil = {...profil, ...dataDechiffre}
             dispatch(setProfil(profil))
@@ -309,7 +309,8 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                     const cleDechiffrageContact = {...cleDechiffrage, ...contact}
                     // console.debug("Dechiffrer doc %O avec info cle %O", docCourant, cleDechiffrageContact)
                     try {
-                        const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(docCourant, cleDechiffrageContact, {DEBUG: true})
+                        const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(
+                            docCourant, cleDechiffrageContact, {DEBUG: false})
                         // console.debug("Contenu dechiffre : ", dataDechiffre)
                         
                         // Ajout/override champs de metadonne avec contenu dechiffre
