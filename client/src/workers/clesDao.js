@@ -86,11 +86,11 @@ async function getClesMessages(workers, liste_hachage_bytes, message_ids, opts) 
         }
     }
 
-    console.debug("Cles connues : %d, cles manquantes : %d", Object.keys(clesDechiffrees).length, clesManquantes.length)
+    // console.debug("Cles connues : %d, cles manquantes : %d", Object.keys(clesDechiffrees).length, clesManquantes.length)
     if(clesManquantes.length > 0) {
         // Recuperer les cles du serveur
         const reponseClesChiffrees = await connexion.getPermissionMessages(message_ids, {messages_envoyes})
-        console.debug("Reponse cles chiffrees : ", reponseClesChiffrees)
+        // console.debug("Reponse cles chiffrees : ", reponseClesChiffrees)
         const cles = await traiterReponseCles(workers, reponseClesChiffrees.cles)
         Object.assign(clesDechiffrees, cles)
     }

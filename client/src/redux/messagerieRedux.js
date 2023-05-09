@@ -366,9 +366,9 @@ export function creerThunks(actions, nomSlice) {
     
         batchUuids = [...batchUuids]
         if(batchUuids.length > 0) {
-            console.debug("Charger messages du serveur ", batchUuids)
+            // console.debug("Charger messages du serveur ", batchUuids)
             const listeMessages = await chargerBatchMessages(workers, batchUuids, {messages_envoyes})
-            console.debug("Liste messages recue : ", listeMessages)
+            // console.debug("Liste messages recue : ", listeMessages)
             await messagerieDao.mergeReferenceMessages(userId, listeMessages)
         }
     }
@@ -414,8 +414,8 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             const batchMessages = messagesChiffres.slice(0, CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Batch messages
             messagesChiffres = messagesChiffres.slice(CONST_TAILLE_BATCH_MESSAGES_DECHIFFRER)  // Clip 
             listenerApi.dispatch(actions.setMessagesChiffres(messagesChiffres))
-            console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
-            console.debug("dechiffrageMiddlewareListener Batch messages ", batchMessages)
+            // console.debug("dechiffrageMiddlewareListener Dechiffrer %d, reste %d", batchMessages.length, messagesChiffres.length)
+            // console.debug("dechiffrageMiddlewareListener Batch messages ", batchMessages)
 
             // Identifier hachage_bytes et message_id de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
@@ -426,9 +426,9 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             }, new Set())
             const message_ids = batchMessages.map(item=>item.message.id)
             try {
-                console.debug("dechiffrageMiddlewareListener Charger message_ids %O, cles %O", message_ids, liste_hachage_bytes)
+                // console.debug("dechiffrageMiddlewareListener Charger message_ids %O, cles %O", message_ids, liste_hachage_bytes)
                 var cles = await clesDao.getClesMessages(liste_hachage_bytes, message_ids, {messages_envoyes})
-                console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
+                // console.debug("dechiffrageMiddlewareListener Cles dechiffrage messages ", cles)
             } catch(err) {
                 console.warn("dechiffrageMiddlewareListener Erreur chargement cles batch %O : %O", liste_hachage_bytes, err)
                 messagesChiffres = [...getState().listeDechiffrage]
@@ -437,13 +437,13 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
 
             for await (const message of batchMessages) {
                 const docCourant = {...message.message, certificat: message.certificat_message, millegrille: message.millegrille_message}
-                console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
+                // console.debug("dechiffrageMiddlewareListener Dechiffrer ", docCourant)
 
                 // Dechiffrer message
                 const infoDechiffrage = docCourant.dechiffrage
                 const cle_id = infoDechiffrage.hachage || infoDechiffrage.cle_id
                 const cleDechiffrageMessage = cles[cle_id]
-                console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                // console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 if(!cleDechiffrageMessage) {
                     console.warn("Erreur dechiffrage message %s, cle %s inconnue", message.message_id, cle_id)
                     continue
@@ -454,7 +454,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                     if(infoDechiffrage.format) cleDechiffrageMessage.format = infoDechiffrage.format
 
                     const dataDechiffre = await dechiffrerMessage(workers, docCourant, cleDechiffrageMessage)
-                    console.debug("Contenu dechiffre : ", dataDechiffre)
+                    // console.debug("Contenu dechiffre : ", dataDechiffre)
                     const { message: messageDechiffre, validation } = dataDechiffre
                     const messageMaj = {
                         message_id: message.message_id, 

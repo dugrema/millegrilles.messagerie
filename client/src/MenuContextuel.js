@@ -27,7 +27,10 @@ export function MenuContextuelAttacherMultiselect(props) {
 
     const { attachments, retirerAttachments, /*setAttachments,*/ selection, contextuel, fermerContextuel } = props
 
-    const retirerAction = useCallback( () => retirerAttacher(selection, attachments, retirerAttachments), [selection, attachments, retirerAttachements])
+    const retirerAction = useCallback( () => retirerAttacher(
+        selection, attachments, retirerAttachments), 
+        [selection, attachments, retirerAttachments]
+    )
 
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>

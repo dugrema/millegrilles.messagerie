@@ -70,7 +70,7 @@ export async function mergeReferenceMessages(userId, messages) {
                 fichiers_completes: fichiers_completes, 
                 'dechiffre': 'false'
             }
-            console.debug("Put nouveau message ", nouveauMessage)
+            // console.debug("Put nouveau message ", nouveauMessage)
             await store.put(nouveauMessage)
         } else {
             // Verifier si on doit ajouter date_envoi ou date_reception
@@ -95,7 +95,7 @@ export async function mergeReferenceMessages(userId, messages) {
                 ...datesOverrides
             }
             if(fichiers) messageMaj.fichiers = fichiers
-            console.debug("Put message maj : ", messageMaj)
+            // console.debug("Put message maj : ", messageMaj)
             await store.put(messageMaj)
         }
     }

@@ -28,10 +28,10 @@ export async function dechiffrerMessage(workers, message, cle) {
     }
 
     const docChiffre = { data_chiffre }
-    console.debug("Dechiffrer %O avec cle %O", docChiffre, cle)
+    // console.debug("Dechiffrer %O avec cle %O", docChiffre, cle)
     const messageDechiffre = await workers.chiffrage.chiffrage.dechiffrerChampsChiffres(docChiffre, cle, {lzma: true})
     
-    console.debug("dechiffrerMessage Message dechiffre : ", messageDechiffre)
+    // console.debug("dechiffrerMessage Message dechiffre : ", messageDechiffre)
 
     const messageDict = {message: messageDechiffre, validation: {valide: resultatValider, userId}}
 
@@ -97,7 +97,7 @@ export async function getClesAttachments(workers, liste_hachage_bytes, opts) {
         return acc
     }, {})
 
-    console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
+    // console.debug("Verifier presence de cles locales : %O", liste_hachage_bytes)
     for(let idx=0; idx<liste_hachage_bytes.length; idx++) {
         const hachage_bytes = liste_hachage_bytes[idx]
         // console.debug("Charger localement cle : %s", hachage_bytes)
