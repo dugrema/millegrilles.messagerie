@@ -90,8 +90,9 @@ function mergeMessagesDataAction(state, action) {
     let liste = state.liste || []
 
     for (const payloadMessage of payload) {
-        let { message_id } = payloadMessage
-        // console.debug("mergeMessagesDataAction action: %O, uuid_transaction : %O", action, uuid_transaction)
+        // let { message_id } = payloadMessage
+        const message_id = payloadMessage.id || payloadMessage.message_id
+        // console.debug("mergeMessagesDataAction action: %O, message_id : %s", action, message_id)
 
         // Ajout flag _mergeVersion pour rafraichissement ecran
         const data = {...payloadMessage}
@@ -419,7 +420,8 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             // Identifier hachage_bytes et message_id de la bacth de messages
             const liste_hachage_bytes = batchMessages.reduce((acc, item)=>{
                 const infoDechiffrage = item.message.dechiffrage
-                acc.add(infoDechiffrage.hachage)
+                const cle_id = infoDechiffrage.hachage || infoDechiffrage.cle_id
+                acc.add(cle_id)
                 return acc
             }, new Set())
             const message_ids = batchMessages.map(item=>item.message.id)
@@ -439,7 +441,8 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
 
                 // Dechiffrer message
                 const infoDechiffrage = docCourant.dechiffrage
-                const cleDechiffrageMessage = cles[infoDechiffrage.hachage]
+                const cle_id = infoDechiffrage.hachage || infoDechiffrage.cle_id
+                const cleDechiffrageMessage = cles[cle_id]
                 console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
                 try {
                     // Override parametres dechiffrage au besoin
