@@ -6,12 +6,15 @@ import Button from 'react-bootstrap/Button'
 import { MenuContextuel } from '@dugrema/millegrilles.reactjs'
 
 export function MenuContextuelAttacher(props) {
-    console.debug("MenuContextuelAttacher proppys : %O", props)
+    // console.debug("MenuContextuelAttacher proppys : %O", props)
     const { 
-        attachment, attachments, setAttachments, contextuel, fermerContextuel, 
+        attachment, attachments, retirerAttachments, contextuel, fermerContextuel, 
     } = props
 
-    const retirerAction = useCallback( () => retirerAttacher([attachment.fileId], attachments, setAttachments), [attachment, attachments, setAttachments] )
+    const retirerAction = useCallback( () => retirerAttacher(
+        [attachment.fileId], attachments, retirerAttachments), 
+        [attachment, attachments, retirerAttachments] 
+    )
 
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
@@ -22,9 +25,9 @@ export function MenuContextuelAttacher(props) {
 
 export function MenuContextuelAttacherMultiselect(props) {
 
-    const { attachments, setAttachments, selection, contextuel, fermerContextuel } = props
+    const { attachments, retirerAttachments, /*setAttachments,*/ selection, contextuel, fermerContextuel } = props
 
-    const retirerAction = useCallback( () => retirerAttacher(selection, attachments, setAttachments), [selection, attachments, setAttachments])
+    const retirerAction = useCallback( () => retirerAttacher(selection, attachments, retirerAttachments), [selection, attachments, retirerAttachements])
 
     return (
         <MenuContextuel show={contextuel.show} posX={contextuel.x} posY={contextuel.y} fermer={fermerContextuel}>
@@ -77,14 +80,14 @@ export function MenuContextuelAfficherAttachments(props) {
     }
 
     const showPreviewAction = useCallback( event => {
-        console.debug("Show preview : %O", attachment.fuuid)
+        // console.debug("Show preview : %O", attachment.fuuid)
         if(previewDisponible) showPreview(attachment.fuuid)
         fermerContextuel()
     }, [attachment, previewDisponible, fermerContextuel, showPreview])
 
     const downloadEvent = useCallback( 
         event => { 
-            console.debug("Downloader attachment : %O", attachment)
+            // console.debug("Downloader attachment : %O", attachment)
             const fuuid = attachment.fuuid
             const cle = cles[fuuid]
             const attachmentInfo = {...attachment, cle}
@@ -108,7 +111,7 @@ export function MenuContextuelAfficherAttachments(props) {
 }
 
 export function MenuContextuelAfficherMessages(props) {
-    console.debug("MenuContextuelAfficherMessages proppys : %O", props)
+    // console.debug("MenuContextuelAfficherMessages proppys : %O", props)
     const { 
         contextuel, fermerContextuel, supprimerMessagesCb,
     } = props
@@ -129,11 +132,12 @@ export function MenuContextuelListeContacts(props) {
     )
 }
 
-function retirerAttacher(listeIds, fichiers, setFichiers) {
-    console.debug("Retirer attachments %O de %O", listeIds, fichiers)
+function retirerAttacher(listeIds, fichiers, retirerAttachments) {
+    // console.debug("Retirer attachments %O de %O", listeIds, fichiers)
     if(!fichiers || !fichiers.filter) return
-    const fichiersMaj = fichiers.filter(item=>!listeIds.includes(item.fileId))
-    setFichiers(fichiersMaj)
+    // const fichiersMaj = fichiers.filter(item=>!listeIds.includes(item.fileId))
+    // setFichiers(fichiersMaj)
+    retirerAttachments(listeIds)
 }
 
 export function onContextMenu(event, value, setContextuel) {

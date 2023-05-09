@@ -444,6 +444,10 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
                 const cle_id = infoDechiffrage.hachage || infoDechiffrage.cle_id
                 const cleDechiffrageMessage = cles[cle_id]
                 console.debug("Cle dechiffrage message : ", cleDechiffrageMessage)
+                if(!cleDechiffrageMessage) {
+                    console.warn("Erreur dechiffrage message %s, cle %s inconnue", message.message_id, cle_id)
+                    continue
+                }
                 try {
                     // Override parametres dechiffrage au besoin
                     if(infoDechiffrage.header) cleDechiffrageMessage.header = infoDechiffrage.header

@@ -62,6 +62,20 @@ function NouveauMessage(props) {
         fermerNouveauMessage()
     }, [fermerNouveauMessage, /* supprimerDraftCb, */ idDraft])
 
+    const ajouterAttachmentsCb = useCallback(attachementsAjoutes => {
+        setAttachments([...attachments, ...attachementsAjoutes])
+    }, [attachments, setAttachments])
+
+    const retirerAttachmentsCb = useCallback(fuuids => {
+        const nouvelleListe = attachments.filter(item=>{
+            const fuuid = item.fuuid || item.fileId || item.file
+            const retirer = !! fuuids.includes(fuuid)
+            return ! retirer
+        })
+        // console.debug("Retirer attachements %O, nouvelleListe : %O", fuuids, nouvelleListe)
+        setAttachments(nouvelleListe)
+    }, [attachments, setAttachments])
+
     const envoyerCb = useCallback(()=>{
         const opts = {reply_to: replyTo, uuid_thread: uuidThread, attachments, attachmentsCles, optionVideo}
         envoyer(workers, userId, certificatsMaitredescles, from, to, content, opts)
@@ -95,7 +109,7 @@ function NouveauMessage(props) {
         const certPromise = clesDao.getCertificatsMaitredescles()
         certPromise
             .then(certificats=>{
-                console.debug("Reponse certificats maitre des cles ", certificats)
+                // console.debug("Reponse certificats maitre des cles ", certificats)
                 setCertificatsMaitredescles(certificats)
             })
             .catch(err=>erreurCb(err, "Erreur chargement du certificat de maitre des cles"))
@@ -112,7 +126,7 @@ function NouveauMessage(props) {
                     // C'est un transfert
                     opts = {conserverAttachments: true, clearTo: true}
                 }
-                preparerReponse(workers, messageTrouve, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts)
+                preparerReponse(workers, messageTrouve, setTo, setContent, setUuidThread, ajouterAttachmentsCb, setAttachmentsCles, opts)
                 dispatch(messagerieActions.setUuidMessageActif(''))  // Clear message_id_repondre/message_id_transfert
             } else {
                 console.error("NouveauMessage Erreur preparation repondre : Message %s introuvable ", message_id_repondre)
@@ -191,7 +205,9 @@ function NouveauMessage(props) {
                 workers={workers} 
                 etatConnexion={etatConnexion} 
                 attachments={attachments} 
-                setAttachments={setAttachments} 
+                // setAttachments={setAttachments} 
+                ajouterAttachments={ajouterAttachmentsCb} 
+                retirerAttachments={retirerAttachmentsCb}
                 attachmentsPending={attachmentsPending}
                 setAttachmentsPending={setAttachmentsPending}
                 attachmentsCles={attachmentsCles}
@@ -280,7 +296,7 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
     }
 
     const resultat = await posterMessage(workers, certificatsChiffragePem, from, to, content, opts)
-    console.debug("Resultat poster message ", resultat)
+    // console.debug("Resultat poster message ", resultat)
     if(resultat.err) throw resultat.err
     if(resultat.ok === false) throw new Error("Erreur envoyer message")
 
@@ -304,10 +320,10 @@ async function envoyer(workers, userId, certificatsChiffragePem, from, to, conte
         supprime: false,
     }
 
-    console.debug("envoyer Conserver message dans IDB : %O", userId, messageEnvoyer)
+    // console.debug("envoyer Conserver message dans IDB : %O", userId, messageEnvoyer)
 
     const messageMaj = await messagerieDao.updateMessage(messageEnvoyer)
-    console.debug("envoyer Messages maj ", messageMaj)
+    // console.debug("envoyer Messages maj ", messageMaj)
 
     return messageMaj
 }
@@ -320,11 +336,11 @@ function mapperAttachments(attachments, opts) {
     let fuuids = []
 
     attachments.forEach( attachment => {
-        console.debug("mapperAttachments ", attachment)
+        // console.debug("mapperAttachments ", attachment)
         if(attachment.file && attachment.decryption) {
             // Deja mappe (e.g. Transfert de message)
             const fuuid = attachment.file
-            console.debug("mapperAttachement Deja fait, fuuid %s = %O", fuuid, attachment)
+            // console.debug("mapperAttachement Deja fait, fuuid %s = %O", fuuid, attachment)
             attachmentsMapping[fuuid] = attachment
             fuuids.push(fuuid)
         } else {
@@ -339,7 +355,7 @@ function mapperAttachments(attachments, opts) {
             }
             delete mapping.tuuid
 
-            console.debug("mapperAttachments Attachment %O", mapping)
+            // console.debug("mapperAttachments Attachment %O", mapping)
 
             attachmentsMapping[fuuid] = mapping
         }
@@ -366,7 +382,10 @@ async function preparerUploaderFichiers(workers, acceptedFiles) {
 function AfficherAttachments(props) {
     const { 
         workers, etatConnexion, erreurCb,
-        attachments, setAttachments, attachmentsPending, setAttachmentsPending,
+        attachments, 
+        // setAttachments, 
+        ajouterAttachments, retirerAttachments,
+        attachmentsPending, setAttachmentsPending,
         attachmentsCles, setAttachmentsCles, 
         optionVideo, setOptionVideo,
     } = props
@@ -388,7 +407,7 @@ function AfficherAttachments(props) {
             if(item.file && item.decryption) {
                 // Item transfere (deja formatte). Convertir a format GrosFichiers
                 const attachementConverti = mapperRowAttachment(item, workers)
-                console.debug("Attachement converti ", attachementConverti)
+                // console.debug("Attachement converti ", attachementConverti)
                 liste.push({...attachementConverti, pret: true})
             } else {
                 liste.push({...item, pret: true})
@@ -396,7 +415,7 @@ function AfficherAttachments(props) {
         })
         if(attachmentsPending) attachmentsPending.forEach(item=>liste.push({...item, pret: false}))
 
-        console.debug("Maj liste Attachments combinee : %O (attachments : %O, attachmentsPending: %O)", liste, attachments, attachmentsPending)
+        // console.debug("Maj liste Attachments combinee : %O (attachments : %O, attachmentsPending: %O)", liste, attachments, attachmentsPending)
 
         return liste
     }, [attachments, attachmentsPending])
@@ -406,14 +425,14 @@ function AfficherAttachments(props) {
         const upload = opts.upload
 
         if(upload) {
-            console.debug("Upload nouvel attachment : %O", selection)
+            // console.debug("Upload nouvel attachment : %O", selection)
             let attachmentsMaj = null
             if(attachmentsPending) {
                 attachmentsMaj = [...attachmentsPending, ...selection]
             } else {
                 attachmentsMaj = selection
             }
-            console.debug("Maj attachments pending pour selection : %O", attachmentsMaj)
+            // console.debug("Maj attachments pending pour selection : %O", attachmentsMaj)
             setAttachmentsPending([...attachmentsMaj])
         } else {
             // Fichier existant, provient d'une collection de l'usager
@@ -422,13 +441,14 @@ function AfficherAttachments(props) {
                 const attachmentsFuuids = attachments.map(item=>item.fuuid_v_courante)
                 selection = selection.filter(item=>!attachmentsFuuids.includes(item.fuuid_v_courante))
             }
-            const attachmentsMaj = [...attachments, ...selection]
-            console.debug("Attachments maj : %O", attachmentsMaj)
-            setAttachments(attachmentsMaj)
+            // const attachmentsMaj = [...attachments, ...selection]
+            // console.debug("Attachments maj : %O", attachmentsMaj)
+            // console.debug("Ajouter attachements de selection ", selection)
+            ajouterAttachments(selection)
 
             // Extraire la liste complete des fuuids de la selection
             const { fuuids /*, fuuidsCleSeulement*/ } = mapperAttachments(selection)
-            console.debug("AfficherAttachments Fuuids %O", fuuids)
+            // console.debug("AfficherAttachments Fuuids %O", fuuids)
             getClesFormattees(workers, fuuids, {delaiInitial: 500, tentatives: 2})
                 .then(cles=>{
                     const clesMaj = {...attachmentsCles, ...cles}
@@ -439,7 +459,7 @@ function AfficherAttachments(props) {
                 })
         }
 
-    }, [workers, attachments, attachmentsPending, attachmentsCles, setAttachments, setAttachmentsPending, setAttachmentsCles])
+    }, [workers, attachments, attachmentsPending, attachmentsCles, /*setAttachments,*/ setAttachmentsPending, setAttachmentsCles])
 
     useEffect(()=>setColonnes(preparerColonnes), [setColonnes])
 
@@ -479,7 +499,9 @@ function AfficherAttachments(props) {
                 contextuel={contextuel} 
                 fermerContextuel={fermerContextuel}
                 attachments={listeAttachments}
-                setAttachments={setAttachments}
+                //ajouterAttachments={ajouterAttachments}
+                retirerAttachments={retirerAttachments}
+                // setAttachments={setAttachments}
                 selection={selection}
                 etatConnexion={etatConnexion}
             />
@@ -531,7 +553,7 @@ function MenuContextuel(props) {
         if(attachment) {
             return <MenuContextuelAttacher attachment={attachment} {...props} />
         } else {
-            console.warn("Aucun match selection pour menu contextuel %s pas inclus dans %O", fichierTuuid, attachments)
+            //console.warn("Aucun match selection pour menu contextuel %s pas inclus dans %O", fichierTuuid, attachments)
         }
     } else {
         console.warn("Aucune selection pour menu contextuel")
@@ -566,7 +588,7 @@ function PretFormatteur(props) {
 }
 
 // Prepare une reponse/transfert de messages
-function preparerReponse(workers, message, setTo, setContent, setUuidThread, setAttachments, setAttachmentsCles, opts) {
+function preparerReponse(workers, message, setTo, setContent, setUuidThread, ajouterAttachments, setAttachmentsCles, opts) {
     opts = opts || {}
     console.trace('preparerReponse ', message)
 
@@ -595,7 +617,7 @@ function preparerReponse(workers, message, setTo, setContent, setUuidThread, set
 
     const fichiers = contenu.files
     if(conserverAttachments && fichiers) {
-        console.debug("preparerReponse Conserver attachements : ", fichiers)
-        setAttachments(fichiers)
+        // console.debug("preparerReponse Conserver attachements : ", fichiers)
+        ajouterAttachments(fichiers)
     }
 }

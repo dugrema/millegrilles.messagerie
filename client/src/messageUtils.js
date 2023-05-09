@@ -21,18 +21,18 @@ export async function posterMessage(workers, certifcatsChiffragePem, from, to, c
     } catch(err) {
         console.error("Erreur preparation sujet : %O", err)
     }
-    console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
+    // console.debug("Subject %O\nContenu %O\nOpts %O", subject, content, opts)
 
     const { message, commande, cle } = await signerMessage(workers, certifcatsChiffragePem, from, to, subject, content, opts)
 
-    console.debug("posterMessage commande %O\nCle %O", commande, cle)
+    // console.debug("posterMessage commande %O\nCle %O", commande, cle)
 
     // console.debug("Enveloppe message : %O", enveloppeMessage)
     // console.debug("Commande maitre des cles : %O", commandeMaitrecles)
 
     // poster
     const reponse = await connexion.posterMessage(commande, cle)
-    console.debug("Reponse poster : %O", reponse)
+    // console.debug("Reponse poster : %O", reponse)
 
     return {...reponse, message, commande}
 }
@@ -62,7 +62,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     let fuuidsCles = fuuids,
         fuuidAttachmentsTransfert = null
     if(attachments) {
-        console.debug("Attachements fichiers : %O\nCles fichiers: %O", attachments, attachmentsCles)
+        // console.debug("Attachements fichiers : %O\nCles fichiers: %O", attachments, attachmentsCles)
 
         // Faire une liste des fuuids a transferer pour la commande poster
         fuuidAttachmentsTransfert = attachments.reduce((acc, attachment) =>{
@@ -76,10 +76,14 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
             Object.values(videos).forEach(video=>acc.push(video.fuuid_video))
             return acc
         }, [])
-        console.debug("Fuuids a transferer : ", fuuidAttachmentsTransfert)
+        // console.debug("Fuuids a transferer : ", fuuidAttachmentsTransfert)
 
         // Retirer cles deja connues
-        const fuuidsClesInconnues = fuuidsCles.filter(item=>(!item.decryption && !attachmentsCles[item]))
+        const fuuidsClesInconnues = attachments.filter(item=>{
+            if(item.decryption) return false
+            const fuuid = item.file || item.fuuid
+            if(!attachmentsCles[fuuid]) return true
+        }).map(item=>item.file)
         let clesAttachmentsPrets = {...attachmentsCles}
         if(fuuidsClesInconnues.length > 0) {
             console.warn("signerMessage : il manque des cles (%O), charger maintenant", fuuidsClesInconnues)
@@ -100,7 +104,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
         message.files = mappingAttachements
     }
 
-    console.debug("Chiffrer le message : %O", message)
+    // console.debug("Chiffrer le message : %O", message)
     // Compresser le message en gzip
     let messageBytes = JSON.stringify(message)
     // console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
@@ -165,7 +169,7 @@ export async function getClesFormattees(workers, fuuidsCles, opts) {
     for(let i=0; i<tentatives; i++) {
         try {
             cles = await promise
-            console.debug("Reponse cles : %O", cles)
+            // console.debug("Reponse cles : %O", cles)
             if(cles.ok !== false) break
         } catch(err) {
             if(i<tentatives-1) {
@@ -194,7 +198,7 @@ export async function getClesFormattees(workers, fuuidsCles, opts) {
 }
 
 async function mapperAttachementFile(workers, fichier, cles) {
-    console.debug("Mapper %O (cles: %O)", fichier, cles)
+    // console.debug("Mapper %O (cles: %O)", fichier, cles)
     const { chiffrage } = workers
 
     const hachage_bytes = fichier.fuuid
@@ -206,7 +210,7 @@ async function mapperAttachementFile(workers, fichier, cles) {
     const cleDechiffrage = cles[hachage_bytes]
     if(cleDechiffrage && metadata.data_chiffre) {
         var metadataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(metadata, cleDechiffrage)
-        console.debug("Metadata dechiffre %s : %O", hachage_bytes, metadataDechiffre)
+        // console.debug("Metadata dechiffre %s : %O", hachage_bytes, metadataDechiffre)
     } else {
         console.warn("Erreur dechiffrage fuuid %s, cle absente", hachage_bytes)
         return null
