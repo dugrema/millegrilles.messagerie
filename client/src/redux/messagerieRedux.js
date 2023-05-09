@@ -1,4 +1,3 @@
-import { base64 } from 'multiformats/bases/base64'
 import { createSlice, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
 import { dechiffrerMessage } from '../cles'
 
@@ -260,6 +259,7 @@ export function creerThunks(actions, nomSlice) {
         if(source === SOURCE_RECEPTION) {
             // Charger le contenu de la collection deja connu et dechiffre
             contenuIdb = await messagerieDao.getMessages(userId)
+            // console.debug("ContenuIdb reception ", contenuIdb)
         } else if(source === SOURCE_OUTBOX) {
             contenuIdb = await messagerieDao.getMessages(userId, {messages_envoyes: true})
         } else if(source === SOURCE_CORBEILLE) {

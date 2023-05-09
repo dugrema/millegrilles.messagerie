@@ -168,10 +168,11 @@ export async function getMessages(userId, opts) {
 
     let position = 0
     const messages = []
-    let curseur = await index.openCursor([userId], direction)
+    const keyRange = IDBKeyRange.bound([userId, 0], [userId, Number.MAX_SAFE_INTEGER])
+    let curseur = await index.openCursor(keyRange, direction)
     while(curseur) {
         const value = curseur.value
-
+        // console.debug("IDB value ", curseur.key, curseur.value)
         if(filtreFct(value)) {
             if(position++ >= skipCount) messages.push(value)
         }
