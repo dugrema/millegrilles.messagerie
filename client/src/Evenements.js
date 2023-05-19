@@ -147,17 +147,18 @@ function traiterContactEvenement(workers, dispatch, userId, evenementContact) {
     const { messagerieDao } = workers
 
     // Traiter message
-    const routing = evenementContact.routingKey,
-            action = routing.split('.').pop()
+    const original = evenementContact.message['__original']
+    const action = original.routage.action
     const message = evenementContact.message
 
     if(action === 'majContact') {
         // Conserver information de contact
-        const date_modification = message['en-tete'].estampille
+        const date_modification = original.estampille  // message['en-tete'].estampille
         const contactMaj = {...message, user_id: userId, date_modification, dechiffre: 'false'}
-        delete contactMaj['en-tete']
-        delete contactMaj['_certificat']
-        delete contactMaj['_signature']
+        delete contactMaj['__original']
+        // delete contactMaj['en-tete']
+        // delete contactMaj['_certificat']
+        // delete contactMaj['_signature']
 
         console.debug("traiterContactEvenement majContact ", contactMaj)
 
