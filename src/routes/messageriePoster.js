@@ -5,7 +5,7 @@ const express = require('express')
 const fsPromises = require('fs/promises')
 const path = require('path')
 
-const messagesBackingStore = require('@dugrema/millegrilles.nodejs/src/messageQueueBackingStore')
+// const messagesBackingStore = require('@dugrema/millegrilles.nodejs/src/messageQueueBackingStore')
 
 const MESSAGE_LIMIT = 5 * 1024 * 1024,
       TIMEOUT_LIMIT = 15 * 60 * 1000
@@ -48,7 +48,7 @@ function init(amqpdao, backingStore, opts) {
     debug("Https agent : %O", _httpsAgent)
 
     // Setup thread transfert messages
-    messagesBackingStore.configurerThreadTransfertMessages(amqpdao, message=>traiterMessage(amqpdao, message), {novalid: true})
+    // messagesBackingStore.configurerThreadTransfertMessages(amqpdao, message=>traiterMessage(amqpdao, message), {novalid: true})
 
     const route = express.Router()
 
@@ -74,8 +74,9 @@ function init(amqpdao, backingStore, opts) {
     const middlewareDeleteStaging = backingStore.middlewareDeleteStaging(opts)
     route.delete('/:correlation', middlewareDeleteStaging)
     
-    const middlewareRecevoirMessage = messagesBackingStore.middlewareRecevoirMessage({successStatus: 202, novalid: true})
-    route.post('/', jsonParser, verifierPoster, middlewareRecevoirMessage)
+    // const middlewareRecevoirMessage = messagesBackingStore.middlewareRecevoirMessage({successStatus: 202, novalid: true})
+    // route.post('/', jsonParser, verifierPoster, middlewareRecevoirMessage)
+    route.post('/', jsonParser, verifierPoster, traiterPoster)
 
     return route
 }
@@ -156,8 +157,6 @@ function validateStatusHead(status) {
 }
 
 async function verifierPoster(req, res, next) {
-    // const idmg = req.idmg
-    // const host = req.headers.host
     debug("verifierPoster HEADERS : %O", req.headers)
     const body = req.body
     debug("Message body\n%O", body)
@@ -176,77 +175,46 @@ async function verifierPoster(req, res, next) {
     next()
 }
 
-async function traiterMessage(amqpdao, message) {
-    debug("Message a transmettre\n%O", message)
-
+async function traiterPoster(req, res, next) {
+    const amqpdao = req.amqpdao
     const pki = amqpdao.pki
+    const enveloppeMessage = req.body
 
-    // Verifier message incoming
+    debug("Message a transmettre\n%O", enveloppeMessage)
+
+    // Verifier commande incoming et sont attachement message 
     try {
-        const resultat = await pki.verifierMessage(message, {tiers: true})
-        debug("poster Resultat verification signature : %O", resultat)
+        const verificationMessage = await pki.verifierMessage(enveloppeMessage, {tiers: true})
+        debug("poster Resultat verification signature message %O", verificationMessage)
+
+        const transfert = enveloppeMessage.attachements.transfert
+        debug("traiterMessage Verifier transfert : ", transfert)
+        const verificationTransfert = await pki.verifierMessage(transfert, {tiers: true})
+        debug("poster Resultat verification signature transfert : %O", verificationTransfert)
     } catch(err) {
-        err.code = 2
-        throw err
+        console.error(new Date() + ' traiterPoster ERROR verification message', err)
+        return res.status(500).send({code: 1})
     }
 
-    if ( ! await sauvegarderCle(amqpdao, message.chiffrage) ) {
-        debug("Sauvegarder cle erreur")
-        const err = new Error('Erreur sauvegarde cle')
-        err.code = 1
-        throw err
-    } 
-    
-    if ( ! await sauvegarderMessage(amqpdao, message) ) {
-        debug("Sauvegarder message erreur")
-        const err = new Error('Erreur sauvegarde message')
-        err.code = 2
-        throw err
+    try {
+        // Separer le message et les attachements
+        const attachements = enveloppeMessage.attachements,
+              cles = attachements.cles,
+              transfert = attachements.transfert
+        const message = {...enveloppeMessage}
+        delete message.attachements
+
+        const commande = { message, cles, transfert }
+
+        debug("Commande recevoir pour messagerie :\n%O", commande)
+        const reponse = await amqpdao.transmettreCommande('Messagerie', commande, {action: 'recevoirExterne', exchange: '2.prive'})
+        debug("Reponse commande recevoir :\n%O", reponse)
+    } catch(err) {
+        console.error(new Date() + ' traiterPoster ERROR preparation message', err)
+        return res.status(500).send({code: 2})
     }
 
-    return true
-}
-
-async function sauvegarderCle(amqpdao, cleInfo) {
-    debug("sauvegarderCle Cles\n%O", cleInfo)
-
-    for(const partition in cleInfo.cles) {
-        debug("Partition : %s", partition)
-        if(partition === _fingerprintCA) continue  // Skip, on utilise une partition autre que CA
-
-        const commande = {...cleInfo}
-
-        // Overrides
-        commande.domaine = 'Messagerie'
-        commande.identificateurs_document = { message: 'true' }
-
-        debug("Commande maitre des cles vers %s:\n%O", partition, commande)
-        const reponse = await amqpdao.transmettreCommande('MaitreDesCles', commande, {partition, action: 'sauvegarderCle'})
-        debug("Reponse sauvegarde cle :\n%O", reponse)
-
-        if(reponse.ok === true) {
-            // Cle recue et conservee, on n'a pas besoin d'emettre les autres cles
-            debug("Cle conservee OK")
-            return true
-        }
-    }
-
-    debug("Erreur sauvegarde cles, seule la cle CA est present (if any) : %O", cleInfo.cles)
-
-    return false
-}
-
-async function sauvegarderMessage(amqpdao, infoMessage) {
-    const commande = {
-        destinataires: infoMessage.destinataires,
-        message: infoMessage.message,
-    }
-
-    debug("Commande recevoir pour messagerie :\n%O", commande)
-    const reponse = await amqpdao.transmettreCommande('Messagerie', commande, {action: 'recevoir'})
-    debug("Reponse commande recevoir :\n%O", reponse)
-
-    return reponse.ok === true
+    return res.sendStatus(201)
 }
 
 module.exports = init
