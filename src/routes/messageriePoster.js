@@ -207,11 +207,22 @@ async function traiterPoster(req, res, next) {
         const commande = { message, cles, transfert }
 
         debug("Commande recevoir pour messagerie :\n%O", commande)
-        const reponse = await amqpdao.transmettreCommande('Messagerie', commande, {action: 'recevoirExterne', exchange: '2.prive'})
+        const reponse = await amqpdao.transmettreCommande(
+            'Messagerie', commande, 
+            {action: 'recevoirExterne', exchange: '2.prive', timeout: 45_000}
+        )
         debug("Reponse commande recevoir :\n%O", reponse)
+
+        if(reponse.ok === true) {
+            const messageOriginal = reponse['__original']
+            return res.status(201).send(messageOriginal)
+        } else {
+            return res.status(500).send(messageOriginal)
+        }
+
     } catch(err) {
         console.error(new Date() + ' traiterPoster ERROR preparation message', err)
-        return res.status(500).send({code: 2})
+        return res.status(500).send({ok: false, code: 2})
     }
 
     return res.sendStatus(201)
