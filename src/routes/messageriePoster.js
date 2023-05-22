@@ -81,7 +81,7 @@ function init(amqpdao, backingStore, opts) {
     return route
 }
 
-function verifierPermissionUploadAttachment(req, res, next) {
+async function verifierPermissionUploadAttachment(req, res, next) {
     const fuuid = req.params.correlation,
           position = req.params.position
     debug("verifierPermissionUploadAttachment %s, position", fuuid, position)
@@ -96,59 +96,59 @@ function verifierPermissionUploadAttachment(req, res, next) {
     const modeTraitementMultiple = !isNaN(position)
     const pathFichier = modeTraitementMultiple?path.join(_pathStaging, fuuid + '.ready'):path.join(_pathStaging, fuuid + '.dat')
 
-    fsPromises.stat(pathFichier)
-    .then(stat=>{
+    try {
+        const stat = await fsPromises.stat(pathFichier)
         // Le fichier/repertoire existe deja et est completement valide. Refuser demande upload, confirmer fichier OK.
         debug("Stat fichier/repertoire existant : %O", stat)
         const resultat = { ok: 200, status: 1, fuuid }
-        res.status(200).send(resultat)
-    })
-    .catch(async err=>{
+        return res.status(200).send(resultat)
+    } catch(err) {
+
         if(err.code !== 'ENOENT') {
-            // Erreur, mais le fichier n'existe pas. On continue.
+            // Le fichier n'existe pas deja. On continue (OK)
             return next()
         }
+    }
 
-        // Le fichier n'existe pas localement, on verifie dans le back-end
-        axios({
-            method: 'HEAD',
-            url: ''+urlFichiers,
-            httpsAgent: _httpsAgent,
-            validateStatus: validateStatusHead,
-            timeout: 1500,
-        })
-        .then(async response=>{
-            const status = response.status
-            debug("Reponse axios : %s", status)
-            if(status === 404) {
-                // Le fichier n'existe pas, verifier s'il est requis pour au moins 1 attachment
-                const reponseRequis = await req.mqdao.attachmentsRequis({amqpdao: req.amqpdao}, [fuuid])
-                debug("Reponse attachments requis : %O", reponseRequis)
-                const valeurFuuids = reponseRequis.fuuids || {}
-                if(valeurFuuids[fuuid] !== true) {
-                    // Le fichier n'est pas requis par au moins 1 message
-                    const resultat = {ok: false, code: 6, fuuid}
-                    res.status(403).send(resultat)
-                } else {
-                    // Le fichier est requis (OK)
-                    next()
-                }
-            } else {
-                const resultat = {
-                    ok: status === 200,
-                    status,
-                    fuuid,
-                    code: 7,
-                    headers: response.headers,
-                }
-                res.status(200).send(resultat)
-            }
-        })
-        .catch(err=>{
-            console.error("messageriePoster.verifierPermissionUploadAttachment Erreur %O", err)
-            res.sendStatus(503)
-        })
+    // Le fichier n'existe pas localement, on verifie dans le back-end
+    const response = await axios({
+        method: 'HEAD',
+        url: ''+urlFichiers,
+        httpsAgent: _httpsAgent,
+        validateStatus: validateStatusHead,
+        timeout: 1500,
     })
+
+    try {
+        const status = response.status
+        debug("Reponse axios : %s", status)
+        if(status === 404) {
+            // Le fichier n'existe pas, verifier s'il est requis pour au moins 1 attachment
+            const reponseRequis = await req.mqdao.attachmentsRequis({amqpdao: req.amqpdao}, [fuuid])
+            debug("Reponse attachments requis : %O", reponseRequis)
+            const valeurFuuids = reponseRequis.fuuids || {}
+            if(valeurFuuids[fuuid] !== true) {
+                // Le fichier n'est pas requis par au moins 1 message
+                const resultat = {ok: false, code: 6, fuuid}
+                return res.status(403).send(resultat)
+            } else {
+                // Le fichier est requis (OK)
+                return next()
+            }
+        } else {
+            const resultat = {
+                ok: status === 200,
+                status,
+                fuuid,
+                code: 7,
+                headers: response.headers,
+            }
+            res.status(200).send(resultat)
+        }
+    } catch(err) {
+        console.error("messageriePoster.verifierPermissionUploadAttachment Erreur %O", err)
+        return res.sendStatus(503)
+    }
 
 }
 
@@ -225,7 +225,7 @@ async function traiterPoster(req, res, next) {
         return res.status(500).send({ok: false, code: 2})
     }
 
-    return res.sendStatus(201)
+    throw new Error('Erreur traitement generique')
 }
 
 module.exports = init

@@ -843,24 +843,24 @@ function longToByteArray( /*long*/ long) {
     return byteArray;
  }
 
- async function reloadMessage(workers, dispatch, uuid_transaction, userId) {
+ async function reloadMessage(workers, dispatch, message_id, userId) {
     const { connexion, messagerieDao } = workers
 
-    // console.debug("Reload message - voir si attachements ont ete recus ")
-    const reponseMessages = await connexion.getMessagesAttachments({uuid_transactions: [uuid_transaction]})
+    console.debug("Reload message - voir si attachements ont ete recus ")
+    const reponseMessages = await connexion.getMessagesAttachments({message_ids: [message_id]})
     const message = reponseMessages.messages.pop()
 
-    // console.debug("Message recu ", message)
-    const { attachments, attachments_traites } = message
-    const messageMaj = {uuid_transaction, attachments_status: attachments, attachments_traites}
+    console.debug("Message recu ", message)
+    const { fichiers, fichiers_completes } = message
+    const messageMaj = {message_id, fichiers_status: fichiers, fichiers_completes}
 
-    // console.debug("Message maj ", messageMaj)
+    console.debug("Message maj ", messageMaj)
     await messagerieDao.updateMessage(messageMaj, {userId})
 
-    const syncIds = [{uuid_transaction}]
+    const syncIds = [{message: {id: message_id, estampille: message.message.estampille}}]
     await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
 
-    // console.debug("Message reloade pour attachments")
+    console.debug("Message reloade pour attachments")
     dispatch(messagerieActions.clearSyncEnCours())
 }
  
