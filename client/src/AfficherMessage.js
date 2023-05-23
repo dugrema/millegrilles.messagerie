@@ -593,16 +593,36 @@ function AfficherAttachments(props) {
 
 function preparerColonnes() {
     const params = {
-        ordreColonnes: ['nom', 'taille', 'mimetype', 'boutonDetail'],
+        ordreColonnes: ['nom', 'taille', 'mimetype', 'pret', 'boutonDetail'],
         paramsColonnes: {
-            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 7},
+            'nom': {'label': 'Nom', showThumbnail: true, xs: 11, lg: 6},
             'taille': {'label': 'Taille', className: 'details', formatteur: FormatteurTaille, xs: 3, lg: 1},
-            'mimetype': {'label': 'Type', className: 'details', xs: 8, lg: 2},
+            'mimetype': {'label': 'Type', className: 'details', xs: 5, lg: 2},
+            'pret': {'label': 'Pret', className: 'details', xs: 3, lg: 1, formatteur: ColonneFichierPret},
             'boutonDetail': {label: ' ', className: 'details', showBoutonContexte: true, xs: 1, lg: 1},
         },
         // tri: {colonne: 'nom', ordre: 1},
     }
     return params
+}
+
+function ColonneFichierPret(props) {
+    const { value, data } = props
+    // console.debug('ColonneFichierPret value %O, data %O', value, data)
+
+    const traite = useMemo(()=>{
+        return data.traite
+    }, [data])
+
+    if(traite === true) {
+        return (
+            <span><i className='fa fa-check' /></span>
+        ) 
+    } else {
+        return (
+            <span><i className='fa fa-hourglass' /></span>
+        )
+    }
 }
 
 function BoutonsFormat(props) {
@@ -666,59 +686,19 @@ async function copierAttachmentVersCollection(workers, fichiers, /*cles, */ cuui
     // const {fuuid, version_courante} = attachment
 
     // Creer hachage de preuve
-    // const {fingerprint} = await connexion.getCertificatFormatteur()
-    // // console.debug("Certificat signature : ", fingerprint)
     const dictPreuves = {}, dictClesSecretes = {}, fichiersCles = {}
     for await (const fichier of fichiers) {
         const fuuid = fichier.file
-        // const cleSecrete = cles[fuuid].cleSecrete
         const cleSecrete = base64.decode(fichier.decryption.key)
         dictClesSecretes[fuuid] = cleSecrete
         const cleFuuid = {...fichier.decryption, cleSecrete}
         const { fingerprint, preuves, cles } = await creerPreuveCle(workers, fuuid, cleFuuid, usager, {domaine: 'GrosFichiers'})
-        //  const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
         fichiersCles[fuuid] = cles[fuuid]
         dictPreuves[fuuid] = preuves[fuuid]
     }
 
     console.debug("copierAttachmentVersCollection Cles secretes %O, preuves : %O, rechiffrer avec cles maitre des cles %O", 
         dictClesSecretes, dictPreuves, listeCertificatMaitreDesCles)
-
-    // const fichiersCles = {}
-    // for await (const certMaitredescles of listeCertificatMaitreDesCles) {
-    //     // Chiffrer la cle secrete pour le certificat de maitre des cles
-    //     // Va servir de preuve d'acces au fichier
-    //     const clesChiffrees = await chiffrage.chiffrerSecret(dictClesSecretes, certMaitredescles, {DEBUG: false})
-    //     // console.debug("copierAttachmentVersCollection Cles chiffrees ", clesChiffrees)
-
-    //     for await (const fuuid of Object.keys(clesChiffrees.cles)) {
-    //     //Object.keys(clesChiffrees.cles).forEach(fuuid=>{
-    //         const cleRechiffree = clesChiffrees.cles[fuuid]
-
-    //         const domaine = 'GrosFichiers'
-    //         const identificateurs_document = {fuuid}
-
-    //         const infoCle = {
-    //             // Valeurs recues
-    //             ...cles[fuuid], 
-    //         }
-    //         // delete infoCle.cle
-    //         delete infoCle.cleSecrete
-            
-    //         let fuuidInfo = fichiersCles[fuuid]
-    //         if(!fuuidInfo) {
-    //             const { cleSecrete } = cles[fuuid]
-    //             const cleSecreteBytes = multibase.decode(cleSecrete)
-    //             // console.debug("Signer identite : cle %O, domaine %s, iddoc %O, fuuid %s", cleSecrete, domaine, identificateurs_document, fuuid)
-    //             const signature_identite = await chiffrage.chiffrage.signerIdentiteCle(
-    //                 cleSecreteBytes, domaine, identificateurs_document, fuuid)
-    //             fuuidInfo = {...infoCle, domaine, identificateurs_document, hachage_bytes: fuuid, signature_identite, cles: {}}
-    //             fichiersCles[fuuid] = fuuidInfo
-    //         }
-    //         fuuidInfo.cles[clesChiffrees.partition] = cleRechiffree
-    //     }
-    // }
-    // console.debug("Fichiers cles ", fichiersCles)
 
     // Rechiffrer metadata
     const fichiersCopies = await Promise.all(fichiers.map(attachment => {
@@ -851,8 +831,8 @@ function longToByteArray( /*long*/ long) {
     const message = reponseMessages.messages.pop()
 
     console.debug("Message recu ", message)
-    const { fichiers, fichiers_completes } = message
-    const messageMaj = {message_id, fichiers_status: fichiers, fichiers_completes}
+    const { fichiers_status, fichiers_completes } = message
+    const messageMaj = {message_id, fichiers_status, fichiers_completes}
 
     console.debug("Message maj ", messageMaj)
     await messagerieDao.updateMessage(messageMaj, {userId})
@@ -961,117 +941,3 @@ async function creerTokensStreaming(workers, fuuidFichier, cleFuuid, fuuidVideo,
 
     return reponseVerifierPreuve.jwts || {}
 }
-
-// function mapperFichiers(fichiers, fichiers_traites, fichiers_status) {
-
-//     const listeFichiers = []
-
-//     for (const fichier of fichiers) {
-//         const fuuid = fichier.file
-//         const mimetype = fichier.mimetype || 'application/bytes'
-//         const traite = fichiers_traites || fichiers_status[fuuid] || false
-
-//         const version_courante = {
-//             nom: fichier.name,
-//             date_fichier: fichier.date,
-//             hachage_original: fichier.digest,
-//             mimetype,
-//             taille: fichier.encrypted_size || fichier.size,
-//         }
-
-//         const fichierMappe = {
-//             nom: fichier.name,
-//             dateFichier: fichier.date,
-//             mimetype,
-//             version_courante,
-
-//             // Indicateurs de chargement
-//             traite, 
-//             disabled: !traite,
-
-//             decryption: fichier.decryption,
-
-//             // Ids pour utilitaires reutilises de collections
-//             fileId: fuuid, fuuid_v_courante: fuuid, fuuid,
-//         }
-
-//         const media = mapperMedia(fichier.media)
-//         if(media) Object.assign(version_courante, media)
-
-//         // dictFichiers[fuuid] = {
-//         //     ...fichierMappe, 
-//         //     fileId: fuuid, fuuid_v_courante: fuuid, 
-//         //     version_courante,
-//         //     traite,
-//         //     disabled: !traite,
-//         // }
-
-//         listeFichiers.push(fichierMappe)
-//     }
-
-//     return listeFichiers
-// }
-
-// const CHAMPS_MEDIA = ['duration', 'width', 'height']
-
-// function mapperMedia(media, fuuid) {
-//     console.debug("Mapper media ", media)
-//     const mediaMappe = {}
-//     for(const champ of CHAMPS_MEDIA) {
-//         if(media[champ]) mediaMappe[champ] = media[champ]
-//     }
-    
-//     if(media.images) {
-//         const images = {}
-//         mediaMappe.images = images
-//         for(const image of media.images) {
-//             const resolution = Math.min(image.width, image.height)
-//             let key = `${image.mimetype};${resolution}`
-//             if(resolution <= 128 && image.data) key = 'thumb'
-//             else if(resolution > 128 && resolution < 360) key = 'small'
-
-//             const imageMappee = {
-//                 width: image.width,
-//                 height: image.height,
-//                 resolution,
-//                 mimetype: image.mimetype,
-//             }
-//             if(image.data) {
-//                 imageMappee.data = image.data
-//             } else {
-//                 imageMappee.hachage = image.file
-//                 imageMappee.taille = image.size
-//                 Object.assign(imageMappee, image.decryption)
-//             }
-            
-//             images[key] = imageMappee
-//         }
-//     }
-
-//     if(media.videos) {
-//         // console.warn("!!! TODO mapper videos ", media.videos)
-//         const videos = {}
-//         mediaMappe.video = videos
-//         for (const video of media.videos) {
-//             const resolution = Math.min(video.width, video.height)
-//             const key = `${video.mimetype};${video.codec};${resolution}p;${video.quality}`
-//             const decryption = video.decryption
-//             const videoMappe = {
-//                 width: video.width,
-//                 height: video.height,
-//                 quality: video.quality,
-//                 fuuid,
-//                 fuuid_video: video.file,
-//                 hachage: video.file,
-//                 mimetype: video.mimetype,
-//                 taille_fichier: video.size,
-//                 bitrate: video.bitrate,
-//                 codec: video.codec,
-//                 ...decryption,
-//             }
-//             videos[key] = videoMappe
-//         }
-//     }
-
-//     return mediaMappe
-// }

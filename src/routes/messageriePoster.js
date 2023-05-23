@@ -82,6 +82,7 @@ function init(amqpdao, backingStore, opts) {
 }
 
 async function verifierPermissionUploadAttachment(req, res, next) {
+    const mq = req.amqpdao
     const fuuid = req.params.correlation,
           position = req.params.position
     debug("verifierPermissionUploadAttachment %s, position", fuuid, position)
@@ -124,7 +125,7 @@ async function verifierPermissionUploadAttachment(req, res, next) {
         debug("Reponse axios : %s", status)
         if(status === 404) {
             // Le fichier n'existe pas, verifier s'il est requis pour au moins 1 attachment
-            const reponseRequis = await req.mqdao.attachmentsRequis({amqpdao: req.amqpdao}, [fuuid])
+            const reponseRequis = await req.mqdao.attachmentsRequis({amqpdao: mq}, [fuuid])
             debug("Reponse attachments requis : %O", reponseRequis)
             const valeurFuuids = reponseRequis.fuuids || {}
             if(valeurFuuids[fuuid] !== true) {
@@ -133,6 +134,16 @@ async function verifierPermissionUploadAttachment(req, res, next) {
                 return res.status(403).send(resultat)
             } else {
                 // Le fichier est requis (OK)
+                // Emettre evenement pour indiquer upload en cours
+                debug("Headers : ", req.headers)
+                const totalLength = req.headers['x-total-length'],
+                      tailleCourante = req.headers['content-length']
+                const evenement = { fuuid, position, tailleCourante: tailleCourante, total: totalLength, 'etat': 'en_cours' }
+                debug("Emettre evenement upload : ", evenement);
+
+                mq.emettreEvenement(evenement, {domaine: 'messagerie_web', action: 'fichier'})
+                    .catch(err=>console.error(new Date() + " verifierPermissionUploadAttachment Erreur emettreEvenement " + err))
+
                 return next()
             }
         } else {
