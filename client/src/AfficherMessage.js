@@ -616,11 +616,11 @@ function ColonneFichierPret(props) {
 
     if(traite === true) {
         return (
-            <span><i className='fa fa-check' /></span>
+            <span title='Fichier pret'><i className='fa fa-check' /></span>
         ) 
     } else {
         return (
-            <span><i className='fa fa-hourglass' /></span>
+            <span title='Fichier en attente'><i className='fa fa-hourglass' /></span>
         )
     }
 }
@@ -836,12 +836,7 @@ function longToByteArray( /*long*/ long) {
 
     console.debug("Message maj ", messageMaj)
     await messagerieDao.updateMessage(messageMaj, {userId})
-
-    const syncIds = [{message: {id: message_id, estampille: message.message.estampille}}]
-    await dispatch(messagerieThunks.chargerMessagesParSyncid(workers, syncIds))
-
-    console.debug("Message reloade pour attachments")
-    dispatch(messagerieActions.clearSyncEnCours())
+    dispatch(messagerieActions.mergeMessagesData(messageMaj))
 }
  
  // Conserver les cles pour les videos
