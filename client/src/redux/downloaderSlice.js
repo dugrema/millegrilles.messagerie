@@ -1,6 +1,7 @@
 import { createSlice, isAnyOf, createListenerMiddleware } from '@reduxjs/toolkit'
 import path from 'path'
 import { proxy } from 'comlink'
+import { base64 } from 'multiformats/bases/base64'
 
 const CACHE_TEMP_NAME = 'fichiersDechiffresTmp',
       DECHIFFRAGE_TAILLE_BLOCK = 64 * 1024,
@@ -168,10 +169,12 @@ async function traiterAjouterDownload(workers, docDownload, dispatch, getState) 
     const infoDownload = getState()[SLICE_NAME].liste.filter(item=>item.fuuid === fuuid).pop()
     console.debug("ajouterDownloadAction fuuid %s info existante %O", fuuid, infoDownload)
     if(!infoDownload) {
-        // Ajouter l'upload, un middleware va charger le reste de l'information
-        // console.debug("Ajout upload %O", correlation)
+        // Ajouter le download, un middleware va charger le reste de l'information
+        console.debug("ajouterDownloadAction Ajout download")
 
-        await clesDao.getCles([fuuid])  // Fetch pour cache (ne pas stocker dans redux)
+        if( ! docDownload.decryption ) {
+            await clesDao.getCles([fuuid])  // Fetch pour cache (ne pas stocker dans redux)
+        }
 
         const nouveauDownload = {
             ...docDownload,
@@ -181,13 +184,14 @@ async function traiterAjouterDownload(workers, docDownload, dispatch, getState) 
             etat: ETAT_PRET,
             dateCreation: new Date().getTime(),
         }
+        console.debug("ajouterDownloadAction Nouveau download detail ", nouveauDownload)
 
         // Conserver le nouveau download dans IDB
         await downloadFichiersDao.updateFichierDownload(nouveauDownload)
 
         dispatch(pushDownload(nouveauDownload))
     } else {
-        throw new Error(`Download ${fuuid} existe deja`)
+        throw new Error(`ajouterDownloadAction Download ${fuuid} existe deja`)
     }    
 }
 
@@ -346,17 +350,22 @@ async function tacheDownload(workers, listenerApi, forkApi) {
 }
 
 async function downloadFichier(workers, dispatch, fichier, cancelToken) {
-    console.debug("Download fichier : ", fichier)
+    // console.debug("Download fichier : ", fichier)
     const { transfertFichiers, clesDao } = workers
     const fuuid = fichier.fuuid
 
     // await marquerDownloadEtat(workers, dispatch, fuuid, {etat: ETAT_EN_COURS})
-    const cles = await clesDao.getCles([fuuid])  // Fetch pour cache (ne pas stocker dans redux)
+    if(fichier.decryption) {
+        // Cle dechiffree inclue dans le message
+        let cleSecrete = base64.decode(fichier.decryption.key)
+        var cles = {['included']: {...fichier.decryption, cleSecrete}}
+    } else {
+        // Charger la cle a partir du systeme local
+        var cles = await clesDao.getCles([fuuid])
+    }
     const valueCles = Object.values(cles).pop()
     delete valueCles.date
-    // valueCles.cleSecrete = base64.encode(valueCles.cleSecrete)
 
-    // transfertFichiers.download() ...
     const frequenceUpdate = 500
     let dernierUpdate = 0
     const progressCb = proxy( tailleCompletee => {
@@ -374,9 +383,9 @@ async function downloadFichier(workers, dispatch, fichier, cancelToken) {
         fuuid, hachage_bytes: fuuid, filename: fichier.nom, mimetype: fichier.mimetype,
         password: valueCles.cleSecrete, ...valueCles,
     }
-    console.debug("Params download : ", paramsDownload)
+    // console.debug("Params download : ", paramsDownload)
     const resultat = await transfertFichiers.downloadCacheFichier(paramsDownload, progressCb)
-    console.debug("Resultat download fichier : ", resultat)
+    // console.debug("Resultat download fichier : ", resultat)
 
     if(cancelToken && cancelToken.cancelled) {
         console.warn("Upload cancelled")
