@@ -675,7 +675,7 @@ async function copierAttachmentVersCollection(workers, fichiers, /*cles, */ cuui
         const cleSecrete = base64.decode(fichier.decryption.key)
         dictClesSecretes[fuuid] = cleSecrete
         const cleFuuid = {...fichier.decryption, cleSecrete}
-        const { fingerprint, preuves, cles } = await creerPreuveCle(workers, fuuid, cleFuuid, usager)
+        const { fingerprint, preuves, cles } = await creerPreuveCle(workers, fuuid, cleFuuid, usager, {domaine: 'GrosFichiers'})
         //  const {preuve, date} = await hacherPreuveCle(fingerprint, cleSecrete)
         fichiersCles[fuuid] = cles[fuuid]
         dictPreuves[fuuid] = preuves[fuuid]
@@ -865,9 +865,12 @@ function longToByteArray( /*long*/ long) {
 }
  
  // Conserver les cles pour les videos
-async function creerPreuveCle(workers, fuuidFichier, cleFuuid, usager) {
+async function creerPreuveCle(workers, fuuidFichier, cleFuuid, usager, opts) {
+    opts = opts || {}
     console.debug("creerPreuveCle Fichier %s Conserver cle %O", fuuidFichier, cleFuuid)
     
+    const domaine = opts.domaine || 'Messagerie'
+
     const {connexion, chiffrage, clesDao} = workers
     const listeCertificatMaitreDesCles = await clesDao.getCertificatsMaitredescles()
     const caPem = usager.ca
@@ -893,7 +896,7 @@ async function creerPreuveCle(workers, fuuidFichier, cleFuuid, usager) {
         for await (const fuuid of Object.keys(clesChiffrees.cles)) {
             const cleRechiffree = clesChiffrees.cles[fuuid]
 
-            const domaine = 'Messagerie'
+            // const domaine = 'Messagerie'
             const identificateurs_document = {type: 'attachment', fuuid}
 
             const infoCle = {
