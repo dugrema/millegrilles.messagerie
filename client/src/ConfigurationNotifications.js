@@ -358,7 +358,7 @@ async function chiffrerData(workers, profil, data) {
     const cle = await clesDao.getCleLocale(ref_hachage_bytes)
     const cleSecrete = cle.cleSecrete
 
-    const champsChiffres = await chiffrage.chiffrage.updateChampsChiffres(data, cleSecrete)
+    const champsChiffres = await chiffrage.chiffrage.updateChampsChiffres(data, cleSecrete, {lzma: true})
     champsChiffres.ref_hachage_bytes = ref_hachage_bytes
     return champsChiffres
 }

@@ -108,7 +108,7 @@ export async function signerMessage(workers, certifcatsChiffragePem, from, to, s
     // Compresser le message en gzip
     let messageBytes = JSON.stringify(message)
     // console.debug("Message signe taille %d\n%s", messageBytes.length, messageBytes)
-    messageBytes = pako.deflate(new TextEncoder().encode(messageBytes))
+    messageBytes = pako.deflate(new TextEncoder().encode(messageBytes), {gzip: true})
     // console.debug("Message signe gzippe : %O", messageBytes)
 
     // Chiffrer le message 

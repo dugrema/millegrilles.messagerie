@@ -201,7 +201,7 @@ export function creerThunks(actions, nomSlice) {
 
         if(profil.email_chiffre) {
             // console.debug("Dechiffrer champs email chiffres")
-            const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {DEBUG: false})
+            const dataDechiffre = await chiffrage.chiffrage.dechiffrerChampsChiffres(profil.email_chiffre, cle, {lzma: true, DEBUG: false})
             // console.debug("Champs email dechiffres ", dataDechiffre)
             profil = {...profil, ...dataDechiffre}
             dispatch(setProfil(profil))
