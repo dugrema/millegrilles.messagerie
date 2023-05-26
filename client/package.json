@@ -1,6 +1,6 @@
 {
   "name": "millegrilles.messagerie-client",
-  "version": "2023.6.0",
+  "version": "2023.6.1",
   "private": true,
   "proxy": "https://localhost:3039",
   "homepage": "/messagerie",

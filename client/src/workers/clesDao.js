@@ -6,8 +6,8 @@ function build(workers) {
 
     return {
         // Recupere une liste de cles, les conserve dans le usagerDao (cache) si applicable
-        getCles(liste_hachage_bytes) {
-            return getCles(workers, liste_hachage_bytes)
+        getCles(liste_hachage_bytes, domaine) {
+            return getCles(workers, domaine, liste_hachage_bytes)
         },
         getClesMessages(liste_hachage_bytes, uuid_transaction_messages, opts) {
             return getClesMessages(workers, liste_hachage_bytes, uuid_transaction_messages, opts)
@@ -34,9 +34,11 @@ function build(workers) {
 
 export default build
 
-async function getCles(workers, liste_hachage_bytes) {
+async function getCles(workers, domaine, liste_hachage_bytes) {
 
+    if(typeof(domaine) !== 'string') throw new Error("getCles domaine doit etre string")
     if(typeof(liste_hachage_bytes) === 'string') liste_hachage_bytes = [liste_hachage_bytes]
+    else if(!Array.isArray(liste_hachage_bytes)) throw new Error("getCles liste_hachage_bytes doit etre string ou array")
 
     const { connexion, usagerDao } = workers
 

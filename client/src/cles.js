@@ -7,7 +7,6 @@ export async function dechiffrerMessage(workers, message, cle) {
     const { date_envoi, user_id, certificat, millegrille } = message
     let data_chiffre = 'm' + message.contenu  // Ajouter code 'm' pour dechiffrer multibase base64
 
-
     let messages_envoyes = date_envoi?true:false
     let userId = user_id,
         resultatValider = null

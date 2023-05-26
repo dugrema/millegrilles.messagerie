@@ -173,7 +173,7 @@ async function traiterAjouterDownload(workers, docDownload, dispatch, getState) 
         console.debug("ajouterDownloadAction Ajout download")
 
         if( ! docDownload.decryption ) {
-            await clesDao.getCles([fuuid])  // Fetch pour cache (ne pas stocker dans redux)
+            await clesDao.getCles([fuuid], 'GrosFichiers')  // Fetch pour cache (ne pas stocker dans redux)
         }
 
         const nouveauDownload = {
@@ -361,7 +361,7 @@ async function downloadFichier(workers, dispatch, fichier, cancelToken) {
         var cles = {['included']: {...fichier.decryption, cleSecrete}}
     } else {
         // Charger la cle a partir du systeme local
-        var cles = await clesDao.getCles([fuuid])
+        var cles = await clesDao.getCles([fuuid], 'GrosFichiers')
     }
     const valueCles = Object.values(cles).pop()
     delete valueCles.date

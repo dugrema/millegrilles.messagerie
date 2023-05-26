@@ -244,7 +244,7 @@ function syncCollection(cuuid, opts) {
 }
 
 async function getClesFichiers(fuuids) {
-  const params = { fuuids }
+  const params = { fuuids, domaine: 'GrosFichiers' }
   // return ConnexionClient.emitBlocking('getPermissionCles', params, {domaine: CONST_DOMAINE_GROSFICHIERS, action: 'getClesFichiers', ajouterCertificat: true})
   return ConnexionClient.emitBlocking(
     'getPermissionCles', params, 
