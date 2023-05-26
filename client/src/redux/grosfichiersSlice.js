@@ -807,7 +807,7 @@ async function dechiffrageMiddlewareListener(workers, actions, _thunks, nomSlice
             const {clesHachage_bytes} = identifierClesHachages(batchFichiers)
             let cles = null
             try {
-                cles = await clesDao.getCles(clesHachage_bytes)
+                cles = await clesDao.getCles(clesHachage_bytes, 'GrosFichiers')
             } catch(err) {
                 console.error("Erreur chargement cles %O : %O", clesHachage_bytes, err)
                 continue  // Prochaine batch
