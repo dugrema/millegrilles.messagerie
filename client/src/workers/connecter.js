@@ -24,17 +24,18 @@ export async function connecter(workers, setUsagerState, setEtatConnexion, setEt
 
 async function setUsager(workers, nomUsager, setUsagerState, opts) {
     opts = opts || {}
+    const DEBUG = opts.DEBUG || true
 
     // Desactiver usager si deja connecte - permet de reauthentifier 
     // (i.e. useEtatPret === false tant que socket serveur pas pret)
     await setUsagerState('')
 
-    // console.debug("setUsager '%s'", nomUsager)
+    if(DEBUG) console.debug("setUsager '%s'", nomUsager)
     const { usagerDao, forgecommon } = await import('@dugrema/millegrilles.reactjs')
     const { pki } = await import('@dugrema/node-forge')
     const { extraireExtensionsMillegrille } = forgecommon
     const usager = await usagerDao.getUsager(nomUsager)
-    // console.debug("Usager info : %O", usager)
+    if(DEBUG) console.debug("Usager info : %O", usager)
     
     if(usager && usager.certificat) {
         const { 
@@ -56,8 +57,9 @@ async function setUsager(workers, nomUsager, setUsagerState, opts) {
         // await transfertUploadFichiers.up_setCertificatCa(caPem)
         // await transfertDownloadFichiers.down_setCertificatCa(caPem)
 
+        if(DEBUG) console.debug("Authentifier")
         const reponseAuthentifier = await workers.connexion.authentifier()
-        // console.debug("Reponse authentifier : %O", reponseAuthentifier)
+        if(DEBUG) console.debug("Reponse authentifier : %O", reponseAuthentifier)
         if(!reponseAuthentifier || reponseAuthentifier.protege !== true) { // throw new Error("Echec authentification (protege=false)")
             console.error("Erreur authentification : reponseAuthentifier = %O", reponseAuthentifier)
             return
