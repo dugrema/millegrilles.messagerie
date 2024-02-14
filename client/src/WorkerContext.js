@@ -120,7 +120,7 @@ export function WorkerProvider(props) {
                 .then(infoConnexion=>{
                     // const statusConnexion = JSON.stringify(infoConnexion)
                     if(!infoConnexion || infoConnexion.ok === false) {
-                        console.error("Erreur de connexion : %O", infoConnexion)
+                        console.error("Erreur de connexion (1) : %O", infoConnexion)
                         // setErreur("Erreur de connexion au serveur : " + infoConnexion.err); 
                     } else {
                         console.info("Info connexion : %O", infoConnexion)
@@ -129,7 +129,7 @@ export function WorkerProvider(props) {
                 })
                 .catch(err=>{
                     // setErreur('Erreur de connexion. Detail : ' + err); 
-                    console.debug("Erreur de connexion : %O", err)
+                    console.debug("Erreur de connexion (2) : %O", err)
                 })
         } else {
             // setErreur("Pas de worker de connexion")

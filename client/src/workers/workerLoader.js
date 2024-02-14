@@ -73,9 +73,10 @@ async function wireWorkers(workers) {
         const axiosImport = await import('axios')
         const axios = axiosImport.default
         const reponse = await axios.get(location.href)
-        console.debug("Reponse fiche ", reponse)
+        // console.debug("Reponse fiche ", reponse)
         const data = reponse.data || {}
         const fiche = JSON.parse(data.contenu)
+        console.debug("Reponse fiche ", fiche)
         const ca = fiche.ca
         if(ca) {
             // console.debug("initialiserCertificateStore (connexion, chiffrage)")

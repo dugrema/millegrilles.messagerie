@@ -14,9 +14,12 @@ export async function connecter(workers, setUsagerState, setEtatConnexion, setEt
     const setUsagerCb = proxy( usager => setUsager(workers, usager, setUsagerState) )
     const setEtatConnexionCb = proxy(setEtatConnexion)
     const setEtatFormatteurMessageCb = proxy(setEtatFormatteurMessage)
-    await connexion.setCallbacks(setEtatConnexionCb, setUsagerCb, setEtatFormatteurMessageCb)
+    // await connexion.setCallbacks(setEtatConnexionCb, setUsagerCb, setEtatFormatteurMessageCb)
 
-    return connexion.connecter(location.href, {DEBUG: true, reconnectionDelay: 5_000})
+    await connexion.configurer(location.href, setEtatConnexionCb, setUsagerCb, setEtatFormatteurMessageCb, 
+        {DEBUG: true, reconnectionDelay: 5_000})
+
+    return connexion.connecter()
 }
 
 async function setUsager(workers, nomUsager, setUsagerState, opts) {
