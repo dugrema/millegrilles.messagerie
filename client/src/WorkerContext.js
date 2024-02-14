@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react'
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react'
 import { setupWorkers, cleanupWorkers } from './workers/workerLoader'
 import { init as initMessagerieIdb } from './redux/messagerieIdbDao'
+const CONST_INTERVAL_VERIF_SESSION = 300_000
 
 const Context = createContext()
 
 const { workerInstances, workers: _workers, ready } = setupWorkers()
-console.warn("Workers : ", _workers)
 
 // Hooks
 function useWorkers() {
@@ -20,6 +20,10 @@ export function useUsager() {
 
 export function useEtatConnexion() {
     return useContext(Context).etatConnexion
+}
+
+export function useEtatConnexionOpts() {
+    return useContext(Context).etatConnexionOpts
 }
 
 export function useFormatteurPret() {
@@ -45,6 +49,7 @@ export function WorkerProvider(props) {
     const [workersPrets, setWorkersPrets] = useState(false)
     const [usager, setUsager] = useState('')
     const [etatConnexion, setEtatConnexion] = useState('')
+    const [etatConnexionOpts, setEtatConnexionOpts] = useState('')
     const [formatteurPret, setFormatteurPret] = useState('')
     const [infoConnexion, setInfoConnexion] = useState('')
 
@@ -54,8 +59,20 @@ export function WorkerProvider(props) {
     }, [etatConnexion, usager, formatteurPret])
 
     const value = useMemo(()=>{
-        if(workersPrets) return { usager, etatConnexion, formatteurPret, etatAuthentifie, infoConnexion, etatPret }
-    }, [workersPrets, usager, etatConnexion, formatteurPret, etatAuthentifie, infoConnexion, etatPret])
+        if(workersPrets) return { 
+            usager, etatConnexion, etatConnexionOpts, formatteurPret, etatAuthentifie, infoConnexion, etatPret, 
+        }
+    }, [
+        workersPrets, 
+        usager, etatConnexion, etatConnexionOpts, formatteurPret, etatAuthentifie, infoConnexion, etatPret, 
+    ])
+
+    const setEtatConnexionCb = useCallback((etat, opts) => {
+        opts = opts || {}
+        console.debug("setEtatConnexionCb etat: %s, opts %O", etat, opts)
+        setEtatConnexion(etat)
+        setEtatConnexionOpts(opts)
+    }, [setEtatConnexion, setEtatConnexionOpts])
 
     useEffect(()=>{
         // console.info("Initialiser web workers (ready : %O, workers : %O)", ready, _workers)
@@ -77,14 +94,32 @@ export function WorkerProvider(props) {
     }, [setWorkersPrets])
 
     useEffect(()=>{
+        if(etatConnexion) {
+            // Verifier etat connexion
+            let interval = null
+            verifierSession(setEtatConnexionOpts)
+                .then(() => {
+                    interval = setInterval(
+                        () => verifierSession(setEtatConnexionOpts), 
+                        CONST_INTERVAL_VERIF_SESSION
+                    )
+                })
+                .catch(err=>console.error("Erreur verifierSession initial", err))
+            return () => {
+                if(interval) clearInterval(interval)
+            }
+        }
+    }, [etatConnexion])
+
+    useEffect(()=>{
         if(!workersPrets) return
         // setWorkersTraitementFichiers(workers)
         if(_workers.connexion) {
             // setErreur('')
-            connecter(_workers, setUsager, setEtatConnexion, setFormatteurPret)
+            connecter(_workers, setUsager, setEtatConnexionCb, setFormatteurPret)
                 .then(infoConnexion=>{
                     // const statusConnexion = JSON.stringify(infoConnexion)
-                    if(infoConnexion.ok === false) {
+                    if(!infoConnexion || infoConnexion.ok === false) {
                         console.error("Erreur de connexion : %O", infoConnexion)
                         // setErreur("Erreur de connexion au serveur : " + infoConnexion.err); 
                     } else {
@@ -100,7 +135,7 @@ export function WorkerProvider(props) {
             // setErreur("Pas de worker de connexion")
             console.error("Pas de worker de connexion")
         }
-    }, [ workersPrets, setUsager, setEtatConnexion, setFormatteurPret, setInfoConnexion ])
+    }, [ workersPrets, setUsager, setEtatConnexionCb, setFormatteurPret, setInfoConnexion ])
 
     useEffect(()=>{
         if(etatAuthentifie) {
@@ -122,4 +157,23 @@ export function WorkerContext(props) {
 async function connecter(workers, setUsager, setEtatConnexion, setFormatteurPret) {
     const { connecter: connecterWorker } = await import('./workers/connecter')
     return connecterWorker(workers, setUsager, setEtatConnexion, setFormatteurPret)
+}
+
+async function verifierSession(setEtatConnexionOpts) {
+    const importAxios = await import('axios')
+    const axios = importAxios.default
+
+    const urlVerificationSession = new URL(window.location)
+    urlVerificationSession.pathname = '/auth/verifier_usager'
+
+    const reponse = await axios({method: 'GET', url: urlVerificationSession.href, validateStatus: null})
+    const status = reponse.status
+    if(status === 200) {
+        console.debug("Session valide (status: %d)", status)
+    } else if(status === 401) {
+        console.debug("Session expiree (status: %d)", status)
+        setEtatConnexionOpts({ok: false, type: 'SessionExpiree'})
+    } else {
+        console.warn("Session etat non gere : %O", status)
+    }
 }

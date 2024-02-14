@@ -18,6 +18,41 @@
       <ol>
         <li>Initialisation</li>
       </ol>
+
+      <p><a href="/millegrilles">Retour</a></p>
     </div>
   </body>
 </html>
+
+<script>
+  // S'assurer d'avoir le path /messagerie/ avec le / a la fin. Requis pour activer le service worker.
+  const pathname = window.location.pathname
+  if(!pathname.startsWith('/messagerie/')) {
+    window.location = '/messagerie/'
+  }
+
+  if ('serviceWorker' in navigator) {
+      if('%NODE_ENV%' === 'development') {
+        navigator.serviceWorker.ready.then(function(registration) {
+          console.debug("Environnement %NODE_ENV% - retrait service worker ", registration)
+          registration.unregister()
+        }).catch(err=>console.error("Erreur service worker ready ", err))
+      } else {
+        console.debug('Registering service worker %PUBLIC_URL%/sw.js')
+        navigator.serviceWorker.register('%PUBLIC_URL%/sw.js', { scope: '%PUBLIC_URL%/' })
+          .then(function (registration) {
+            console.log('Service Worker Registered')
+          })
+          .catch(function (error) {
+            console.error('Service Worker not registered due to error ', error)
+          });
+        navigator.serviceWorker.ready.then(function (registration) {
+          console.log('Service Worker Ready')
+        })
+        .catch(function (error) {
+          conso.error('Service Worker not ready due to error ', error)
+        })
+
+      }
+  }
+</script>

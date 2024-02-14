@@ -15,6 +15,14 @@
     background: $second-color;
 }
 
+.top-spacer-menu {
+    position: sticky;
+    top: 1rem;
+    height: 2.7rem;
+    width: 1rem;
+    z-index: 0;
+}
+
 .liste-boutons DIV, 
 .liste-boutons BUTTON {
     margin-right: 0.25rem;
