@@ -82,7 +82,8 @@ async function wireWorkers(workers) {
             // console.debug("initialiserCertificateStore (connexion, chiffrage)")
             await Promise.all([
                 connexion.initialiserCertificateStore(ca, {isPEM: true, DEBUG: false}),
-                chiffrage.initialiserCertificateStore(ca, {isPEM: true, DEBUG: false})
+                chiffrage.initialiserCertificateStore(ca, {isPEM: true, DEBUG: false}),
+                chiffrage.init(ca),  // x509
             ])
         } else {
             throw new Error("Erreur initialisation - fiche/CA non disponible")

@@ -45,22 +45,13 @@ export function EvenementsMessageHandler(_props) {
 }
 
 async function traiterMessageEvenement(workers, dispatch, userId, evenementMessage) {
-    // console.debug("traiterMessageEvenement ", evenementMessage)
+    console.debug("traiterMessageEvenement ", evenementMessage)
     const { connexion, messagerieDao } = workers
   
     // Traiter message
     const routing = evenementMessage.routingKey,
             action = routing.split('.').pop()
     const message = evenementMessage.message
-
-    // const verificationMessage = await x509.verifierMessage(message)
-    // const messageAVerifier = {...message, certificat: message.certificat_message, millegrille: message.certificat_millegrille}
-    // const resultatVerification = await connexion.verifierMessage(message)
-    // console.debug("Message verification ", resultatVerification)
-    // if(resultatVerification !== true) {
-    //     console.error("Message invalide (signature/cert) : ", message)
-    //     return  // Message rejete, on ne traite pas l'evenement
-    // }
   
     if(action === 'nouveauMessage') {
         console.debug("traiterMessageEvenement Nouveau message ", message)
