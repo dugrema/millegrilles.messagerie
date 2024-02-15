@@ -1,17 +1,24 @@
-# FROM node:18
-FROM docker.maceroc.com/millegrilles_webappbase:2023.2.0
+FROM docker.maple.maceroc.com:5000/millegrilles_web_python:2024.0.8
 
-ENV APP_FOLDER=/usr/src/app \
-    NODE_ENV=production \
-    PORT=443 \
-    MG_MQ_URL=amqps://mq:5673
+ENV CA_PEM=/run/secrets/millegrille.cert.pem \
+    CERT_PEM=/run/secrets/cert.pem \
+    KEY_PEM=/run/secrets/key.pem \
+    MQ_HOSTNAME=mq \
+    MQ_PORT=5673 \
+    REDIS_HOSTNAME=redis \
+    REDIS_PASSWORD_PATH=/var/run/secrets/passwd.redis.txt \
+    WEB_PORT=1443
 
-EXPOSE 80 443
+COPY static/ $BUNDLE_FOLDER/static
 
-# Creer repertoire app, copier fichiers
-# WORKDIR $APP_FOLDER
+COPY . $BUILD_FOLDER
 
-COPY . $APP_FOLDER/
-RUN npm install --production
+RUN cd $BUILD_FOLDER && \
+    python3 ./setup.py install
 
-CMD [ "npm", "run", "server" ]
+# UID fichiers = 984
+# GID millegrilles = 980
+USER 984:980
+
+CMD ["-m", "server_messagerie"]
+# CMD ["-m", "server_messagerie", "--verbose"]
