@@ -90,7 +90,6 @@ class SocketIoMessagerieHandler(SocketIoHandler):
         return await self.executer_requete(sid, message,
                                            ConstantesMessagerie.NOM_DOMAINE, 'getClepubliqueWebpush')
 
-
     # Commandes
 
     async def initialiser_profil(self, sid: str, message: dict):
